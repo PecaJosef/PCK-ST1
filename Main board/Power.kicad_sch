@@ -4786,6 +4786,17 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "PWR_ST is open drain - use pullup on STM32 side!!!"
+		(exclude_from_sim no)
+		(at 256.794 119.634 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(color 255 0 5 1)
+			)
+		)
+		(uuid "7bdc6dc1-a34a-4e36-a4b1-71b45e2ce25c")
+	)
 	(junction
 		(at 162.56 92.71)
 		(diameter 0)
