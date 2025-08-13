@@ -1,0 +1,3 @@
+../Core/Src/mag.c:20:19:Mag_Init	40	static
+../Core/Src/mag.c:34:19:Mag_ReadRaw	32	static
+../Core/Src/mag.c:48:7:ReadMagHeading	24	static

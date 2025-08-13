@@ -4,3 +4,4 @@
 ../USB_DEVICE/App/usbd_cdc_if.c:261:15:CDC_Receive_FS	16	static
 ../USB_DEVICE/App/usbd_cdc_if.c:281:9:CDC_Transmit_FS	24	static
 ../USB_DEVICE/App/usbd_cdc_if.c:307:15:CDC_TransmitCplt_FS	32	static
+../USB_DEVICE/App/usbd_cdc_if.c:319:5:_write	24	static
