@@ -29,6 +29,7 @@
 #include "timers.h"
 #include "stepper.h"
 #include "mag.h"
+#include "gps.h"
 #include "usbd_cdc_if.h"
 
 
@@ -63,6 +64,7 @@ TIM_HandleTypeDef htim17;
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart1;
+DMA_HandleTypeDef hdma_uart4_rx;
 DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
 
@@ -144,13 +146,27 @@ int main(void)
 
   Stepper_nSleep(GPIO_PIN_SET);
   //Stepper_Enable(&EL_Axis_motor);
-  //Stepper_Enable(&AZ_Axis_motor);
-  Stepper_Enable(&RA_Axis_motor);
+  Stepper_Enable(&AZ_Axis_motor);
+  //Stepper_Enable(&RA_Axis_motor);
 
+  /*
+  Mag_Init(&hi2c3);
+  MagCalib_t calib = CalibrateMagnetometer(&AZ_Axis_motor, 1.0f, 7.5f);
+  float Heading = GetCalibratedHeading(&calib);
+  if (Heading<=180.0)
+  {
+	  Stepper_Move(&AZ_Axis_motor, Heading, 5.0f, 0);
+  }
+  else
+  {
+	  Stepper_Move(&AZ_Axis_motor, 360.0f-Heading, 5.0f, 1);
+  }
+  */
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  GPS_Data_t GPS_Data;
 
   while (1)
   {
@@ -159,20 +175,27 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 
-
+	  GPS_Data = Get_GPS_Data();
+	  printf("Lat: %.6f, Lon: %.6f, Alt: %.2f m, Sats: %d, HDOP: %.2f, Fix: %d\r\n",
+	         GPS_Data.latitude,
+	         GPS_Data.longitude,
+	         GPS_Data.altitude,
+	         GPS_Data.satellites,
+	         GPS_Data.hdop,
+	         GPS_Data.fix);
+	  HAL_Delay(1000);
 	  //Stepper_Move(&EL_Axis_motor, 5.0f, 10.0f, 0);
-	  //Stepper_Move(&AZ_Axis_motor, 90.0f, 20.0f, 0);
-	  //Stepper_Move(&RA_Axis_motor, 90.0f, 10.0f, 0);
-	  Stepper_Move_RA(90.0f, 2.0f, 0);
-	  //HAL_Delay(500);
-	  //printf("TIM2 CNT: %lu\r\n", __HAL_TIM_GET_COUNTER(&htim2));
-	  HAL_Delay(50000);
-	  //Stepper_Move(&EL_Axis_motor, 5.0f, 10.0f, 1);
-	  //Stepper_Move(&AZ_Axis_motor, 90.0f, 20.0f, 1);
-	  //Stepper_Move(&RA_Axis_motor, 90.0f, 10.0f, 1);
-	  Stepper_Move_RA(90.0f, 2.0f, 1);
-	  HAL_Delay(50000);
-
+	  //Stepper_Move(&AZ_Axis_motor, 2.50f, 10.0f, 0);
+	  //HAL_Delay(750);
+	  //Stepper_Move(&RA_Axis_motor, 5.0f, 2.0f, 0);
+/*
+	  for (int deg=0;deg<360;deg++)
+	  {
+		  printf("Angle: %d   Heading: %d \n\r",deg, (uint16_t)ReadMagHeading());
+		  Stepper_Move(&AZ_Axis_motor, 1.0f, 5.0f, 0);
+		  HAL_Delay(350);
+	  }
+*/
 
   }
 
@@ -669,7 +692,7 @@ static void MX_UART4_Init(void)
   huart4.Init.WordLength = UART_WORDLENGTH_8B;
   huart4.Init.StopBits = UART_STOPBITS_1;
   huart4.Init.Parity = UART_PARITY_NONE;
-  huart4.Init.Mode = UART_MODE_TX_RX;
+  huart4.Init.Mode = UART_MODE_RX;
   huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
@@ -762,6 +785,7 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
+  __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Channel4_IRQn interrupt configuration */
@@ -770,6 +794,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+  /* DMA2_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Channel5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Channel5_IRQn);
 
 }
 

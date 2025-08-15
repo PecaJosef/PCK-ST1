@@ -1,8 +1,8 @@
-../Core/Src/stepper.c:70:6:Stepper_IT_Handeler	4
-../Core/Src/stepper.c:95:6:Stepper_IT_Enable	1
-../Core/Src/stepper.c:100:6:Stepper_Enable	1
-../Core/Src/stepper.c:105:6:Stepper_Move	3
-../Core/Src/stepper.c:119:6:Stepper_Move_DEC	1
-../Core/Src/stepper.c:142:6:Stepper_Move_RA	1
-../Core/Src/stepper.c:167:6:STEP_Generating	3
-../Core/Src/stepper.c:189:6:Stepper_nSleep	1
+../Core/Src/stepper.c:95:6:Stepper_IT_Handeler	3
+../Core/Src/stepper.c:108:6:Stepper_IT_Enable	1
+../Core/Src/stepper.c:113:6:Stepper_Enable	2
+../Core/Src/stepper.c:122:6:Stepper_Disable	1
+../Core/Src/stepper.c:127:6:Stepper_Move	13
+../Core/Src/stepper.c:177:6:Stepper_Stop	3
+../Core/Src/stepper.c:192:6:STEP_Generating	3
+../Core/Src/stepper.c:214:6:Stepper_nSleep	1

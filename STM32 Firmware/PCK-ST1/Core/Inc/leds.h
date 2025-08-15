@@ -10,6 +10,7 @@
 
 #include "stm32l4xx_hal.h"
 
+#define LED_TIMER TIM4
 
 extern TIM_HandleTypeDef htim4;
 

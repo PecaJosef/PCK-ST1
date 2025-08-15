@@ -1,3 +1,5 @@
-../Core/Src/mag.c:20:19:Mag_Init	40	static
-../Core/Src/mag.c:34:19:Mag_ReadRaw	32	static
-../Core/Src/mag.c:48:7:ReadMagHeading	24	static
+../Core/Src/mag.c:15:19:Mag_Init	32	static
+../Core/Src/mag.c:28:19:Mag_ReadRaw	32	static
+../Core/Src/mag.c:42:7:ReadMagHeading	24	static
+../Core/Src/mag.c:53:12:CalibrateMagnetometer	128	static
+../Core/Src/mag.c:101:7:GetCalibratedHeading	40	static

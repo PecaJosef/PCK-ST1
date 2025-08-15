@@ -12,6 +12,7 @@
 #include "stm32l4xx_hal.h"
 #include "main.h"
 #include "stdbool.h"
+#include "usbd_cdc_if.h"
 
 #define STEPS_PER_REV 200.0f
 #define STEPPER_TIMER_FREQ 10000
@@ -34,6 +35,23 @@
 #define DEC_STEP_PER_DEG ((STEPS_PER_REV*DEC_MICROSTEPPING*DEC_GEAR_RATIO)/(360))
 #define RA_STEP_PER_DEG ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/(360))
 
+#define RA_TIM TIM2
+#define RA_PWM_TIM &htim1
+#define RA_PWM_CH TIM_CHANNEL_2
+#define RA_STEP_TIM &htim2
+
+#define DEC_TIM TIM5
+#define DEC_PWM_TIM &htim8
+#define DEC_PWM_CH TIM_CHANNEL_3
+#define DEC_STEP_TIM &htim5
+
+#define STEPPER_TIMER TIM3
+
+typedef enum {
+    PWM_OUT_P,
+    PWM_OUT_N
+} PWM_OutputType;
+
 typedef struct {
 	GPIO_TypeDef *STEP_Port;
 	uint16_t STEP_Pin;
@@ -41,32 +59,39 @@ typedef struct {
 	uint16_t EN_Pin;
 	GPIO_TypeDef *DIR_Port;
 	uint16_t DIR_Pin;
-	uint32_t Steps_remaining;
-	uint32_t Step_interval_ticks;
-	uint32_t Tick_counter;
 	const float Steps_per_deg;
 	bool enabled;
+	bool busy;
+	bool High_precision;
+	bool homing;
+
+	//Low precision stepper motors
+	uint32_t Steps_remaining; //Number of steps
+	uint32_t Step_interval_ticks;
+	uint32_t Tick_counter;
+
+	//High precision stepper motors
+	TIM_HandleTypeDef *PWM_Timer; //PWM (STEP) signal timer
+	uint32_t PWM_Channel; //PWM (STEP) signal channel
+	TIM_HandleTypeDef *Step_Counter_Timer; //Timer for counting steps
+	PWM_OutputType PWM_Type; //PWM Channel polarity
+
+
 }Stepper_motor;
-
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim2;
-extern TIM_HandleTypeDef htim3;
-extern TIM_HandleTypeDef htim5;
-extern TIM_HandleTypeDef htim8;
-
 
 extern Stepper_motor EL_Axis_motor;
 extern Stepper_motor AZ_Axis_motor;
 extern Stepper_motor RA_Axis_motor;
 extern Stepper_motor DEC_Axis_motor;
 
-extern
 
 void Stepper_IT_Handeler();
 
 void Stepper_IT_Enable();
 
 void Stepper_Enable(Stepper_motor *Axis);
+
+void Stepper_Disable(Stepper_motor *Axis);
 
 void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool direction);
 
@@ -77,5 +102,7 @@ void Stepper_Move_RA(float angle, float speed, bool dir);
 void Stepper_nSleep(bool n_sleep);
 
 void STEP_Generating(Stepper_motor *Axis);
+
+void Stepper_Stop(Stepper_motor *Axis);
 
 #endif /* INC_STEPPER_H_ */

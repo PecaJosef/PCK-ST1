@@ -8,12 +8,11 @@
 #ifndef INC_TIMERS_H_
 #define INC_TIMERS_H_
 
+#include "leds.h"
+#include "stepper.h"
+#include "main.h"
 #include "stm32l4xx_hal.h"
-
-extern TIM_HandleTypeDef htim8;
-extern TIM_HandleTypeDef htim5;
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim2;
+#include "usbd_cdc_if.h"
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
