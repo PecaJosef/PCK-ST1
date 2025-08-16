@@ -7124,6 +7124,16 @@
 	)
 	(wire
 		(pts
+			(xy 166.37 74.93) (xy 181.61 74.93)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5776b3ef-f790-4bb2-8b41-332961a8c62a")
+	)
+	(wire
+		(pts
 			(xy 86.36 30.48) (xy 110.49 30.48)
 		)
 		(stroke
@@ -7361,6 +7371,16 @@
 			(type default)
 		)
 		(uuid "6ca84579-ca98-43b4-a9b3-68595dcc5fee")
+	)
+	(wire
+		(pts
+			(xy 166.37 69.85) (xy 181.61 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6cb57fc9-debe-4a8d-a35b-e06c67a0daa3")
 	)
 	(wire
 		(pts
@@ -7751,6 +7771,16 @@
 			(type default)
 		)
 		(uuid "8ffbdd20-e2b3-426e-ba1b-8feaeb1cc06f")
+	)
+	(wire
+		(pts
+			(xy 166.37 72.39) (xy 181.61 72.39)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "91b828f2-a38d-498c-8bf6-e75fda5bf403")
 	)
 	(wire
 		(pts
@@ -8211,6 +8241,16 @@
 			(type default)
 		)
 		(uuid "b8473788-dfbb-4421-912c-011a1f40ad1a")
+	)
+	(wire
+		(pts
+			(xy 116.84 125.73) (xy 130.81 125.73)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b8db5a5a-1700-4a57-8998-1d70b1537fc9")
 	)
 	(wire
 		(pts
@@ -8952,6 +8992,16 @@
 		)
 		(uuid "15afe527-1f38-4785-aa64-5786a55d71bc")
 	)
+	(label "DEC_LIM"
+		(at 181.61 72.39 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "20ce8a85-9735-4e5f-b2e3-52fff4a0f3e5")
+	)
 	(label "CAM_GND"
 		(at 33.02 106.68 0)
 		(effects
@@ -9011,6 +9061,16 @@
 			(justify left bottom)
 		)
 		(uuid "31ef8acc-f7ea-4efe-9f9d-b3f8bc6a88bc")
+	)
+	(label "EL_LIM"
+		(at 181.61 69.85 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "3559ee66-0154-4d10-bab8-07d6743b5d9b")
 	)
 	(label "PWR_BTN"
 		(at 116.84 123.19 0)
@@ -9131,6 +9191,16 @@
 			(justify right bottom)
 		)
 		(uuid "72965150-3d84-4edf-b864-f9dde71c510b")
+	)
+	(label "RA_LIM"
+		(at 181.61 74.93 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "787ac8a6-a755-47ba-a920-00061cf25027")
 	)
 	(label "LED3"
 		(at 200.66 101.6 0)
@@ -9371,6 +9441,16 @@
 			(justify left bottom)
 		)
 		(uuid "ed5d9c7a-c09d-4b3f-8b31-bb100ed588e5")
+	)
+	(label "AZ_LIM"
+		(at 116.84 125.73 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "f00f8fd8-b202-4c8f-bf24-3f9c82496892")
 	)
 	(label "LED4"
 		(at 200.66 110.49 0)
