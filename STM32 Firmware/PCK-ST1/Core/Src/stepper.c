@@ -130,6 +130,7 @@ void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Spe
 	        return;
 	else
 	{
+		HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, dir);
 		if (!Axis->High_precision)
 		{
 			//Steps calculation
@@ -168,25 +169,64 @@ void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Spe
 		//Set direction
 		Axis->enabled = true;
 		Axis->busy = true;
-		HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, dir);
 	}
 
 
 }
 
+void Stepper_Home(Stepper_motor *Axis, float speed, bool dir)
+{
+	if (!Axis || speed <= 0.0f)
+		        return;
+		else
+		{
+			if (!Axis->High_precision)
+			{
+				//Steps calculation
+				Axis->Steps_remaining = (uint32_t)(2*90.0f*Axis->Steps_per_deg); //Times two because of toggle STEP pin -> twice lower steps
+				//Steps per second calculation
+				Axis->Step_interval_ticks = (uint32_t)(STEPPER_TIMER_FREQ/(2*speed*Axis->Steps_per_deg));
+				Axis->Tick_counter = 0;
+			}
+
+			else
+			{
+				return;
+			}
+
+			Axis->enabled = true;
+			Axis->homing = true;
+			Axis->busy = true;
+			HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, dir);
+		}
+
+}
+
 void Stepper_Stop(Stepper_motor *Axis)
 {
-	//Stop PWM timer
-	if (Axis->PWM_Type == PWM_OUT_P)
+
+	if (Axis->High_precision)
 	{
-		HAL_TIM_PWM_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
+		//Stop PWM timer
+			if (Axis->PWM_Type == PWM_OUT_P)
+			{
+				HAL_TIM_PWM_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
+			}
+			else if (Axis->PWM_Type == PWM_OUT_N)
+			{
+				HAL_TIMEx_PWMN_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
+			}
+			//Stop STEP counting timer
+			HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
 	}
-	else if (Axis->PWM_Type == PWM_OUT_N)
+	else if (!Axis->High_precision)
 	{
-		HAL_TIMEx_PWMN_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
+		Axis->Steps_remaining = 0;
 	}
-	//Stop STEP counting timer
-	HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
+
+	Axis->enabled = false;
+	Axis->busy = false;
+
 }
 
 void STEP_Generating(Stepper_motor *Axis)

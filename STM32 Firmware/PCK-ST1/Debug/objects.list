@@ -1,3 +1,4 @@
+"./Core/Src/exti.o"
 "./Core/Src/gps.o"
 "./Core/Src/leds.o"
 "./Core/Src/mag.o"

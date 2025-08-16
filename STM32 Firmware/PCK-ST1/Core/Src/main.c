@@ -30,6 +30,7 @@
 #include "stepper.h"
 #include "mag.h"
 #include "gps.h"
+#include "exti.h"
 #include "usbd_cdc_if.h"
 
 
@@ -146,7 +147,8 @@ int main(void)
 
   Stepper_nSleep(GPIO_PIN_SET);
   //Stepper_Enable(&EL_Axis_motor);
-  Stepper_Enable(&AZ_Axis_motor);
+  //Stepper_Enable(&EL_Axis_motor);
+  //Stepper_Enable(&AZ_Axis_motor);
   //Stepper_Enable(&RA_Axis_motor);
 
   /*
@@ -168,12 +170,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   GPS_Data_t GPS_Data;
 
+  //Stepper_Home(&EL_Axis_motor, 5.0f, EL_HOMING_DIR);
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+	//Stepper_Move(&EL_Axis_motor, 5, 5.0f, EL_HOMING_DIR);
+	//Stepper_Move(&RA_Axis_motor, 5, 1.0f, GPIO_PIN_SET);
+	//HAL_Delay(2000);
+	//Stepper_Move(&EL_Axis_motor, 5, 5.0f, 0);
+	//Stepper_Move(&RA_Axis_motor, 5, 1.0f, GPIO_PIN_SET);
 
 	  GPS_Data = Get_GPS_Data();
 	  printf("Lat: %.6f, Lon: %.6f, Alt: %.2f m, Sats: %d, HDOP: %.2f, Fix: %d\r\n",
@@ -188,14 +196,6 @@ int main(void)
 	  //Stepper_Move(&AZ_Axis_motor, 2.50f, 10.0f, 0);
 	  //HAL_Delay(750);
 	  //Stepper_Move(&RA_Axis_motor, 5.0f, 2.0f, 0);
-/*
-	  for (int deg=0;deg<360;deg++)
-	  {
-		  printf("Angle: %d   Heading: %d \n\r",deg, (uint16_t)ReadMagHeading());
-		  Stepper_Move(&AZ_Axis_motor, 1.0f, 5.0f, 0);
-		  HAL_Delay(350);
-	  }
-*/
 
   }
 
@@ -840,6 +840,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : EL_STOP_Pin */
+  GPIO_InitStruct.Pin = EL_STOP_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(EL_STOP_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : AZ_EN_Pin AZ_DIR_Pin AZ_STEP_Pin LED4_Pin
                            LED3_Pin */
   GPIO_InitStruct.Pin = AZ_EN_Pin|AZ_DIR_Pin|AZ_STEP_Pin|LED4_Pin
@@ -863,6 +869,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(PWR_STATE_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

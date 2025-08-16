@@ -3,6 +3,7 @@
 ../Core/Src/stepper.c:113:6:Stepper_Enable	16	static
 ../Core/Src/stepper.c:122:6:Stepper_Disable	16	static
 ../Core/Src/stepper.c:127:6:Stepper_Move	40	static
-../Core/Src/stepper.c:177:6:Stepper_Stop	16	static
-../Core/Src/stepper.c:192:6:STEP_Generating	16	static
-../Core/Src/stepper.c:214:6:Stepper_nSleep	16	static
+../Core/Src/stepper.c:177:6:Stepper_Home	24	static
+../Core/Src/stepper.c:205:6:Stepper_Stop	16	static
+../Core/Src/stepper.c:232:6:STEP_Generating	16	static
+../Core/Src/stepper.c:254:6:Stepper_nSleep	16	static

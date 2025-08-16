@@ -35,6 +35,11 @@
 #define DEC_STEP_PER_DEG ((STEPS_PER_REV*DEC_MICROSTEPPING*DEC_GEAR_RATIO)/(360))
 #define RA_STEP_PER_DEG ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/(360))
 
+#define AZ_HOMING_DIR 1
+#define EL_HOMING_DIR 1
+#define DEC_HOMING_DIR 1
+#define RA_HOMING_DIR 1
+
 #define RA_TIM TIM2
 #define RA_PWM_TIM &htim1
 #define RA_PWM_CH TIM_CHANNEL_2
@@ -95,9 +100,7 @@ void Stepper_Disable(Stepper_motor *Axis);
 
 void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool direction);
 
-void Stepper_Move_DEC(float angle, float speed, bool dir);
-
-void Stepper_Move_RA(float angle, float speed, bool dir);
+void Stepper_Home(Stepper_motor *Axis, float speed, bool direction);
 
 void Stepper_nSleep(bool n_sleep);
 
