@@ -169,6 +169,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   GPS_Data_t GPS_Data;
+  GPS_Init();
 
   //Stepper_Home(&EL_Axis_motor, 5.0f, EL_HOMING_DIR);
 

@@ -25,9 +25,10 @@ typedef struct {
 } GPS_Data_t;
 
 #define GPS_UART &huart4 //GPS UART Handler
-#define GPS_DMA_RX_BUF_SIZE 512
+#define GPS_DMA_RX_BUF_SIZE 1024
 
 void GPS_Init(void);
+
 GPS_Data_t Get_GPS_Data(void);
 
 #endif /* INC_GPS_H_ */

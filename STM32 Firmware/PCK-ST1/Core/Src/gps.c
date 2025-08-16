@@ -89,11 +89,14 @@ GPS_Data_t Get_GPS_Data(void)
     uint16_t i = last_read_ptr;
     uint16_t count = 0;
 
+    //printf("DMA write ptr: %d\n", dma_write_ptr);
+
     // Safety: limit max iterations to buffer size
     while (i != dma_write_ptr && count < GPS_DMA_RX_BUF_SIZE)
     {
-        if (dma_rx_buf[i] == '$') start_idx = i;
-        if (dma_rx_buf[i] == '\n' && start_idx >= 0)
+    	//printf("loop running\n");
+    	if (dma_rx_buf[i] == '$') start_idx = i;
+        if ((dma_rx_buf[i] == '\n' || dma_rx_buf[i] == '\r') && start_idx >= 0)
         {
             end_idx = i;
         }
@@ -103,7 +106,7 @@ GPS_Data_t Get_GPS_Data(void)
 
     if (start_idx >= 0 && end_idx >= 0)
     {
-        char sentence[128];
+        static char sentence[512];
         int len;
 
         if (end_idx >= start_idx)
@@ -117,6 +120,8 @@ GPS_Data_t Get_GPS_Data(void)
         sentence[len] = '\0';
 
         last_read_ptr = (end_idx + 1) % GPS_DMA_RX_BUF_SIZE;
+
+        printf("Sentence: %s\n", sentence);
 
         GPS_ParseLine(sentence);
     }
