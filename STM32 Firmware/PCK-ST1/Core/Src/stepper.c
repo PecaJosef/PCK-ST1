@@ -5,12 +5,14 @@
  *      Author: pecka
  */
 #include "stepper.h"
+#include "usbd_cdc_if.h"
 
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim2;
-extern TIM_HandleTypeDef htim3;
-extern TIM_HandleTypeDef htim5;
-extern TIM_HandleTypeDef htim8;
+typedef enum {
+    HOMING_SEARCH,
+    HOMING_BACKOFF,
+    HOMING_SLOW,
+    HOMING_DONE
+} HomingState;
 
 Stepper_motor EL_Axis_motor = {
 	.STEP_Port = EL_STEP_GPIO_Port,
@@ -110,6 +112,11 @@ void Stepper_IT_Enable()
 	HAL_TIM_Base_Start_IT(&htim3);
 }
 
+void Stepper_IT_Disable()
+{
+	HAL_TIM_Base_Stop_IT(&htim3);
+}
+
 void Stepper_Enable(Stepper_motor *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_SET);
@@ -117,11 +124,17 @@ void Stepper_Enable(Stepper_motor *Axis)
 	{
 		Stepper_IT_Enable();
 	}
+	Axis->enabled = true;
 }
 
 void Stepper_Disable(Stepper_motor *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_RESET);
+	if(!Axis->High_precision)
+	{
+		Stepper_IT_Disable();
+	}
+	Axis->enabled = false;
 }
 
 void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Speed is in deg/s
@@ -130,6 +143,10 @@ void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Spe
 	        return;
 	else
 	{
+		if(!Axis->enabled)
+		{
+			Stepper_Enable(Axis);
+		}
 		HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, dir);
 		if (!Axis->High_precision)
 		{
@@ -180,6 +197,11 @@ void Stepper_Home(Stepper_motor *Axis, float speed, bool dir)
 		        return;
 		else
 		{
+			if (!Axis->enabled)
+			{
+				Stepper_Enable(Axis);
+			}
+
 			if (!Axis->High_precision)
 			{
 				//Steps calculation
@@ -194,12 +216,10 @@ void Stepper_Home(Stepper_motor *Axis, float speed, bool dir)
 				return;
 			}
 
-			Axis->enabled = true;
 			Axis->homing = true;
 			Axis->busy = true;
 			HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, dir);
 		}
-
 }
 
 void Stepper_Stop(Stepper_motor *Axis)
@@ -224,7 +244,6 @@ void Stepper_Stop(Stepper_motor *Axis)
 		Axis->Steps_remaining = 0;
 	}
 
-	Axis->enabled = false;
 	Axis->busy = false;
 
 }
@@ -233,7 +252,7 @@ void STEP_Generating(Stepper_motor *Axis)
 {
 	if (Axis->Steps_remaining == 0)
 	        {
-				Axis->enabled= false;
+				Axis->busy= false;
 	            return;
 	        }
 	        if (Axis->Tick_counter == 0)

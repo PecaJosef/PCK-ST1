@@ -8,11 +8,9 @@
 #ifndef INC_STEPPER_H_
 #define INC_STEPPER_H_
 
-
 #include "stm32l4xx_hal.h"
 #include "main.h"
 #include "stdbool.h"
-#include "usbd_cdc_if.h"
 
 #define STEPS_PER_REV 200.0f
 #define STEPPER_TIMER_FREQ 10000
@@ -81,7 +79,6 @@ typedef struct {
 	TIM_HandleTypeDef *Step_Counter_Timer; //Timer for counting steps
 	PWM_OutputType PWM_Type; //PWM Channel polarity
 
-
 }Stepper_motor;
 
 extern Stepper_motor EL_Axis_motor;
@@ -89,10 +86,17 @@ extern Stepper_motor AZ_Axis_motor;
 extern Stepper_motor RA_Axis_motor;
 extern Stepper_motor DEC_Axis_motor;
 
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim5;
+extern TIM_HandleTypeDef htim8;
 
 void Stepper_IT_Handeler();
 
 void Stepper_IT_Enable();
+
+void Stepper_IT_Disable();
 
 void Stepper_Enable(Stepper_motor *Axis);
 

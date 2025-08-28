@@ -32,6 +32,9 @@
 #include "gps.h"
 #include "exti.h"
 #include "usbd_cdc_if.h"
+#include "wmm.h"
+#include "control_loop.h"
+#include "stdbool.h"
 
 
 /* USER CODE END Includes */
@@ -151,10 +154,35 @@ int main(void)
   //Stepper_Enable(&AZ_Axis_motor);
   //Stepper_Enable(&RA_Axis_motor);
 
-  /*
+//#define CALIB_FROM_FLASH
   Mag_Init(&hi2c3);
-  MagCalib_t calib = CalibrateMagnetometer(&AZ_Axis_motor, 1.0f, 7.5f);
-  float Heading = GetCalibratedHeading(&calib);
+  MagCalib_t calib;
+
+#define CALIB_FROM_FLASH
+
+#ifdef CALIB_FROM_FLASH
+  if (!LoadCalibrationFromFlash(&calib))
+  {
+	calib = CalibrateMagnetometer(&AZ_Axis_motor, 1.0f, 7.5f);
+	SaveCalibrationToFlash(&calib);
+  }
+#else
+  calib = CalibrateMagnetometer(&AZ_Axis_motor, 1.0f, 7.5f);
+  SaveCalibrationToFlash(&calib);
+#endif
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+/*
+  GPS_Data_t GPS_Data;
+  GPS_Init_DMA();
+  HAL_Delay(5000);
+  GPS_Config();
+
+  float Heading = GetCalibratedHeading(&calib, 5.42f);
+  printf("Heading: %.02f\r\n", Heading);
   if (Heading<=180.0)
   {
 	  Stepper_Move(&AZ_Axis_motor, Heading, 5.0f, 0);
@@ -163,13 +191,33 @@ int main(void)
   {
 	  Stepper_Move(&AZ_Axis_motor, 360.0f-Heading, 5.0f, 1);
   }
-  */
-  /* USER CODE END 2 */
+  while(AZ_Axis_motor.busy)
+  {
+  }
+  Heading = GetCalibratedHeading(&calib, 5.42f);
+  printf("Heading: %.02f\r\n", Heading);
+  if (Heading<=180.0)
+    {
+  	  Stepper_Move(&AZ_Axis_motor, Heading, 5.0f, 0);
+    }
+    else
+    {
+  	  Stepper_Move(&AZ_Axis_motor, 360.0f-Heading, 5.0f, 1);
+    }
+    while(AZ_Axis_motor.busy)
+    {
+    }
+*/
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  GPS_Data_t GPS_Data;
-  GPS_Init();
+  /*
+  for (uint16_t ang = 0; ang <=360; ang=ang+10)
+  {
+	  float Heading = GetCalibratedHeading(&calib, 5.42f);
+	  printf("Angle: %u   Heading: %.02f   Error: %.02f\r\n",360-ang, Heading, (360-ang)-Heading);
+	  Stepper_Move(&AZ_Axis_motor, 10.0f, 7.5f, 0);
+	  while(AZ_Axis_motor.busy){}
+  }
+*/
 
   //Stepper_Home(&EL_Axis_motor, 5.0f, EL_HOMING_DIR);
 
@@ -178,26 +226,32 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	//Stepper_Move(&EL_Axis_motor, 5, 5.0f, EL_HOMING_DIR);
-	//Stepper_Move(&RA_Axis_motor, 5, 1.0f, GPIO_PIN_SET);
-	//HAL_Delay(2000);
-	//Stepper_Move(&EL_Axis_motor, 5, 5.0f, 0);
-	//Stepper_Move(&RA_Axis_motor, 5, 1.0f, GPIO_PIN_SET);
 
-	  GPS_Data = Get_GPS_Data();
-	  printf("Lat: %.6f, Lon: %.6f, Alt: %.2f m, Sats: %d, HDOP: %.2f, Fix: %d\r\n",
-	         GPS_Data.latitude,
-	         GPS_Data.longitude,
-	         GPS_Data.altitude,
-	         GPS_Data.satellites,
-	         GPS_Data.hdop,
-	         GPS_Data.fix);
-	  HAL_Delay(1000);
-	  //Stepper_Move(&EL_Axis_motor, 5.0f, 10.0f, 0);
-	  //Stepper_Move(&AZ_Axis_motor, 2.50f, 10.0f, 0);
-	  //HAL_Delay(750);
-	  //Stepper_Move(&RA_Axis_motor, 5.0f, 2.0f, 0);
+	Control_loop();
+	  /*
+	GPS_Data = Get_GPS_Data();
+	HAL_Delay(500);
 
+	printf("Lat: %.6f, Lon: %.6f, Alt: %.2f m, Sats: %d, HDOP: %.2f, Fix: %d, Date: %02u-%02u-%02u\r\n",
+		 GPS_Data.latitude,
+		 GPS_Data.longitude,
+		 GPS_Data.altitude,
+		 GPS_Data.satellites,
+		 GPS_Data.hdop,
+		 GPS_Data.fix,
+		 GPS_Data.day,
+		 GPS_Data.month,
+		 GPS_Data.year);
+
+	HAL_Delay(500);
+	printf("Heading: %0.2f\r\n",GetCalibratedHeading(&calib, 5.42f));
+	wmm_init();
+	float wmm_date = wmm_get_date(GPS_Data.year, GPS_Data.month, GPS_Data.day);
+	float declination;
+	E0000(GPS_Data.latitude, GPS_Data.longitude, wmm_date, &declination);
+	printf("Magnetic declination: %0.2f\r\n",declination);
+	HAL_Delay(2500);
+*/
   }
 
   /* USER CODE END 3 */
@@ -693,7 +747,7 @@ static void MX_UART4_Init(void)
   huart4.Init.WordLength = UART_WORDLENGTH_8B;
   huart4.Init.StopBits = UART_STOPBITS_1;
   huart4.Init.Parity = UART_PARITY_NONE;
-  huart4.Init.Mode = UART_MODE_RX;
+  huart4.Init.Mode = UART_MODE_TX_RX;
   huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
@@ -840,6 +894,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PWR_BTN_Pin */
+  GPIO_InitStruct.Pin = PWR_BTN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(PWR_BTN_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : EL_STOP_Pin */
   GPIO_InitStruct.Pin = EL_STOP_Pin;
