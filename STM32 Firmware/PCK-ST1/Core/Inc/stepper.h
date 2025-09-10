@@ -55,6 +55,14 @@ typedef enum {
     PWM_OUT_N
 } PWM_OutputType;
 
+typedef enum {
+    AXIS_HOMING_IDLE,
+    AXIS_HOMING_COARSE,
+    AXIS_HOMING_BACKOFF,
+    AXIS_HOMING_FINE,
+    AXIS_HOMING_DONE
+} AxisHomingState;
+
 typedef struct {
 	GPIO_TypeDef *STEP_Port;
 	uint16_t STEP_Pin;
@@ -62,11 +70,16 @@ typedef struct {
 	uint16_t EN_Pin;
 	GPIO_TypeDef *DIR_Port;
 	uint16_t DIR_Pin;
+	GPIO_TypeDef *ENDSTOP_Port;
+	uint16_t ENDSTOP_Pin;
 	const float Steps_per_deg;
 	bool enabled;
 	bool busy;
 	bool High_precision;
 	bool homing;
+	bool Homing_dir;
+	AxisHomingState homing_state;
+	float Position;
 
 	//Low precision stepper motors
 	uint32_t Steps_remaining; //Number of steps
@@ -80,6 +93,7 @@ typedef struct {
 	PWM_OutputType PWM_Type; //PWM Channel polarity
 
 }Stepper_motor;
+
 
 extern Stepper_motor EL_Axis_motor;
 extern Stepper_motor AZ_Axis_motor;

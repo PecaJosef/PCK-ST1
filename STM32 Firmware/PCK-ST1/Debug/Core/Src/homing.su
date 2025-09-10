@@ -1,0 +1,4 @@
+../Core/Src/homing.c:11:6:handleHoming	8	static
+../Core/Src/homing.c:39:6:Axis_Home_Start	24	static
+../Core/Src/homing.c:60:6:Axis_Homing_Update	24	static
+../Core/Src/homing.c:86:6:Endstop_Reached	16	static

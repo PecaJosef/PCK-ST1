@@ -4,9 +4,10 @@
  *  Created on: Aug 25, 2025
  *      Author: pecka
  */
-#include <low_power_idle.h>
-#include <warming_up.h>
+#include "low_power_idle.h"
+#include "warming_up.h"
 #include "control_loop.h"
+#include "homing.h"
 
 
 ControlState_t controlState;
@@ -27,7 +28,9 @@ void Control_loop()
 	        case WARMING_UP:
 	            handleWarmingUp();      // your warming up logic
 	            break;
-
+	        case HOMING:
+	        	handleHoming();
+	        	break;
 	        // add more states as needed
 	        default:
 	            break;

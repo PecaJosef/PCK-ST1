@@ -3,6 +3,7 @@
 "./Core/Src/control_loop.o"
 "./Core/Src/exti.o"
 "./Core/Src/gps.o"
+"./Core/Src/homing.o"
 "./Core/Src/leds.o"
 "./Core/Src/low_power_idle.o"
 "./Core/Src/mag.o"

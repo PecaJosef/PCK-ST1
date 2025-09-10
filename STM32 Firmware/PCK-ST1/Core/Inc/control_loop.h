@@ -14,6 +14,7 @@
 #include "gps.h"
 #include "button.h"
 #include "wmm.h"
+#include "stepper.h"
 
 typedef enum {
 	LOW_POWER_IDLE, //Waiting for button press to power up, initial state

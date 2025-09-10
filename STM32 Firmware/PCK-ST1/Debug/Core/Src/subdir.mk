@@ -10,6 +10,7 @@ C_SRCS += \
 ../Core/Src/control_loop.c \
 ../Core/Src/exti.c \
 ../Core/Src/gps.c \
+../Core/Src/homing.c \
 ../Core/Src/leds.c \
 ../Core/Src/low_power_idle.c \
 ../Core/Src/mag.c \
@@ -30,6 +31,7 @@ OBJS += \
 ./Core/Src/control_loop.o \
 ./Core/Src/exti.o \
 ./Core/Src/gps.o \
+./Core/Src/homing.o \
 ./Core/Src/leds.o \
 ./Core/Src/low_power_idle.o \
 ./Core/Src/mag.o \
@@ -50,6 +52,7 @@ C_DEPS += \
 ./Core/Src/control_loop.d \
 ./Core/Src/exti.d \
 ./Core/Src/gps.d \
+./Core/Src/homing.d \
 ./Core/Src/leds.d \
 ./Core/Src/low_power_idle.d \
 ./Core/Src/mag.d \
@@ -72,7 +75,7 @@ Core/Src/%.o Core/Src/%.su Core/Src/%.cyclo: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/WMM_COF.cyclo ./Core/Src/WMM_COF.d ./Core/Src/WMM_COF.o ./Core/Src/WMM_COF.su ./Core/Src/button.cyclo ./Core/Src/button.d ./Core/Src/button.o ./Core/Src/button.su ./Core/Src/control_loop.cyclo ./Core/Src/control_loop.d ./Core/Src/control_loop.o ./Core/Src/control_loop.su ./Core/Src/exti.cyclo ./Core/Src/exti.d ./Core/Src/exti.o ./Core/Src/exti.su ./Core/Src/gps.cyclo ./Core/Src/gps.d ./Core/Src/gps.o ./Core/Src/gps.su ./Core/Src/leds.cyclo ./Core/Src/leds.d ./Core/Src/leds.o ./Core/Src/leds.su ./Core/Src/low_power_idle.cyclo ./Core/Src/low_power_idle.d ./Core/Src/low_power_idle.o ./Core/Src/low_power_idle.su ./Core/Src/mag.cyclo ./Core/Src/mag.d ./Core/Src/mag.o ./Core/Src/mag.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stepper.cyclo ./Core/Src/stepper.d ./Core/Src/stepper.o ./Core/Src/stepper.su ./Core/Src/stm32l4xx_hal_msp.cyclo ./Core/Src/stm32l4xx_hal_msp.d ./Core/Src/stm32l4xx_hal_msp.o ./Core/Src/stm32l4xx_hal_msp.su ./Core/Src/stm32l4xx_it.cyclo ./Core/Src/stm32l4xx_it.d ./Core/Src/stm32l4xx_it.o ./Core/Src/stm32l4xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32l4xx.cyclo ./Core/Src/system_stm32l4xx.d ./Core/Src/system_stm32l4xx.o ./Core/Src/system_stm32l4xx.su ./Core/Src/timers.cyclo ./Core/Src/timers.d ./Core/Src/timers.o ./Core/Src/timers.su ./Core/Src/warming_up.cyclo ./Core/Src/warming_up.d ./Core/Src/warming_up.o ./Core/Src/warming_up.su ./Core/Src/wmm.cyclo ./Core/Src/wmm.d ./Core/Src/wmm.o ./Core/Src/wmm.su
+	-$(RM) ./Core/Src/WMM_COF.cyclo ./Core/Src/WMM_COF.d ./Core/Src/WMM_COF.o ./Core/Src/WMM_COF.su ./Core/Src/button.cyclo ./Core/Src/button.d ./Core/Src/button.o ./Core/Src/button.su ./Core/Src/control_loop.cyclo ./Core/Src/control_loop.d ./Core/Src/control_loop.o ./Core/Src/control_loop.su ./Core/Src/exti.cyclo ./Core/Src/exti.d ./Core/Src/exti.o ./Core/Src/exti.su ./Core/Src/gps.cyclo ./Core/Src/gps.d ./Core/Src/gps.o ./Core/Src/gps.su ./Core/Src/homing.cyclo ./Core/Src/homing.d ./Core/Src/homing.o ./Core/Src/homing.su ./Core/Src/leds.cyclo ./Core/Src/leds.d ./Core/Src/leds.o ./Core/Src/leds.su ./Core/Src/low_power_idle.cyclo ./Core/Src/low_power_idle.d ./Core/Src/low_power_idle.o ./Core/Src/low_power_idle.su ./Core/Src/mag.cyclo ./Core/Src/mag.d ./Core/Src/mag.o ./Core/Src/mag.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stepper.cyclo ./Core/Src/stepper.d ./Core/Src/stepper.o ./Core/Src/stepper.su ./Core/Src/stm32l4xx_hal_msp.cyclo ./Core/Src/stm32l4xx_hal_msp.d ./Core/Src/stm32l4xx_hal_msp.o ./Core/Src/stm32l4xx_hal_msp.su ./Core/Src/stm32l4xx_it.cyclo ./Core/Src/stm32l4xx_it.d ./Core/Src/stm32l4xx_it.o ./Core/Src/stm32l4xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32l4xx.cyclo ./Core/Src/system_stm32l4xx.d ./Core/Src/system_stm32l4xx.o ./Core/Src/system_stm32l4xx.su ./Core/Src/timers.cyclo ./Core/Src/timers.d ./Core/Src/timers.o ./Core/Src/timers.su ./Core/Src/warming_up.cyclo ./Core/Src/warming_up.d ./Core/Src/warming_up.o ./Core/Src/warming_up.su ./Core/Src/wmm.cyclo ./Core/Src/wmm.d ./Core/Src/wmm.o ./Core/Src/wmm.su
 
 .PHONY: clean-Core-2f-Src
 

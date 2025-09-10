@@ -7,12 +7,6 @@
 #include "stepper.h"
 #include "usbd_cdc_if.h"
 
-typedef enum {
-    HOMING_SEARCH,
-    HOMING_BACKOFF,
-    HOMING_SLOW,
-    HOMING_DONE
-} HomingState;
 
 Stepper_motor EL_Axis_motor = {
 	.STEP_Port = EL_STEP_GPIO_Port,
@@ -21,11 +15,16 @@ Stepper_motor EL_Axis_motor = {
 	.EN_Pin = EL_EN_Pin,
 	.DIR_Port = EL_DIR_GPIO_Port,
 	.DIR_Pin = EL_DIR_Pin,
+	.ENDSTOP_Port = EL_STOP_GPIO_Port,
+	.ENDSTOP_Pin = EL_STOP_Pin,
 	.Steps_per_deg = EL_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
 	.High_precision = false,
+	.homing_state = AXIS_HOMING_IDLE,
+	.Position = -1,
+	.Homing_dir = EL_HOMING_DIR,
 
 	//Low precision stepper motors
 	.Steps_remaining = 0,
@@ -40,11 +39,16 @@ Stepper_motor AZ_Axis_motor = {
 	.EN_Pin = AZ_EN_Pin,
 	.DIR_Port = AZ_DIR_GPIO_Port,
 	.DIR_Pin = AZ_DIR_Pin,
+	//.ENDSTOP_Port = ,
+	//.ENDSTOP_Pin = ,
 	.Steps_per_deg = AZ_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
 	.High_precision = false,
+	.homing_state = AXIS_HOMING_IDLE,
+	.Position = -1,
+	.Homing_dir = AZ_HOMING_DIR,
 
 	//Low precision stepper motors
 	.Steps_remaining = 0,
@@ -59,11 +63,16 @@ Stepper_motor RA_Axis_motor = {
 	.EN_Pin = RA_EN_Pin,
 	.DIR_Port = RA_DIR_GPIO_Port,
 	.DIR_Pin = RA_DIR_Pin,
+	//.ENDSTOP_Port = ,
+	//.ENDSTOP_Pin = ,
 	.Steps_per_deg = RA_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
 	.High_precision = true,
+	.homing_state = AXIS_HOMING_IDLE,
+	.Position = -1,
+	.Homing_dir = RA_HOMING_DIR,
 
 	//High precision stepper motors
 	.PWM_Timer = RA_PWM_TIM,
@@ -80,11 +89,16 @@ Stepper_motor DEC_Axis_motor = {
 	.EN_Pin = DEC_EN_Pin,
 	.DIR_Port = DEC_DIR_GPIO_Port,
 	.DIR_Pin = DEC_DIR_Pin,
+	//.ENDSTOP_Port = ,
+	//.ENDSTOP_Pin = ,
 	.Steps_per_deg = DEC_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
 	.High_precision = true,
+	.homing_state = AXIS_HOMING_IDLE,
+	.Position = -1,
+	.Homing_dir = DEC_HOMING_DIR,
 
 	//High precision stepper motors
 	.PWM_Timer = DEC_PWM_TIM,

@@ -1,4 +1,4 @@
-Core/Src/warming_up.o: ../Core/Src/warming_up.c ../Core/Inc/warming_up.h \
+Core/Src/homing.o: ../Core/Src/homing.c ../Core/Inc/homing.h \
  ../Core/Inc/control_loop.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h \
  ../Core/Inc/stm32l4xx_hal_conf.h \
@@ -43,7 +43,7 @@ Core/Src/warming_up.o: ../Core/Src/warming_up.c ../Core/Inc/warming_up.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  ../Core/Inc/main.h ../Core/Inc/gps.h ../Core/Inc/button.h \
  ../Core/Inc/wmm.h ../Core/Inc/stepper.h
-../Core/Inc/warming_up.h:
+../Core/Inc/homing.h:
 ../Core/Inc/control_loop.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Core/Inc/stm32l4xx_hal_conf.h:

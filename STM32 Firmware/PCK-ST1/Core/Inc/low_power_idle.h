@@ -10,6 +10,6 @@
 
 #include "control_loop.h"
 
-void handleWarmingUp();
+void handleLowPowerIdle();
 
 #endif /* INC_LOW_POWER_IDLE_H_ */

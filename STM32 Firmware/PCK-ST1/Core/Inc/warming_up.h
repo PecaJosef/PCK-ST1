@@ -11,6 +11,6 @@
 #include "control_loop.h"
 #include "gps.h"
 
-void handleLowPowerIdle();
+void handleWarmingUp();
 
 #endif /* INC_WARMING_UP_H_ */
