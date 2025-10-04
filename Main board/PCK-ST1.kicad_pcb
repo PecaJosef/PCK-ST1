@@ -43013,7 +43013,7 @@
 			(justify left bottom mirror)
 		)
 	)
-	(gr_text "12V\n\nGND"
+	(gr_text "GND\n\n12V"
 		(at 185.9026 67.7926 0)
 		(layer "B.SilkS")
 		(uuid "4f604418-9719-40e5-ba3c-26938d389598")

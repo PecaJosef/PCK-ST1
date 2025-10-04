@@ -14,7 +14,7 @@ C17,C27,C33,C39;4;220nF/16V;;;;Capacitor_SMD:C_0402_1005Metric;~
 C18,C19,C24,C25,C30,C31,C36,C37;8;10nF/16V;;;;Capacitor_SMD:C_0402_1005Metric;~
 C42;1;100n/6.3V;;;;Capacitor_SMD:C_0402_1005Metric;~
 C43;1;1n/6.3V;;;;Capacitor_SMD:C_0402_1005Metric;~
-C44,C45,C46,C47,C48,C49,C52;7;100n;;;;Capacitor_SMD:C_0402_1005Metric;~
+C44,C45,C46,C47,C48,C49,C52,C53;8;100n;;;;Capacitor_SMD:C_0402_1005Metric;~
 C50,C51;2;10pF;;;;Capacitor_SMD:C_0402_1005Metric;~
 D1;1;TPD4E05U06DQAR;;;;SamacSys_Parts.pretty:DQA_R-PUSON-N10_;http://www.ti.com/lit/gpn/tpd4e05u06
 D2,D3;2;SMF22A-E3-08;;;;SODFL3718X108N;http://www.vishay.com/docs/85881/smf5v0atosmf58a.pdf
@@ -42,7 +42,7 @@ L1;1;1uH;;;;Inductor_SMD:L_Coilcraft_XAL4020-XXX;~
 PS1;1;TPS62135RGXR;;;;TPS621361RGXT;http://www.ti.com/lit/gpn/tps62135
 Q1;1;2N7002;;;;Package_TO_SOT_SMD:SOT-323_SC-70;https://www.onsemi.com/pub/Collateral/NDS7002A-D.PDF
 R2;1;604k;;;;Resistor_SMD:R_0402_1005Metric;~
-R3,R5,R14,R15,R16,R17,R36,R37,R38,R39,R40,R45,R46,R47,R48,R49;16;100k;;;;Resistor_SMD:R_0402_1005Metric;~
+R3,R5,R14,R15,R16,R17,R36,R37,R38,R39,R40,R45,R46,R47,R48,R49,R59;17;100k;;;;Resistor_SMD:R_0402_1005Metric;~
 R4;1;33k;;;;Resistor_SMD:R_0402_1005Metric;~
 R6,R8;2;200k;;;;Resistor_SMD:R_0402_1005Metric;~
 R7;1;24k;;;;Resistor_SMD:R_0402_1005Metric;~
@@ -50,7 +50,7 @@ R9,R52;2;10k;;;;Resistor_SMD:R_0402_1005Metric;~
 R10,R13;2;4k99;;;;Resistor_SMD:R_0402_1005Metric;~
 R11,R12;2;71k5;;;;Resistor_SMD:R_0402_1005Metric;~
 R18,R20,R22;3;28k;;;;Resistor_SMD:R_0402_1005Metric;~
-R19,R21,R23;3;22k;;;;Resistor_SMD:R_0402_1005Metric;~
+R19,R21,R23,R60;4;22k;;;;Resistor_SMD:R_0402_1005Metric;~
 R24;1;39k;;;;Resistor_SMD:R_0402_1005Metric;~
 R25;1;11k;;;;Resistor_SMD:R_0402_1005Metric;~
 R26,R27;2;22R;;;;Resistor_SMD:R_0402_1005Metric;~
@@ -58,8 +58,7 @@ R28,R30,R50;3;0R;DNP;;;Resistor_SMD:R_0402_1005Metric;~
 R29,R31;2;330k;DNP;;;Resistor_SMD:R_0402_1005Metric;~
 R32,R33;2;4k7;;;;Resistor_SMD:R_0402_1005Metric;~
 R34,R35;2;100k;DNP;;;Resistor_SMD:R_0402_1005Metric;~
-R41,R42;2;2k2;;;;Resistor_SMD:R_0402_1005Metric;~
-R43,R44;2;2k;;;;Resistor_SMD:R_0402_1005Metric;~
+R41,R42,R43,R44;4;2k2;;;;Resistor_SMD:R_0402_1005Metric;~
 R51,R53,R54,R55,R56,R57,R58;7;1k;;;;Resistor_SMD:R_0402_1005Metric;~
 S1;1;TPS22975DSGR;;;;SON50P200X200X80-9N;http://www.ti.com/lit/gpn/tps22975
 S2;1;TL3336AF160Q;;;;TL3336AF160Q;https://configured-product-images.s3.amazonaws.com/2D/specs/TL3336AF160Q.pdf

@@ -463,6 +463,56 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "10k for DRV8434"
+		(exclude_from_sim no)
+		(at 57.912 98.044 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "556ac9d5-7126-4983-b277-cb19c55b6244")
+	)
+	(text "10k for DRV8434"
+		(exclude_from_sim no)
+		(at 56.896 63.246 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "6e8407b7-33a4-47a9-b636-0989092c9f00")
+	)
+	(text "33k for DRV8434"
+		(exclude_from_sim no)
+		(at 58.42 160.528 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "9f676dee-f770-497d-a4c0-b62d4f755936")
+	)
+	(text "4k99 for DRV8434"
+		(exclude_from_sim no)
+		(at 58.42 170.942 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "ee1cc643-dd97-4830-a352-a6e88835219e")
+	)
+	(text "10k for DRV8434"
+		(exclude_from_sim no)
+		(at 58.166 133.858 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "ffefb9a1-6090-4e75-a4ec-e62bd992664f")
+	)
 	(junction
 		(at 68.58 165.1)
 		(diameter 0)
