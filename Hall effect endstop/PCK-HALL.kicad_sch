@@ -1584,7 +1584,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "TBD"
+		(property "Value" "11k"
 			(at 119.634 115.57 0)
 			(effects
 				(font
