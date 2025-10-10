@@ -35,6 +35,8 @@
 #include "wmm.h"
 #include "control_loop.h"
 #include "stdbool.h"
+#include "cmd_handler.h"
+#include "uart_it.h"
 
 
 /* USER CODE END Includes */
@@ -69,8 +71,6 @@ UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_uart4_rx;
-DMA_HandleTypeDef hdma_usart1_rx;
-DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN PV */
 
@@ -158,6 +158,7 @@ int main(void)
   Mag_Init(&hi2c3);
   MagCalib_t calib;
 
+/*
 #define CALIB_FROM_FLASH
 
 #ifdef CALIB_FROM_FLASH
@@ -170,6 +171,7 @@ int main(void)
   calib = CalibrateMagnetometer(&AZ_Axis_motor, 1.0f, 7.5f);
   SaveCalibrationToFlash(&calib);
 #endif
+*/
 
   /* USER CODE END 2 */
 
@@ -218,6 +220,8 @@ int main(void)
 	  while(AZ_Axis_motor.busy){}
   }
 */
+  CMD_Handler_Init();
+  UART_IT_Init();
 
   //Stepper_Home(&EL_Axis_motor, 5.0f, EL_HOMING_DIR);
 
@@ -228,6 +232,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 	Control_loop();
+	CMD_Handler_Process();
 	  /*
 	GPS_Data = Get_GPS_Data();
 	HAL_Delay(500);
@@ -839,16 +844,9 @@ static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
   __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Channel4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
-  /* DMA1_Channel5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
   /* DMA2_Channel5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Channel5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Channel5_IRQn);
@@ -884,7 +882,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, STEP_SLEEP_n_Pin|EL_EN_Pin|EL_DIR_Pin|EL_STEP_Pin
-                          |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin, GPIO_PIN_RESET);
+                          |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
+                          |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PWR_BTN_LED_Pin DEC_EN_Pin DEC_DIR_Pin LED2_Pin
                            LED1_Pin */
@@ -895,17 +894,29 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PWR_BTN_Pin */
-  GPIO_InitStruct.Pin = PWR_BTN_Pin;
+  /*Configure GPIO pins : PWR_BTN_Pin AZ_FAULT_n_Pin DEC_FAULT_n_Pin */
+  GPIO_InitStruct.Pin = PWR_BTN_Pin|AZ_FAULT_n_Pin|DEC_FAULT_n_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(PWR_BTN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : EL_STOP_Pin */
-  GPIO_InitStruct.Pin = EL_STOP_Pin;
+  /*Configure GPIO pin : AZ_LIM_Pin */
+  GPIO_InitStruct.Pin = AZ_LIM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(EL_STOP_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(AZ_LIM_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : VIN_ADC_Pin */
+  GPIO_InitStruct.Pin = VIN_ADC_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(VIN_ADC_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : EL_LIM_Pin DEC_LIM_Pin RA_LIM_Pin */
+  GPIO_InitStruct.Pin = EL_LIM_Pin|DEC_LIM_Pin|RA_LIM_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : AZ_EN_Pin AZ_DIR_Pin AZ_STEP_Pin LED4_Pin
                            LED3_Pin */
@@ -917,12 +928,20 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : STEP_SLEEP_n_Pin EL_EN_Pin EL_DIR_Pin EL_STEP_Pin
-                           RA_EN_Pin RA_DIR_Pin LED_USB_Pin LED_DC_Pin */
+                           RA_EN_Pin RA_DIR_Pin LED_USB_Pin LED_DC_Pin
+                           CAM_SHUTTER_Pin CAM_FOCUS_Pin RPI_PWR_EN_Pin */
   GPIO_InitStruct.Pin = STEP_SLEEP_n_Pin|EL_EN_Pin|EL_DIR_Pin|EL_STEP_Pin
-                          |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin;
+                          |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
+                          |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : EL_FAULT_n_Pin RA_FAULT_n_Pin */
+  GPIO_InitStruct.Pin = EL_FAULT_n_Pin|RA_FAULT_n_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PWR_STATE_Pin */

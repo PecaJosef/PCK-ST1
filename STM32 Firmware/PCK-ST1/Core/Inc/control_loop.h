@@ -18,12 +18,12 @@
 
 typedef enum {
 	LOW_POWER_IDLE, //Waiting for button press to power up, initial state
-	WARMING_UP, //Powering up RPi, waiting for "OK" from RPi, waiting for GPS fix, calculating magnetic declination
 	HOMING, //Axis homing
+	WARMING_UP, //Powering up RPi, waiting for "OK" from RPi, waiting for GPS fix, calculating magnetic declination
 	ALIGNING, //Pointing to NCP, communication with RPi - taking photo
+	IDLE, //Not moving, waiting for action (commands), can be powered off while in idle
 	AXIS_MOVING, //Moving with any axis - GOTO
 	GUIDING, //Moving RA axis to counter Earth's rotation
-	IDLE, //Not moving, waiting for action (commands), can be powered off while in idle
 	FAULT, //Error state - waiting for reset
 }ControlState_t;
 

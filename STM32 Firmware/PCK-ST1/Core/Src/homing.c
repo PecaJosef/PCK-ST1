@@ -14,7 +14,7 @@ void handleHoming()
 
 	    if (!homed) {
 	        // Kick off homing for all axes
-	        Axis_Home_Start(&EL_Axis_motor, 10.0f, 2.5f);
+	        Axis_Home_Start(&EL_Axis_motor, 10.0f, 5.0f);
 	        //Axis_Home_Start(&AZ_Axis_motor, 200.0f, 50.0f);
 	        //Axis_Home_Start(&RA_Axis_motor, 200.0f, 50.0f);
 	        //Axis_Home_Start(&DEC_Axis_motor, 200.0f, 50.0f);
@@ -23,16 +23,16 @@ void handleHoming()
 	    }
 
     // Update all axes in parallel
-    Axis_Homing_Update(&EL_Axis_motor, 10.0f, 2.5f);
-    Axis_Homing_Update(&AZ_Axis_motor, 10.0f, 2.5f);
-    Axis_Homing_Update(&RA_Axis_motor, 200.0f, 50.0f);
-    Axis_Homing_Update(&DEC_Axis_motor, 200.0f, 50.0f);
+    Axis_Homing_Update(&EL_Axis_motor, 10.0f, 5.0f);
+    Axis_Homing_Update(&AZ_Axis_motor, 10.0f, 5.0f);
+    Axis_Homing_Update(&RA_Axis_motor, 5.0f, 1.0f);
+    Axis_Homing_Update(&DEC_Axis_motor, 5.0f, 1.0f);
 
     // Check if all done
     if (!EL_Axis_motor.homing && !AZ_Axis_motor.homing && !RA_Axis_motor.homing && !DEC_Axis_motor.homing)
     {
     	homed = false;
-    	controlState = LOW_POWER_IDLE; // Or TRACKING etc.
+    	controlState = WARMING_UP;
     }
 }
 
@@ -42,6 +42,8 @@ void Axis_Home_Start(Stepper_motor *Axis, float coarseSpeed, float fineSpeed)
     if (!Axis->enabled) Stepper_Enable(Axis);
 
     Axis->homing = true;
+    __HAL_GPIO_EXTI_CLEAR_IT(Axis->ENDSTOP_Pin);
+    HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
 
     if (HAL_GPIO_ReadPin(Axis->ENDSTOP_Port, Axis->ENDSTOP_Pin) == GPIO_PIN_RESET)
     {
@@ -66,6 +68,9 @@ void Axis_Homing_Update(Stepper_motor *Axis, float coarseSpeed, float fineSpeed)
         {
         case AXIS_HOMING_BACKOFF:
             // Backoff done → now fine approach
+        	__HAL_GPIO_EXTI_CLEAR_IT(Axis->ENDSTOP_Pin);
+        	HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
+
             Axis->homing_state = AXIS_HOMING_FINE;
             Stepper_Move(Axis, 10.0f, fineSpeed, Axis->Homing_dir);
             break;

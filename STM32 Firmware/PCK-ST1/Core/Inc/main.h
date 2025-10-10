@@ -63,15 +63,25 @@ void Error_Handler(void);
 #define PWR_BTN_LED_GPIO_Port GPIOC
 #define PWR_BTN_Pin GPIO_PIN_14
 #define PWR_BTN_GPIO_Port GPIOC
-#define EL_STOP_Pin GPIO_PIN_2
-#define EL_STOP_GPIO_Port GPIOA
-#define EL_STOP_EXTI_IRQn EXTI2_IRQn
+#define AZ_LIM_Pin GPIO_PIN_15
+#define AZ_LIM_GPIO_Port GPIOC
+#define VIN_ADC_Pin GPIO_PIN_3
+#define VIN_ADC_GPIO_Port GPIOC
+#define EL_LIM_Pin GPIO_PIN_2
+#define EL_LIM_GPIO_Port GPIOA
+#define EL_LIM_EXTI_IRQn EXTI2_IRQn
+#define DEC_LIM_Pin GPIO_PIN_3
+#define DEC_LIM_GPIO_Port GPIOA
+#define RA_LIM_Pin GPIO_PIN_4
+#define RA_LIM_GPIO_Port GPIOA
 #define AZ_EN_Pin GPIO_PIN_5
 #define AZ_EN_GPIO_Port GPIOA
 #define AZ_DIR_Pin GPIO_PIN_6
 #define AZ_DIR_GPIO_Port GPIOA
 #define AZ_STEP_Pin GPIO_PIN_7
 #define AZ_STEP_GPIO_Port GPIOA
+#define AZ_FAULT_n_Pin GPIO_PIN_4
+#define AZ_FAULT_n_GPIO_Port GPIOC
 #define STEP_SLEEP_n_Pin GPIO_PIN_0
 #define STEP_SLEEP_n_GPIO_Port GPIOB
 #define EL_EN_Pin GPIO_PIN_1
@@ -80,18 +90,24 @@ void Error_Handler(void);
 #define EL_DIR_GPIO_Port GPIOB
 #define EL_STEP_Pin GPIO_PIN_10
 #define EL_STEP_GPIO_Port GPIOB
+#define EL_FAULT_n_Pin GPIO_PIN_11
+#define EL_FAULT_n_GPIO_Port GPIOB
 #define RA_EN_Pin GPIO_PIN_12
 #define RA_EN_GPIO_Port GPIOB
 #define RA_DIR_Pin GPIO_PIN_13
 #define RA_DIR_GPIO_Port GPIOB
 #define RA_STEP_Pin GPIO_PIN_14
 #define RA_STEP_GPIO_Port GPIOB
+#define RA_FAULT_n_Pin GPIO_PIN_15
+#define RA_FAULT_n_GPIO_Port GPIOB
 #define DEC_EN_Pin GPIO_PIN_6
 #define DEC_EN_GPIO_Port GPIOC
 #define DEC_DIR_Pin GPIO_PIN_7
 #define DEC_DIR_GPIO_Port GPIOC
 #define DEC_STEP_Pin GPIO_PIN_8
 #define DEC_STEP_GPIO_Port GPIOC
+#define DEC_FAULT_n_Pin GPIO_PIN_9
+#define DEC_FAULT_n_GPIO_Port GPIOC
 #define LED4_Pin GPIO_PIN_14
 #define LED4_GPIO_Port GPIOA
 #define LED3_Pin GPIO_PIN_15
@@ -106,6 +122,12 @@ void Error_Handler(void);
 #define LED_USB_GPIO_Port GPIOB
 #define LED_DC_Pin GPIO_PIN_5
 #define LED_DC_GPIO_Port GPIOB
+#define CAM_SHUTTER_Pin GPIO_PIN_6
+#define CAM_SHUTTER_GPIO_Port GPIOB
+#define CAM_FOCUS_Pin GPIO_PIN_7
+#define CAM_FOCUS_GPIO_Port GPIOB
+#define RPI_PWR_EN_Pin GPIO_PIN_8
+#define RPI_PWR_EN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

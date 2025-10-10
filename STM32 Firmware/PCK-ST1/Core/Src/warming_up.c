@@ -17,7 +17,7 @@ typedef enum {
 static bool gpsConfigured = false;
 static uint32_t gpsLastCheck = 0;
 static GPS_Data_t GPS_Data;
-static Warm_up_state_t WarmUpState = WAITING_FOR_GPS_FIX;
+static Warm_up_state_t WarmUpState = WAITING_FOR_BUTTON_PRESS;//WAITING_FOR_GPS_FIX;
 
 void handleWarmingUp()
 {
@@ -68,7 +68,7 @@ void handleWarmingUp()
 		case WAITING_FOR_BUTTON_RELEASE:
 			if (btn == RELEASED) // released
 			{
-				controlState = HOMING;
+				controlState = LOW_POWER_IDLE;
 			}
 			break;
 	}

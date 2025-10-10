@@ -72,6 +72,7 @@ typedef struct {
 	uint16_t DIR_Pin;
 	GPIO_TypeDef *ENDSTOP_Port;
 	uint16_t ENDSTOP_Pin;
+	IRQn_Type EXTI_IRQn;
 	const float Steps_per_deg;
 	bool enabled;
 	bool busy;

@@ -15,8 +15,9 @@ Stepper_motor EL_Axis_motor = {
 	.EN_Pin = EL_EN_Pin,
 	.DIR_Port = EL_DIR_GPIO_Port,
 	.DIR_Pin = EL_DIR_Pin,
-	.ENDSTOP_Port = EL_STOP_GPIO_Port,
-	.ENDSTOP_Pin = EL_STOP_Pin,
+	.ENDSTOP_Port = EL_LIM_GPIO_Port,
+	.ENDSTOP_Pin = EL_LIM_Pin,
+	.EXTI_IRQn = EXTI2_IRQn,
 	.Steps_per_deg = EL_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
@@ -41,6 +42,7 @@ Stepper_motor AZ_Axis_motor = {
 	.DIR_Pin = AZ_DIR_Pin,
 	//.ENDSTOP_Port = ,
 	//.ENDSTOP_Pin = ,
+	//.EXTI_IRQn = ,
 	.Steps_per_deg = AZ_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
@@ -65,6 +67,7 @@ Stepper_motor RA_Axis_motor = {
 	.DIR_Pin = RA_DIR_Pin,
 	//.ENDSTOP_Port = ,
 	//.ENDSTOP_Pin = ,
+	//.EXTI_IRQn = ,
 	.Steps_per_deg = RA_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
@@ -91,6 +94,7 @@ Stepper_motor DEC_Axis_motor = {
 	.DIR_Pin = DEC_DIR_Pin,
 	//.ENDSTOP_Port = ,
 	//.ENDSTOP_Pin = ,
+	//.EXTI_IRQn = ,
 	.Steps_per_deg = DEC_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
@@ -255,6 +259,7 @@ void Stepper_Stop(Stepper_motor *Axis)
 	}
 	else if (!Axis->High_precision)
 	{
+		printf("S\r\n");
 		Axis->Steps_remaining = 0;
 	}
 
