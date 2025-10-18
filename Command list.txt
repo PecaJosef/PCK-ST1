@@ -1,0 +1,21 @@
+$HOME	:ALL
+	:AZ - unused
+	:EL
+	:DEC
+	:RA
+	
+$MOVE	:AZ	:ANGLE	:SPEED
+	:EL	:ANGLE	:SPEED
+	:DEC	:ANGLE	:SPEED
+	:RA	:ANGLE	:SPEED
+
+$RPI	:ON
+	:OFF
+	:PIC
+	:ECHO
+
+$GET	:INFO
+	:STATE
+	:POS
+	:
+	
