@@ -31,4 +31,10 @@ void CMD_Handler_Process(void);
 
 void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte);
 
+void CMD_Send(UART_Source_t src, const char *msg);
+
+void rpiStart();
+
+void rpiShutdown();
+
 #endif /* INC_CMD_HANDLER_H_ */

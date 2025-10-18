@@ -165,7 +165,9 @@ void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Spe
 		{
 			Stepper_Enable(Axis);
 		}
+		//Set direction
 		HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, dir);
+
 		if (!Axis->High_precision)
 		{
 			//Steps calculation
@@ -180,7 +182,7 @@ void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Spe
 			uint32_t arr = (uint32_t)(STEPPER_TIMER_HI_FREQ / (speed*Axis->Steps_per_deg));
 			uint32_t ccr = arr / 2;
 
-			// Set PWM (STEP) timer frequency
+			//Set PWM (STEP) timer frequency
 			__HAL_TIM_SET_AUTORELOAD(Axis->PWM_Timer, arr-1);
 			__HAL_TIM_SET_COMPARE(Axis->PWM_Timer, Axis->PWM_Channel, ccr);
 
@@ -201,7 +203,7 @@ void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Spe
 				HAL_TIMEx_PWMN_Start(Axis->PWM_Timer, Axis->PWM_Channel);
 			}
 		}
-		//Set direction
+		//Set flags
 		Axis->enabled = true;
 		Axis->busy = true;
 	}

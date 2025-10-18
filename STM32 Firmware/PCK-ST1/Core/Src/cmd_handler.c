@@ -24,8 +24,6 @@ static uint8_t rpi_cmd_ready = 0;
 
 static void CMD_Execute(uint8_t *cmd, UART_Source_t src);
 
-static void CMD_SendResponse(UART_Source_t src, const char *msg);
-
 void CMD_Handler_Process(void)
 {
     if (pc_cmd_ready) {
@@ -76,26 +74,40 @@ static void CMD_Execute(uint8_t *cmd, UART_Source_t src)
     if (strncmp((char*)cmd, "ECHO", 4) == 0)
     {
         printf("here\r\n");
-    	CMD_SendResponse(src, "ECHO\r\n");
+    	CMD_Send(src, "ECHO\r\n");
     }
-    else if (strncmp((char*)cmd, "START_TRACK", 11) == 0)
+    else if (strncmp((char*)cmd, "$RPI:ON", 7) == 0)
     {
-        CMD_SendResponse(src, "TRACKING_STARTED\n");
+    	rpiStart();
+    	CMD_Send(src, "RPI Started\r\n");
     }
-    else if (strncmp((char*)cmd, "STOP", 4) == 0)
+    else if (strncmp((char*)cmd, "$RPI:OFF", 8) == 0)
     {
-        CMD_SendResponse(src, "STOPPED\n");
+    	//CMD_Send(UART_SRC_RPI, "$RPI:OFF\r\n");
+    	rpiShutdown();
+    	CMD_Send(src, "RPI Shutdown\r\n");
     }
     else
     {
-        CMD_SendResponse(src, "ERR:UNKNOWN_CMD\n");
+        CMD_Send(src, "ERR:UNKNOWN_CMD\r\n");
     }
 }
 
-static void CMD_SendResponse(UART_Source_t src, const char *msg)
+void CMD_Send(UART_Source_t src, const char *msg)
 {
     if (src == UART_SRC_PC)
         HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
     else
         HAL_UART_Transmit(&huart5, (uint8_t*)msg, strlen(msg), 100);
 }
+
+void rpiShutdown()
+{
+	HAL_GPIO_WritePin(RPI_PWR_EN_GPIO_Port, RPI_PWR_EN_Pin, 0);
+}
+
+void rpiStart()
+{
+	HAL_GPIO_WritePin(RPI_PWR_EN_GPIO_Port, RPI_PWR_EN_Pin, 1);
+}
+

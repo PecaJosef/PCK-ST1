@@ -110,7 +110,6 @@ void handleLowPowerIdle() {
 		case BTN_SEQ_DONE:
 			controlState = HOMING;
 			btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS; // reset for next time
-			//HAL_GPIO_WritePin(RPI_PWR_EN_GPIO_Port, RPI_PWR_EN_Pin, 1);
 			break;
 	}
 }
