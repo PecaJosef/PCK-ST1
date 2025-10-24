@@ -22,16 +22,16 @@ static uint16_t rpi_index = 0;
 static uint8_t pc_cmd_ready = 0;
 static uint8_t rpi_cmd_ready = 0;
 
-static void CMD_Execute(uint8_t *cmd, UART_Source_t src);
+static void CMD_Execute(char *cmd, UART_Source_t src);
 
 void CMD_Handler_Process(void)
 {
     if (pc_cmd_ready) {
-        CMD_Execute(pc_buffer, UART_SRC_PC);
+        CMD_Execute((char *)pc_buffer, UART_SRC_PC);
         pc_cmd_ready = 0;
     }
     if (rpi_cmd_ready) {
-        CMD_Execute(rpi_buffer, UART_SRC_RPI);
+        CMD_Execute((char *)rpi_buffer, UART_SRC_RPI);
         rpi_cmd_ready = 0;
     }
 }
@@ -69,8 +69,30 @@ void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte)
     }
 }
 
-static void CMD_Execute(uint8_t *cmd, UART_Source_t src)
+static void CMD_Execute(char *cmd, UART_Source_t src)
 {
+	char *token;
+	char *saveptr;
+
+	token = strtok_r(cmd, ":", &saveptr);
+	if (!token) return;
+
+	if (strcmp(token, "$ECHO")==0)
+	{
+		CMD_Send(src, "ECHO\r\n");
+	}
+	else if (strcmp(token, "RPI")==0)
+	{
+		//Jump to RPI command sub processing
+	}
+	else
+	{
+		CMD_Send(src, "ERR:Unknown command\r\n");
+	}
+
+
+/*
+//Out of date code - may be useful later
     if (strncmp((char*)cmd, "ECHO", 4) == 0)
     {
         printf("here\r\n");
@@ -91,6 +113,7 @@ static void CMD_Execute(uint8_t *cmd, UART_Source_t src)
     {
         CMD_Send(src, "ERR:UNKNOWN_CMD\r\n");
     }
+*/
 }
 
 void CMD_Send(UART_Source_t src, const char *msg)

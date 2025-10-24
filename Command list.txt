@@ -17,5 +17,4 @@ $RPI	:ON
 $GET	:INFO
 	:STATE
 	:POS
-	:
 	
