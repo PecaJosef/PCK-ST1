@@ -53,7 +53,7 @@
 typedef enum {
     PWM_OUT_P,
     PWM_OUT_N
-} PWM_OutputType;
+} PWM_OutputType_t;
 
 typedef enum {
     AXIS_HOMING_IDLE,
@@ -61,7 +61,7 @@ typedef enum {
     AXIS_HOMING_BACKOFF,
     AXIS_HOMING_FINE,
     AXIS_HOMING_DONE
-} AxisHomingState;
+} AxisHomingState_t;
 
 typedef struct {
 	GPIO_TypeDef *STEP_Port;
@@ -79,27 +79,27 @@ typedef struct {
 	bool High_precision;
 	bool homing;
 	bool Homing_dir;
-	AxisHomingState homing_state;
+	AxisHomingState_t homing_state;
 	float Position;
+	uint32_t Steps_remaining; //Number of steps to make
 
 	//Low precision stepper motors
-	uint32_t Steps_remaining; //Number of steps
-	uint32_t Step_interval_ticks;
-	uint32_t Tick_counter;
+	uint32_t Step_interval_ticks; //Number of interrupt ticks between each step
+	uint32_t Tick_counter;	//Interrupt ticks counter
 
 	//High precision stepper motors
 	TIM_HandleTypeDef *PWM_Timer; //PWM (STEP) signal timer
 	uint32_t PWM_Channel; //PWM (STEP) signal channel
 	TIM_HandleTypeDef *Step_Counter_Timer; //Timer for counting steps
-	PWM_OutputType PWM_Type; //PWM Channel polarity
+	PWM_OutputType_t PWM_Type; //PWM Channel polarity
 
-}Stepper_motor;
+}StepperMotor_t;
 
 
-extern Stepper_motor EL_Axis_motor;
-extern Stepper_motor AZ_Axis_motor;
-extern Stepper_motor RA_Axis_motor;
-extern Stepper_motor DEC_Axis_motor;
+extern StepperMotor_t EL_Axis_motor;
+extern StepperMotor_t AZ_Axis_motor;
+extern StepperMotor_t RA_Axis_motor;
+extern StepperMotor_t DEC_Axis_motor;
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
@@ -113,18 +113,18 @@ void Stepper_IT_Enable();
 
 void Stepper_IT_Disable();
 
-void Stepper_Enable(Stepper_motor *Axis);
+void Stepper_Enable(StepperMotor_t *Axis);
 
-void Stepper_Disable(Stepper_motor *Axis);
+void Stepper_Disable(StepperMotor_t *Axis);
 
-void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool direction);
+void Stepper_Move(StepperMotor_t *Axis, float angle, float speed, bool direction);
 
-void Stepper_Home(Stepper_motor *Axis, float speed, bool direction);
+void Stepper_Home(StepperMotor_t *Axis, float speed, bool direction);
 
 void Stepper_nSleep(bool n_sleep);
 
-void STEP_Generating(Stepper_motor *Axis);
+void STEP_Generating(StepperMotor_t *Axis);
 
-void Stepper_Stop(Stepper_motor *Axis);
+void Stepper_Stop(StepperMotor_t *Axis);
 
 #endif /* INC_STEPPER_H_ */

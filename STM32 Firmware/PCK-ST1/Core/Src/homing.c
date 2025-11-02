@@ -32,11 +32,12 @@ void handleHoming()
     if (!EL_Axis_motor.homing && !AZ_Axis_motor.homing && !RA_Axis_motor.homing && !DEC_Axis_motor.homing)
     {
     	homed = false;
+    	Stepper_Disable(&EL_Axis_motor);
     	controlState = WARMING_UP;
     }
 }
 
-void Axis_Home_Start(Stepper_motor *Axis, float coarseSpeed, float fineSpeed)
+void Axis_Home_Start(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
 {
     if (!Axis) return;
     if (!Axis->enabled) Stepper_Enable(Axis);
@@ -59,7 +60,7 @@ void Axis_Home_Start(Stepper_motor *Axis, float coarseSpeed, float fineSpeed)
     }
 }
 
-void Axis_Homing_Update(Stepper_motor *Axis, float coarseSpeed, float fineSpeed)
+void Axis_Homing_Update(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
 {
     if (!Axis->homing) return;
 
@@ -88,7 +89,7 @@ void Axis_Homing_Update(Stepper_motor *Axis, float coarseSpeed, float fineSpeed)
     }
 }
 
-void Endstop_Reached(Stepper_motor *Axis)
+void Endstop_Reached(StepperMotor_t *Axis)
 {
 	Stepper_Stop(Axis);
 

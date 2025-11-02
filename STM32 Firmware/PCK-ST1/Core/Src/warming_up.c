@@ -54,9 +54,6 @@ void handleWarmingUp()
 				E0000(GPS_Data.latitude, GPS_Data.longitude, wmm_date, &declination);
 				// Move on to next state
 
-
-				//Button LED should start blinking and the control loop should wait for button press to jump to the homing state
-				WarmUpState = WAITING_FOR_BUTTON_PRESS;
 			}
 			break;
 		case WAITING_FOR_BUTTON_PRESS:

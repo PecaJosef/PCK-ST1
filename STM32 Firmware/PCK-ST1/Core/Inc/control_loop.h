@@ -32,10 +32,31 @@ typedef struct {
 	float declination;
 }Align_t;
 
+typedef struct {
+	bool rpiStarting;
+	bool rpiRunning;
+}Status_t;
+
+typedef struct{
+	StepperMotor_t *Axis;
+	float angle;
+	float speed;
+	bool moveRequested;
+}MoveRequest_t;
+
+
 extern ControlState_t controlState;
+extern ControlState_t prevControlState;
 
 extern Align_t Align_data;
 
+extern MoveRequest_t AZ_MoveRequest;
+extern MoveRequest_t EL_MoveRequest;
+extern MoveRequest_t DEC_MoveRequest;
+extern MoveRequest_t RA_MoveRequest;
+
 void Control_loop();
+
+void handleMoving();
 
 #endif /* INC_CONTROL_LOOP_H_ */

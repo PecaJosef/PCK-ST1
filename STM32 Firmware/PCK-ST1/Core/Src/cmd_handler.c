@@ -24,6 +24,10 @@ static uint8_t rpi_cmd_ready = 0;
 
 static void CMD_Execute(char *cmd, UART_Source_t src);
 
+static void moveParsing(char **saveptr, UART_Source_t src);
+
+static void rpiParsing(char **saveptr, UART_Source_t src);
+
 void CMD_Handler_Process(void)
 {
     if (pc_cmd_ready) {
@@ -59,13 +63,17 @@ void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte)
 
     if (*ready) return; // previous command not yet processed
 
-    buf[(*idx)++] = byte;
+    buf[*idx] = byte;
 
-    if (byte == '\n' || byte == '\r' || *idx >= CMD_BUFFER_SIZE)
+    if (byte == '\r' || byte == '\n' || *idx >= CMD_BUFFER_SIZE)
     {
         buf[*idx] = '\0';
         *ready = 1;
         *idx = 0;
+    }
+    else
+    {
+    	(*idx)++;
     }
 }
 
@@ -81,39 +89,157 @@ static void CMD_Execute(char *cmd, UART_Source_t src)
 	{
 		CMD_Send(src, "ECHO\r\n");
 	}
-	else if (strcmp(token, "RPI")==0)
+	else if(strcmp(token, "$MOVE")==0)
+	{
+		moveParsing(&saveptr, src);
+	}
+
+
+	else if(strcmp(token, "ECHO")==0 && src == UART_SRC_RPI)
+	{
+		CMD_Send(UART_SRC_PC, "#RPI:ECHO\r\n"); //sends response from RPi (ECHO) to PC
+	}
+	else if (strcmp(token, "$RPI")==0)
 	{
 		//Jump to RPI command sub processing
+		rpiParsing(&saveptr, src);
 	}
 	else
 	{
 		CMD_Send(src, "ERR:Unknown command\r\n");
+
+		//For debugging only - comment out for normal use
+		#define CMD_DEBUG
+
+		#ifdef CMD_DEBUG
+		for(uint8_t i=0;i<10;i++)
+		{
+			printf("%d -> %d\r\n",i,*(token+i));
+			HAL_Delay(100);
+			if(*(token+i)=='\0')
+			{
+				break;
+			}
+		}
+		#endif
 	}
 
+}
 
-/*
-//Out of date code - may be useful later
-    if (strncmp((char*)cmd, "ECHO", 4) == 0)
-    {
-        printf("here\r\n");
-    	CMD_Send(src, "ECHO\r\n");
-    }
-    else if (strncmp((char*)cmd, "$RPI:ON", 7) == 0)
-    {
-    	rpiStart();
-    	CMD_Send(src, "RPI Started\r\n");
-    }
-    else if (strncmp((char*)cmd, "$RPI:OFF", 8) == 0)
-    {
-    	//CMD_Send(UART_SRC_RPI, "$RPI:OFF\r\n");
-    	rpiShutdown();
-    	CMD_Send(src, "RPI Shutdown\r\n");
-    }
-    else
-    {
-        CMD_Send(src, "ERR:UNKNOWN_CMD\r\n");
-    }
-*/
+
+static void moveParsing(char **saveptr, UART_Source_t src)
+{
+	char *command;
+	char *saveptr_cmd;
+
+	command  = strtok_r(NULL, "$",saveptr);
+
+	while(command != NULL)
+	{
+
+		char *axis = strtok_r(command, ":", &saveptr_cmd);
+		char *angle = strtok_r(NULL, ":",&saveptr_cmd);
+		char *speed = strtok_r(NULL, ":",&saveptr_cmd);
+
+		if(axis == NULL || angle == NULL || speed == NULL)
+		{
+			CMD_Send(src, "#ERR:Wrong format\r\n");
+			return;
+		}
+
+		if(strcmp(axis, "AZ")==0)
+		{
+			if(AZ_MoveRequest.moveRequested==false)
+			{
+				AZ_MoveRequest.angle = atof(angle);
+				AZ_MoveRequest.speed = atof(speed);
+				//CMD_Send(UART_SRC_PC, "AZ\r\n");
+				//printf("Move AZ angle:%.5f speed:%.5f\r\n",AZ_MoveRequest.angle, AZ_MoveRequest.speed);
+				AZ_MoveRequest.moveRequested = true;
+			}
+			else
+			{
+				CMD_Send(src, "ERR:Axis busy\r\n");
+			}
+		}
+		else if(strcmp(axis, "EL")==0)
+		{
+			if(EL_MoveRequest.moveRequested==false)
+			{
+				EL_MoveRequest.angle = atof(angle);
+				EL_MoveRequest.speed = atof(speed);
+				//CMD_Send(UART_SRC_PC, "EL\r\n");
+				//printf("Move EL angle:%.5f speed:%.5f\r\n",EL_MoveRequest.angle, EL_MoveRequest.speed);
+				EL_MoveRequest.moveRequested = true;
+			}
+			else
+			{
+				CMD_Send(src, "ERR:Axis busy\r\n");
+			}
+		}
+		else if(strcmp(axis, "DEC")==0)
+		{
+			if(DEC_MoveRequest.moveRequested==false)
+			{
+				DEC_MoveRequest.angle = atof(angle);
+				DEC_MoveRequest.speed = atof(speed);
+				DEC_MoveRequest.moveRequested = true;
+			}
+			else
+			{
+				CMD_Send(src, "ERR:Axis busy\r\n");
+			}
+		}
+		else if(strcmp(axis, "RA")==0)
+		{
+			if(RA_MoveRequest.moveRequested==false)
+			{
+				RA_MoveRequest.angle = atof(angle);
+				RA_MoveRequest.speed = atof(speed);
+				RA_MoveRequest.moveRequested = true;
+			}
+			else
+			{
+				CMD_Send(src, "ERR:Axis busy\r\n");
+			}
+		}
+		else
+		{
+			//Wrong Axis name -> Error
+			CMD_Send(src, "#ERR:Wrong axis name\r\n");
+
+			return;
+		}
+		command  = strtok_r(NULL, "$",saveptr);
+	}
+		//Changes state to MOVE and prevState to current state
+	if(controlState != AXIS_MOVING)
+	{
+		prevControlState = controlState; //Keep the previous control state intact if there are multiple $MOVE commands while in AXIS_MOVING state
+		controlState = AXIS_MOVING;
+	}
+}
+
+
+static void rpiParsing(char **saveptr, UART_Source_t src)
+{
+	char *command;
+
+	command = strtok_r(NULL,":",saveptr); //Gets the RPI command name
+	if(strcmp(command, "ECHO")==0)
+	{
+		CMD_Send(UART_SRC_RPI, "$ECHO\r\n");
+		CMD_Send(UART_SRC_PC, "Sent ECHO to RPi\r\n");
+	}
+	else if(strcmp(command, "SHUTDOWN")==0)
+	{
+		rpiShutdown();
+	}
+	else if(strcmp(command, "START")==0)
+	{
+		rpiPowerOn();
+	}
+
 }
 
 void CMD_Send(UART_Source_t src, const char *msg)
@@ -126,11 +252,16 @@ void CMD_Send(UART_Source_t src, const char *msg)
 
 void rpiShutdown()
 {
-	HAL_GPIO_WritePin(RPI_PWR_EN_GPIO_Port, RPI_PWR_EN_Pin, 0);
+	CMD_Send(UART_SRC_RPI, "$SHUTDOWN");
 }
 
-void rpiStart()
+void rpiPowerOn()
 {
 	HAL_GPIO_WritePin(RPI_PWR_EN_GPIO_Port, RPI_PWR_EN_Pin, 1);
+}
+
+void rpiPowerOff()
+{
+	HAL_GPIO_WritePin(RPI_PWR_EN_GPIO_Port, RPI_PWR_EN_Pin, 0);
 }
 

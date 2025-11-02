@@ -8,7 +8,7 @@
 #include "usbd_cdc_if.h"
 
 
-Stepper_motor EL_Axis_motor = {
+StepperMotor_t EL_Axis_motor = {
 	.STEP_Port = EL_STEP_GPIO_Port,
 	.STEP_Pin = EL_STEP_Pin,
 	.EN_Port = EL_EN_GPIO_Port,
@@ -33,7 +33,7 @@ Stepper_motor EL_Axis_motor = {
 	.Tick_counter = 0,
 };
 
-Stepper_motor AZ_Axis_motor = {
+StepperMotor_t AZ_Axis_motor = {
 	.STEP_Port = AZ_STEP_GPIO_Port,
 	.STEP_Pin = AZ_STEP_Pin,
 	.EN_Port = AZ_EN_GPIO_Port,
@@ -58,7 +58,7 @@ Stepper_motor AZ_Axis_motor = {
 	.Tick_counter = 0,
 };
 
-Stepper_motor RA_Axis_motor = {
+StepperMotor_t RA_Axis_motor = {
 	.STEP_Port = RA_STEP_GPIO_Port,
 	.STEP_Pin = RA_STEP_Pin,
 	.EN_Port = RA_EN_GPIO_Port,
@@ -85,7 +85,7 @@ Stepper_motor RA_Axis_motor = {
 
 };
 
-Stepper_motor DEC_Axis_motor = {
+StepperMotor_t DEC_Axis_motor = {
 	.STEP_Port = DEC_STEP_GPIO_Port,
 	.STEP_Pin = DEC_STEP_Pin,
 	.EN_Port = DEC_EN_GPIO_Port,
@@ -135,7 +135,7 @@ void Stepper_IT_Disable()
 	HAL_TIM_Base_Stop_IT(&htim3);
 }
 
-void Stepper_Enable(Stepper_motor *Axis)
+void Stepper_Enable(StepperMotor_t *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_SET);
 	if(!Axis->High_precision)
@@ -145,7 +145,7 @@ void Stepper_Enable(Stepper_motor *Axis)
 	Axis->enabled = true;
 }
 
-void Stepper_Disable(Stepper_motor *Axis)
+void Stepper_Disable(StepperMotor_t *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_RESET);
 	if(!Axis->High_precision)
@@ -155,7 +155,7 @@ void Stepper_Disable(Stepper_motor *Axis)
 	Axis->enabled = false;
 }
 
-void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Speed is in deg/s
+void Stepper_Move(StepperMotor_t *Axis, float angle, float speed, bool dir) //Speed is in deg/s
 {
 	if (!Axis || speed <= 0.0f || angle <= 0.0f)
 	        return;
@@ -211,7 +211,7 @@ void Stepper_Move(Stepper_motor *Axis, float angle, float speed, bool dir) //Spe
 
 }
 
-void Stepper_Home(Stepper_motor *Axis, float speed, bool dir)
+void Stepper_Home(StepperMotor_t *Axis, float speed, bool dir)
 {
 	if (!Axis || speed <= 0.0f)
 		        return;
@@ -242,7 +242,7 @@ void Stepper_Home(Stepper_motor *Axis, float speed, bool dir)
 		}
 }
 
-void Stepper_Stop(Stepper_motor *Axis)
+void Stepper_Stop(StepperMotor_t *Axis)
 {
 
 	if (Axis->High_precision)
@@ -269,7 +269,7 @@ void Stepper_Stop(Stepper_motor *Axis)
 
 }
 
-void STEP_Generating(Stepper_motor *Axis)
+void STEP_Generating(StepperMotor_t *Axis)
 {
 	if (Axis->Steps_remaining == 0)
 	        {

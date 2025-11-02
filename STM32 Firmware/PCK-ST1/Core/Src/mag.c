@@ -165,7 +165,7 @@ static void eigen2x2(float a, float b, float c, float *l1, float *l2,
     float n2 = sqrtf((*vx2)*(*vx2) + (*vy2)*(*vy2)); if (n2 > 0) { *vx2 /= n2; *vy2 /= n2; }
 }
 
-MagCalib_t CalibrateMagnetometer(Stepper_motor *AZ_motor, float step_deg, float speed)
+MagCalib_t CalibrateMagnetometer(StepperMotor_t *AZ_motor, float step_deg, float speed)
 {
     const uint16_t N = (uint16_t)(360.0f / step_deg);
     // Accumulators

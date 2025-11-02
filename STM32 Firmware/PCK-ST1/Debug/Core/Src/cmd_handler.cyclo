@@ -1,7 +1,10 @@
-../Core/Src/cmd_handler.c:27:6:CMD_Handler_Process	3
-../Core/Src/cmd_handler.c:39:6:CMD_Handler_Init	1
-../Core/Src/cmd_handler.c:45:6:CMD_UART_StoreByte	6
-../Core/Src/cmd_handler.c:72:13:CMD_Execute	4
-../Core/Src/cmd_handler.c:119:6:CMD_Send	2
-../Core/Src/cmd_handler.c:127:6:rpiShutdown	1
-../Core/Src/cmd_handler.c:132:6:rpiStart	1
+../Core/Src/cmd_handler.c:31:6:CMD_Handler_Process	3
+../Core/Src/cmd_handler.c:43:6:CMD_Handler_Init	1
+../Core/Src/cmd_handler.c:49:6:CMD_UART_StoreByte	6
+../Core/Src/cmd_handler.c:80:13:CMD_Execute	9
+../Core/Src/cmd_handler.c:130:13:moveParsing	14
+../Core/Src/cmd_handler.c:224:13:rpiParsing	4
+../Core/Src/cmd_handler.c:245:6:CMD_Send	2
+../Core/Src/cmd_handler.c:253:6:rpiShutdown	1
+../Core/Src/cmd_handler.c:258:6:rpiPowerOn	1
+../Core/Src/cmd_handler.c:263:6:rpiPowerOff	1

@@ -12,10 +12,10 @@
 
 void handleHoming();
 
-void Axis_Home_Start(Stepper_motor *Axis, float coarseSpeed, float fineSpeed);
+void Axis_Home_Start(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
 
-void Axis_Homing_Update(Stepper_motor *Axis, float coarseSpeed, float fineSpeed);
+void Axis_Homing_Update(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
 
-void Endstop_Reached(Stepper_motor *Axis);
+void Endstop_Reached(StepperMotor_t *Axis);
 
 #endif /* INC_HOMING_H_ */

@@ -58,7 +58,7 @@ HAL_StatusTypeDef Mag_ReadRaw(MagRawData_t *data);
 // Compute heading in degrees (0–360)
 float ReadMagHeading(void);
 
-MagCalib_t CalibrateMagnetometer(Stepper_motor *AZ_motor, float step_angle, float speed);
+MagCalib_t CalibrateMagnetometer(StepperMotor_t *AZ_motor, float step_angle, float speed);
 
 float GetCalibratedHeading(MagCalib_t *calib, float declination);
 
