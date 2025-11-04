@@ -21,12 +21,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   else if (htim->Instance == DEC_TIM)
   {
 	  //Stepper timer DEC
-	  Stepper_Stop(&DEC_Axis_motor);
+	  Stepper_Stop(&DEC_AxisMotor);
   }
   else if(htim->Instance == RA_TIM)
   {
 	  //Stepper timer RA
-	  Stepper_Stop(&RA_Axis_motor);
+	  Stepper_Stop(&RA_AxisMotor);
   }
 
 }

@@ -8,7 +8,7 @@
 #include "usbd_cdc_if.h"
 
 
-StepperMotor_t EL_Axis_motor = {
+StepperMotor_t EL_AxisMotor = {
 	.STEP_Port = EL_STEP_GPIO_Port,
 	.STEP_Pin = EL_STEP_Pin,
 	.EN_Port = EL_EN_GPIO_Port,
@@ -25,7 +25,7 @@ StepperMotor_t EL_Axis_motor = {
 	.High_precision = false,
 	.homing_state = AXIS_HOMING_IDLE,
 	.Position = -1,
-	.Homing_dir = EL_HOMING_DIR,
+	.Positive_dir = !EL_POS_DIR,
 
 	//Low precision stepper motors
 	.Steps_remaining = 0,
@@ -33,7 +33,7 @@ StepperMotor_t EL_Axis_motor = {
 	.Tick_counter = 0,
 };
 
-StepperMotor_t AZ_Axis_motor = {
+StepperMotor_t AZ_AxisMotor = {
 	.STEP_Port = AZ_STEP_GPIO_Port,
 	.STEP_Pin = AZ_STEP_Pin,
 	.EN_Port = AZ_EN_GPIO_Port,
@@ -50,7 +50,7 @@ StepperMotor_t AZ_Axis_motor = {
 	.High_precision = false,
 	.homing_state = AXIS_HOMING_IDLE,
 	.Position = -1,
-	.Homing_dir = AZ_HOMING_DIR,
+	.Positive_dir = !AZ_POS_DIR,
 
 	//Low precision stepper motors
 	.Steps_remaining = 0,
@@ -58,7 +58,7 @@ StepperMotor_t AZ_Axis_motor = {
 	.Tick_counter = 0,
 };
 
-StepperMotor_t RA_Axis_motor = {
+StepperMotor_t RA_AxisMotor = {
 	.STEP_Port = RA_STEP_GPIO_Port,
 	.STEP_Pin = RA_STEP_Pin,
 	.EN_Port = RA_EN_GPIO_Port,
@@ -75,7 +75,7 @@ StepperMotor_t RA_Axis_motor = {
 	.High_precision = true,
 	.homing_state = AXIS_HOMING_IDLE,
 	.Position = -1,
-	.Homing_dir = RA_HOMING_DIR,
+	.Positive_dir = !RA_POS_DIR,
 
 	//High precision stepper motors
 	.PWM_Timer = RA_PWM_TIM,
@@ -85,7 +85,7 @@ StepperMotor_t RA_Axis_motor = {
 
 };
 
-StepperMotor_t DEC_Axis_motor = {
+StepperMotor_t DEC_AxisMotor = {
 	.STEP_Port = DEC_STEP_GPIO_Port,
 	.STEP_Pin = DEC_STEP_Pin,
 	.EN_Port = DEC_EN_GPIO_Port,
@@ -102,7 +102,7 @@ StepperMotor_t DEC_Axis_motor = {
 	.High_precision = true,
 	.homing_state = AXIS_HOMING_IDLE,
 	.Position = -1,
-	.Homing_dir = DEC_HOMING_DIR,
+	.Positive_dir = !DEC_POS_DIR,
 
 	//High precision stepper motors
 	.PWM_Timer = DEC_PWM_TIM,
@@ -114,14 +114,14 @@ StepperMotor_t DEC_Axis_motor = {
 
 void Stepper_IT_Handeler()
 {
-    if (EL_Axis_motor.enabled)
+    if (EL_AxisMotor.enabled)
     {
-    	STEP_Generating(&EL_Axis_motor);
+    	STEP_Generating(&EL_AxisMotor);
     }
 
-    if (AZ_Axis_motor.enabled)
+    if (AZ_AxisMotor.enabled)
     {
-        STEP_Generating(&AZ_Axis_motor);
+        STEP_Generating(&AZ_AxisMotor);
     }
 }
 
@@ -155,7 +155,7 @@ void Stepper_Disable(StepperMotor_t *Axis)
 	Axis->enabled = false;
 }
 
-void Stepper_Move(StepperMotor_t *Axis, float angle, float speed, bool dir) //Speed is in deg/s
+void stepperMove(StepperMotor_t *Axis, float angle, float speed, bool dir) //Speed is in deg/s
 {
 	if (!Axis || speed <= 0.0f || angle <= 0.0f)
 	        return;

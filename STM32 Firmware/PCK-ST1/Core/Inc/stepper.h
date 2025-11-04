@@ -33,10 +33,11 @@
 #define DEC_STEP_PER_DEG ((STEPS_PER_REV*DEC_MICROSTEPPING*DEC_GEAR_RATIO)/(360))
 #define RA_STEP_PER_DEG ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/(360))
 
-#define AZ_HOMING_DIR 1
-#define EL_HOMING_DIR 1
-#define DEC_HOMING_DIR 1
-#define RA_HOMING_DIR 1
+//Positive direction is opposite to Homing direction -> while homing the stepper moves in negative direction towards endstop
+#define AZ_POS_DIR 1
+#define EL_POS_DIR 0
+#define DEC_POS_DIR 1
+#define RA_POS_DIR 1
 
 #define RA_TIM TIM2
 #define RA_PWM_TIM &htim1
@@ -78,7 +79,7 @@ typedef struct {
 	bool busy;
 	bool High_precision;
 	bool homing;
-	bool Homing_dir;
+	bool Positive_dir;
 	AxisHomingState_t homing_state;
 	float Position;
 	uint32_t Steps_remaining; //Number of steps to make
@@ -96,10 +97,10 @@ typedef struct {
 }StepperMotor_t;
 
 
-extern StepperMotor_t EL_Axis_motor;
-extern StepperMotor_t AZ_Axis_motor;
-extern StepperMotor_t RA_Axis_motor;
-extern StepperMotor_t DEC_Axis_motor;
+extern StepperMotor_t EL_AxisMotor;
+extern StepperMotor_t AZ_AxisMotor;
+extern StepperMotor_t RA_AxisMotor;
+extern StepperMotor_t DEC_AxisMotor;
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
@@ -117,7 +118,7 @@ void Stepper_Enable(StepperMotor_t *Axis);
 
 void Stepper_Disable(StepperMotor_t *Axis);
 
-void Stepper_Move(StepperMotor_t *Axis, float angle, float speed, bool direction);
+void stepperMove(StepperMotor_t *Axis, float angle, float speed, bool direction);
 
 void Stepper_Home(StepperMotor_t *Axis, float speed, bool direction);
 
