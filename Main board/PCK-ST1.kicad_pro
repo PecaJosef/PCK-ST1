@@ -132,7 +132,7 @@
         "min_microvia_drill": 0.1,
         "min_resolved_spokes": 1,
         "min_silk_clearance": 0.15,
-        "min_text_height": 0.7,
+        "min_text_height": 0.65,
         "min_text_thickness": 0.08,
         "min_through_hole_diameter": 0.3,
         "min_track_width": 0.1,
@@ -192,6 +192,7 @@
         0.25,
         0.3,
         0.4,
+        0.5,
         1.0
       ],
       "tuning_pattern_settings": {
@@ -692,20 +693,24 @@
       "Power"
     ],
     [
-      "a851105d-bdd0-4ec0-928c-46e611832447",
-      "DEC Stepper driver"
+      "7d83884c-ef67-44b1-a5da-ae0fea884f70",
+      "Power_Delivery"
+    ],
+    [
+      "ea7a1037-f500-40d5-a1ae-644aae4fb6eb",
+      "ALT Stepper driver"
+    ],
+    [
+      "10f9fbe8-3d19-4bd6-87eb-eb2b5f6a624c",
+      "AZ Stepper driver"
     ],
     [
       "c6e4b693-59b0-422d-b66d-8edf1a45a668",
       "RA Stepper driver"
     ],
     [
-      "ea7a1037-f500-40d5-a1ae-644aae4fb6eb",
-      "EL Stepper driver"
-    ],
-    [
-      "10f9fbe8-3d19-4bd6-87eb-eb2b5f6a624c",
-      "AZ Stepper driver"
+      "a851105d-bdd0-4ec0-928c-46e611832447",
+      "DEC Stepper driver"
     ]
   ],
   "text_variables": {}
