@@ -6,26 +6,27 @@
  */
 #include "stepper.h"
 #include "usbd_cdc_if.h"
+#include "math.h"
 
 
-StepperMotor_t EL_AxisMotor = {
-	.STEP_Port = EL_STEP_GPIO_Port,
-	.STEP_Pin = EL_STEP_Pin,
-	.EN_Port = EL_EN_GPIO_Port,
-	.EN_Pin = EL_EN_Pin,
-	.DIR_Port = EL_DIR_GPIO_Port,
-	.DIR_Pin = EL_DIR_Pin,
-	.ENDSTOP_Port = EL_LIM_GPIO_Port,
-	.ENDSTOP_Pin = EL_LIM_Pin,
+StepperMotor_t ALT_AxisMotor = {
+	.STEP_Port = ALT_STEP_GPIO_Port,
+	.STEP_Pin = ALT_STEP_Pin,
+	.EN_Port = ALT_EN_GPIO_Port,
+	.EN_Pin = ALT_EN_Pin,
+	.DIR_Port = ALT_DIR_GPIO_Port,
+	.DIR_Pin = ALT_DIR_Pin,
+	.ENDSTOP_Port = ALT_LIM_GPIO_Port,
+	.ENDSTOP_Pin = ALT_LIM_Pin,
 	.EXTI_IRQn = EXTI2_IRQn,
-	.Steps_per_deg = EL_STEP_PER_DEG,
+	.Steps_per_deg = ALT_STEP_PER_DEG,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
 	.High_precision = false,
 	.homing_state = AXIS_HOMING_IDLE,
 	.Position = -1,
-	.Positive_dir = !EL_POS_DIR,
+	.Positive_dir = !ALT_POS_DIR,
 
 	//Low precision stepper motors
 	.Steps_remaining = 0,
@@ -114,9 +115,9 @@ StepperMotor_t DEC_AxisMotor = {
 
 void Stepper_IT_Handeler()
 {
-    if (EL_AxisMotor.enabled)
+    if (ALT_AxisMotor.enabled)
     {
-    	STEP_Generating(&EL_AxisMotor);
+    	STEP_Generating(&ALT_AxisMotor);
     }
 
     if (AZ_AxisMotor.enabled)
@@ -135,7 +136,7 @@ void Stepper_IT_Disable()
 	HAL_TIM_Base_Stop_IT(&htim3);
 }
 
-void Stepper_Enable(StepperMotor_t *Axis)
+void stepperEnable(StepperMotor_t *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_SET);
 	if(!Axis->High_precision)
@@ -145,7 +146,7 @@ void Stepper_Enable(StepperMotor_t *Axis)
 	Axis->enabled = true;
 }
 
-void Stepper_Disable(StepperMotor_t *Axis)
+void stepperDisable(StepperMotor_t *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_RESET);
 	if(!Axis->High_precision)
@@ -155,18 +156,30 @@ void Stepper_Disable(StepperMotor_t *Axis)
 	Axis->enabled = false;
 }
 
-void stepperMove(StepperMotor_t *Axis, float angle, float speed, bool dir) //Speed is in deg/s
+
+////!!!!!!!Remove the bool dir from the function. Direction is set based on the angle (negative/positive)
+void stepperMove(StepperMotor_t *Axis, float angle, float speed) //Speed is in deg/s
 {
-	if (!Axis || speed <= 0.0f || angle <= 0.0f)
+	if (!Axis || speed <= 0.0f || angle == 0.0f)
 	        return;
 	else
 	{
 		if(!Axis->enabled)
 		{
-			Stepper_Enable(Axis);
+			stepperEnable(Axis);
 		}
 		//Set direction
-		HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, dir);
+		if(angle > 0.0f)
+		{
+			HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, Axis->Positive_dir);
+		}
+		else
+		{
+			HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, !Axis->Positive_dir);
+		}
+
+		angle = fabsf(angle);
+
 
 		if (!Axis->High_precision)
 		{
@@ -211,7 +224,7 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed, bool dir) //Spe
 
 }
 
-void Stepper_Home(StepperMotor_t *Axis, float speed, bool dir)
+void stepperHome(StepperMotor_t *Axis, float speed, bool dir)
 {
 	if (!Axis || speed <= 0.0f)
 		        return;
@@ -219,7 +232,7 @@ void Stepper_Home(StepperMotor_t *Axis, float speed, bool dir)
 		{
 			if (!Axis->enabled)
 			{
-				Stepper_Enable(Axis);
+				stepperEnable(Axis);
 			}
 
 			if (!Axis->High_precision)
@@ -242,29 +255,29 @@ void Stepper_Home(StepperMotor_t *Axis, float speed, bool dir)
 		}
 }
 
-void Stepper_Stop(StepperMotor_t *Axis)
+void stepperStop(StepperMotor_t *Axis)
 {
 
 	if (Axis->High_precision)
 	{
 		//Stop PWM timer
-			if (Axis->PWM_Type == PWM_OUT_P)
-			{
-				HAL_TIM_PWM_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
-			}
-			else if (Axis->PWM_Type == PWM_OUT_N)
-			{
-				HAL_TIMEx_PWMN_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
-			}
-			//Stop STEP counting timer
-			HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
-	}
+		if (Axis->PWM_Type == PWM_OUT_P)
+		{
+			HAL_TIM_PWM_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
+		}
+		else if (Axis->PWM_Type == PWM_OUT_N)
+		{
+			HAL_TIMEx_PWMN_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
+		}
+		//Stop STEP counting timer
+		HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
+		}
 	else if (!Axis->High_precision)
 	{
-		printf("S\r\n");
 		Axis->Steps_remaining = 0;
 	}
 
+	//stepperDisable(Axis);
 	Axis->busy = false;
 
 }
@@ -274,6 +287,7 @@ void STEP_Generating(StepperMotor_t *Axis)
 	if (Axis->Steps_remaining == 0)
 	        {
 				Axis->busy= false;
+				//stepperDisable(Axis);
 	            return;
 	        }
 	        if (Axis->Tick_counter == 0)

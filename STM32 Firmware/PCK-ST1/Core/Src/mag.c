@@ -176,7 +176,7 @@ MagCalib_t CalibrateMagnetometer(StepperMotor_t *AZ_motor, float step_deg, float
 
     // 1) First pass: compute mean (hard-iron)
     for (int i=0;i<N;i++) {
-        stepperMove(AZ_motor, step_deg, speed, true);
+        stepperMove(AZ_motor, step_deg, speed);
         while (AZ_motor->busy);
         //HAL_Delay(200);
 
@@ -194,7 +194,7 @@ MagCalib_t CalibrateMagnetometer(StepperMotor_t *AZ_motor, float step_deg, float
     // Here we re-sweep for simplicity:
     // Return to start angle if needed (optional)
     for (int i=0;i<N;i++) {
-        stepperMove(AZ_motor, step_deg, speed, false);
+        stepperMove(AZ_motor, -step_deg, speed);
         while (AZ_motor->busy);
         //HAL_Delay(200);
 

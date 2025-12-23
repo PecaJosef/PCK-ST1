@@ -1,2 +1,2 @@
-../Core/Src/control_loop.c:70:6:Control_loop	8	static
-../Core/Src/control_loop.c:103:6:handleMoving	8	static
+../Core/Src/control_loop.c:74:6:Control_loop	8	static
+../Core/Src/control_loop.c:107:6:handleMoving	8	static

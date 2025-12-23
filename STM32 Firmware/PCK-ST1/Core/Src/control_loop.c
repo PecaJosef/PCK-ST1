@@ -107,7 +107,7 @@ void Control_loop()
 void handleMoving()
 {
 	//If all axis are not busy and there is no move requested the control loop shall return to the previous state
-	if(!AZ_AxisMotor.busy && !EL_AxisMotor.busy && !RA_AxisMotor.busy && !DEC_AxisMotor.busy)
+	if(!AZ_AxisMotor.busy && !ALT_AxisMotor.busy && !RA_AxisMotor.busy && !DEC_AxisMotor.busy)
 	{
 		if(!AZ_MoveRequest.moveRequested && !EL_MoveRequest.moveRequested && !RA_MoveRequest.moveRequested && !DEC_MoveRequest.moveRequested)
 		{
@@ -118,49 +118,23 @@ void handleMoving()
 
 	if(AZ_MoveRequest.moveRequested && !AZ_AxisMotor.busy)
 	{
-		if(AZ_MoveRequest.angle > 0)
-		{
-			stepperMove(&AZ_AxisMotor, AZ_MoveRequest.angle, AZ_MoveRequest.speed, AZ_POS_DIR);
-		}
-		else
-		{
-			stepperMove(&AZ_AxisMotor, AZ_MoveRequest.angle, AZ_MoveRequest.speed, !AZ_POS_DIR);
-		}
+		stepperMove(&AZ_AxisMotor, AZ_MoveRequest.angle, AZ_MoveRequest.speed);
 		AZ_MoveRequest.moveRequested = false;
 	}
-	else if(EL_MoveRequest.moveRequested && !EL_AxisMotor.busy)
+	else if(EL_MoveRequest.moveRequested && !ALT_AxisMotor.busy)
 	{
-		if(EL_MoveRequest.angle > 0)
-		{
-			stepperMove(&EL_AxisMotor, EL_MoveRequest.angle, EL_MoveRequest.speed, EL_POS_DIR);
-		}
-		else
-		{
-			stepperMove(&EL_AxisMotor, EL_MoveRequest.angle, EL_MoveRequest.speed, !EL_POS_DIR);
-		}
+		stepperMove(&ALT_AxisMotor, EL_MoveRequest.angle, EL_MoveRequest.speed);
 		EL_MoveRequest.moveRequested = false;
 	}
 	else if(RA_MoveRequest.moveRequested && !RA_AxisMotor.busy)
 	{
-		if(EL_MoveRequest.angle > 0)
-		{
-			stepperMove(&RA_AxisMotor, RA_MoveRequest.angle, RA_MoveRequest.speed, RA_POS_DIR);
-		}
-		else
-		{
-			stepperMove(&RA_AxisMotor, RA_MoveRequest.angle, RA_MoveRequest.speed, !RA_POS_DIR);
-		}
+		stepperMove(&RA_AxisMotor, RA_MoveRequest.angle, RA_MoveRequest.speed);
+		RA_MoveRequest.moveRequested = false;
 	}
 	else if(DEC_MoveRequest.moveRequested && !DEC_AxisMotor.busy)
 	{
-		if(DEC_MoveRequest.angle > 0)
-		{
-			stepperMove(&DEC_AxisMotor, DEC_MoveRequest.angle, DEC_MoveRequest.speed, DEC_POS_DIR);
-		}
-		else
-		{
-			stepperMove(&DEC_AxisMotor, DEC_MoveRequest.angle, DEC_MoveRequest.speed, !DEC_POS_DIR);
-		}
+		stepperMove(&DEC_AxisMotor, DEC_MoveRequest.angle, DEC_MoveRequest.speed);
+		DEC_MoveRequest.moveRequested = false;
 	}
 
 

@@ -17,25 +17,25 @@
 #define STEPPER_TIMER_HI_FREQ 2000000
 
 //Define microstepping for each axis
-#define EL_MICROSTEPPING 2
+#define ALT_MICROSTEPPING 2
 #define AZ_MICROSTEPPING 4
 #define DEC_MICROSTEPPING 128
 #define RA_MICROSTEPPING 128
 
 //Define Gear ratios for each axis
-#define EL_GEAR_RATIO 90.0f //Should be 90
+#define ALT_GEAR_RATIO 90.0f //Should be 90
 #define AZ_GEAR_RATIO 48.5625f
 #define DEC_GEAR_RATIO 100.0f
 #define RA_GEAR_RATIO 1000.0f
 
-#define EL_STEP_PER_DEG ((STEPS_PER_REV*EL_MICROSTEPPING*EL_GEAR_RATIO)/(360))
+#define ALT_STEP_PER_DEG ((STEPS_PER_REV*ALT_MICROSTEPPING*ALT_GEAR_RATIO)/(360))
 #define AZ_STEP_PER_DEG ((STEPS_PER_REV*AZ_MICROSTEPPING*AZ_GEAR_RATIO)/(360))
 #define DEC_STEP_PER_DEG ((STEPS_PER_REV*DEC_MICROSTEPPING*DEC_GEAR_RATIO)/(360))
 #define RA_STEP_PER_DEG ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/(360))
 
 //Positive direction is opposite to Homing direction -> while homing the stepper moves in negative direction towards endstop
 #define AZ_POS_DIR 1
-#define EL_POS_DIR 0
+#define ALT_POS_DIR 1
 #define DEC_POS_DIR 1
 #define RA_POS_DIR 1
 
@@ -97,7 +97,7 @@ typedef struct {
 }StepperMotor_t;
 
 
-extern StepperMotor_t EL_AxisMotor;
+extern StepperMotor_t ALT_AxisMotor;
 extern StepperMotor_t AZ_AxisMotor;
 extern StepperMotor_t RA_AxisMotor;
 extern StepperMotor_t DEC_AxisMotor;
@@ -114,18 +114,18 @@ void Stepper_IT_Enable();
 
 void Stepper_IT_Disable();
 
-void Stepper_Enable(StepperMotor_t *Axis);
+void stepperEnable(StepperMotor_t *Axis);
 
-void Stepper_Disable(StepperMotor_t *Axis);
+void stepperDisable(StepperMotor_t *Axis);
 
-void stepperMove(StepperMotor_t *Axis, float angle, float speed, bool direction);
+void stepperMove(StepperMotor_t *Axis, float angle, float speed);
 
-void Stepper_Home(StepperMotor_t *Axis, float speed, bool direction);
+void stepperHome(StepperMotor_t *Axis, float speed, bool direction);
 
 void Stepper_nSleep(bool n_sleep);
 
 void STEP_Generating(StepperMotor_t *Axis);
 
-void Stepper_Stop(StepperMotor_t *Axis);
+void stepperStop(StepperMotor_t *Axis);
 
 #endif /* INC_STEPPER_H_ */

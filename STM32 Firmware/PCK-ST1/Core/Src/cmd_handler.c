@@ -104,6 +104,18 @@ static void CMD_Execute(char *cmd, UART_Source_t src)
 		//Jump to RPI command sub processing
 		rpiParsing(&saveptr, src);
 	}
+	else if(strcmp(token, "$DIS")==0)
+	{
+		stepperDisable(&ALT_AxisMotor);
+		stepperDisable(&AZ_AxisMotor);
+		stepperDisable(&RA_AxisMotor);
+	}
+	else if(strcmp(token, "$EN")==0)
+		{
+			stepperEnable(&ALT_AxisMotor);
+			stepperEnable(&AZ_AxisMotor);
+			stepperEnable(&RA_AxisMotor);
+		}
 	else
 	{
 		CMD_Send(src, "ERR:Unknown command\r\n");

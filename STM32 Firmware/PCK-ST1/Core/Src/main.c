@@ -224,6 +224,7 @@ int main(void)
   UART_IT_Init();
 
   //Stepper_Home(&EL_Axis_motor, 5.0f, EL_HOMING_DIR);
+  //CMD_Send(UART_SRC_PC, "START\r\n");
 
   while (1)
   {
@@ -712,6 +713,9 @@ static void MX_TIM17_Init(void)
 
   /* USER CODE END TIM17_Init 0 */
 
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
   /* USER CODE BEGIN TIM17_Init 1 */
 
   /* USER CODE END TIM17_Init 1 */
@@ -726,9 +730,36 @@ static void MX_TIM17_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_Init(&htim17) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim17, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim17, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM17_Init 2 */
 
   /* USER CODE END TIM17_Init 2 */
+  HAL_TIM_MspPostInit(&htim17);
 
 }
 
@@ -881,7 +912,7 @@ static void MX_GPIO_Init(void)
                           |LED3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, STEP_SLEEP_n_Pin|EL_EN_Pin|EL_DIR_Pin|EL_STEP_Pin
+  HAL_GPIO_WritePin(GPIOB, STEP_SLEEP_n_Pin|ALT_EN_Pin|ALT_DIR_Pin|ALT_STEP_Pin
                           |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
                           |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin, GPIO_PIN_RESET);
 
@@ -913,7 +944,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(VIN_ADC_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : EL_LIM_Pin DEC_LIM_Pin RA_LIM_Pin */
-  GPIO_InitStruct.Pin = EL_LIM_Pin|DEC_LIM_Pin|RA_LIM_Pin;
+  GPIO_InitStruct.Pin = ALT_LIM_Pin|DEC_LIM_Pin|RA_LIM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -930,7 +961,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : STEP_SLEEP_n_Pin EL_EN_Pin EL_DIR_Pin EL_STEP_Pin
                            RA_EN_Pin RA_DIR_Pin LED_USB_Pin LED_DC_Pin
                            CAM_SHUTTER_Pin CAM_FOCUS_Pin RPI_PWR_EN_Pin */
-  GPIO_InitStruct.Pin = STEP_SLEEP_n_Pin|EL_EN_Pin|EL_DIR_Pin|EL_STEP_Pin
+  GPIO_InitStruct.Pin = STEP_SLEEP_n_Pin|ALT_EN_Pin|ALT_DIR_Pin|ALT_STEP_Pin
                           |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
                           |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

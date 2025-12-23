@@ -14,7 +14,7 @@ void handleHoming()
 
 	    if (!homed) {
 	        // Kick off homing for all axes
-	        Axis_Home_Start(&EL_AxisMotor, 10.0f, 5.0f);
+	        Axis_Home_Start(&ALT_AxisMotor, 10.0f, 5.0f);
 	        //Axis_Home_Start(&AZ_Axis_motor, 200.0f, 50.0f);
 	        //Axis_Home_Start(&RA_Axis_motor, 200.0f, 50.0f);
 	        //Axis_Home_Start(&DEC_Axis_motor, 200.0f, 50.0f);
@@ -23,16 +23,16 @@ void handleHoming()
 	    }
 
     // Update all axes in parallel
-    Axis_Homing_Update(&EL_AxisMotor, 10.0f, 5.0f);
-    Axis_Homing_Update(&AZ_AxisMotor, 10.0f, 5.0f);
-    Axis_Homing_Update(&RA_AxisMotor, 5.0f, 1.0f);
-    Axis_Homing_Update(&DEC_AxisMotor, 5.0f, 1.0f);
+    Axis_Homing_Update(&ALT_AxisMotor, 10.0f, 7.5f);
+    Axis_Homing_Update(&AZ_AxisMotor, 10.0f, 7.5f);
+    Axis_Homing_Update(&RA_AxisMotor, 1.5f, 1.0f);
+    Axis_Homing_Update(&DEC_AxisMotor, 1.5f, 1.0f);
 
     // Check if all done
-    if (!EL_AxisMotor.homing && !AZ_AxisMotor.homing && !RA_AxisMotor.homing && !DEC_AxisMotor.homing)
+    if (!ALT_AxisMotor.homing && !AZ_AxisMotor.homing && !RA_AxisMotor.homing && !DEC_AxisMotor.homing)
     {
     	homed = false;
-    	Stepper_Disable(&EL_AxisMotor);
+    	stepperDisable(&ALT_AxisMotor);
     	controlState = WARMING_UP;
     }
 }
@@ -42,7 +42,7 @@ void Axis_Home_Start(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
     if (!Axis) return;
     if (!Axis->enabled)
 	{
-    	Stepper_Enable(Axis);
+    	stepperEnable(Axis);
 	}
 
     Axis->homing = true;
@@ -53,13 +53,13 @@ void Axis_Home_Start(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
     {
         // Endstop already pressed → skip coarse, go to backoff
         Axis->homing_state = AXIS_HOMING_BACKOFF;
-        stepperMove(Axis, 5.0f, fineSpeed, Axis->Positive_dir);
+        stepperMove(Axis, 5.0f, fineSpeed);
     }
     else
     {
         // Normal coarse move towards switch
         Axis->homing_state = AXIS_HOMING_COARSE;
-        stepperMove(Axis, 180.0f, coarseSpeed, !Axis->Positive_dir); // 180° is just "long enough"
+        stepperMove(Axis, -180.0f, coarseSpeed); // 180° is just "long enough"
     }
 }
 
@@ -76,7 +76,7 @@ void Axis_Homing_Update(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed
         	HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
 
             Axis->homing_state = AXIS_HOMING_FINE;
-            stepperMove(Axis, 10.0f, fineSpeed, !Axis->Positive_dir);
+            stepperMove(Axis, -10.0f, fineSpeed);
             break;
 
         case AXIS_HOMING_FINE:
@@ -94,7 +94,7 @@ void Axis_Homing_Update(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed
 
 void Endstop_Reached(StepperMotor_t *Axis)
 {
-	Stepper_Stop(Axis);
+	stepperStop(Axis);
 
 	if (!Axis->homing) return;
 
@@ -102,7 +102,7 @@ void Endstop_Reached(StepperMotor_t *Axis)
 	case AXIS_HOMING_COARSE:
 		// First hit → back off
 		Axis->homing_state = AXIS_HOMING_BACKOFF;
-		stepperMove(Axis, 5.0f, 5.0f, Axis->Positive_dir);
+		stepperMove(Axis, 5.0f, 5.0f);
 		break;
 
 	case AXIS_HOMING_FINE:
