@@ -502,7 +502,7 @@
       "plot": "Fab_data_hall/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "PCK-HALL.step",
       "svg": "",
       "vrml": ""
     },
