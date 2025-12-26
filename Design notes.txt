@@ -1,0 +1,2 @@
+Change R7 from 24k to 10k
+Change C13 from 1uF to 100n
