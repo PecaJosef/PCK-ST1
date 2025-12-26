@@ -1,16 +1,18 @@
-$HOME	:ALL
-	:AZ - unused
-	:EL
-	:DEC
-	:RA
+$HOME
+
+$ECHO
 	
 $MOVE	:AZ	:ANGLE	:SPEED
 	:EL	:ANGLE	:SPEED
 	:DEC	:ANGLE	:SPEED
 	:RA	:ANGLE	:SPEED
+	*Two axis at once can be moved as following $MOVE:AZ:AZ_angle:AZ_speed$EL:EL_angle:EL_speed
+	*The delimiter is subject to change
 
-$RPI	:ON
-	:OFF
+$GOTO	:HH:MM:SS:DD:MM:SS //Hours:Minutes:Seconds:Degrees:ArcMinutes:ArcSeconds
+
+$RPI	:START
+	:SHUTDOWN
 	:PIC
 	:ECHO
 
@@ -18,3 +20,6 @@ $GET	:INFO
 	:STATE
 	:POS
 	
+$GUIDE	:START
+	:STOP
+
