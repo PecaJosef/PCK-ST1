@@ -1,2 +1,4 @@
 Change R7 from 24k to 10k
 Change C13 from 1uF to 100n
+Change R4 from 33k to 38k3
+TPS62135 PG pin is not used and does not need to be tied to Vout. Tie it to the ground instead
