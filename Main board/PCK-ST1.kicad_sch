@@ -479,7 +479,7 @@
 	)
 	(text "10k for DRV8434"
 		(exclude_from_sim no)
-		(at 23.368 99.568 0)
+		(at 34.544 90.17 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -489,7 +489,7 @@
 	)
 	(text "10k for DRV8434"
 		(exclude_from_sim no)
-		(at 22.352 63.754 0)
+		(at 34.544 64.262 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -499,7 +499,7 @@
 	)
 	(text "33k for DRV8434"
 		(exclude_from_sim no)
-		(at 23.622 159.766 0)
+		(at 34.798 150.368 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -509,7 +509,7 @@
 	)
 	(text "4k99 for DRV8434"
 		(exclude_from_sim no)
-		(at 24.13 173.99 0)
+		(at 35.306 164.592 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -519,7 +519,7 @@
 	)
 	(text "10k for DRV8434"
 		(exclude_from_sim no)
-		(at 23.114 135.89 0)
+		(at 34.29 126.492 0)
 		(effects
 			(font
 				(size 1.27 1.27)

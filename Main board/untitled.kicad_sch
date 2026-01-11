@@ -13420,7 +13420,6 @@
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "cffa6be0-0c12-492d-a927-80860b6b7107")
 		(property "Reference" "SW1"
 			(at 118.11 133.35 0)
@@ -13438,7 +13437,7 @@
 				)
 			)
 		)
-		(property "Footprint" "TL3336AF160Q"
+		(property "Footprint" "SKRTLAE010"
 			(at 118.11 135.89 0)
 			(effects
 				(font

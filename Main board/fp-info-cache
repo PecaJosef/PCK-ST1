@@ -1,4 +1,4 @@
-24801490561497041
+24805026493937045
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -91300,6 +91300,20 @@ Connector
 0
 8
 8
+SamacSys_Parts.pretty
+SJ2524SMTTR
+SJ-2524-SMT-TR-1
+Connector
+0
+4
+4
+SamacSys_Parts.pretty
+SKRTLAE010
+SKRTLAE010
+Switch
+0
+5
+5
 SamacSys_Parts.pretty
 SMBJ12A
 SMB-UD
