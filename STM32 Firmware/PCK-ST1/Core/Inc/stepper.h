@@ -23,7 +23,7 @@
 #define RA_MICROSTEPPING 128
 
 //Define Gear ratios for each axis
-#define ALT_GEAR_RATIO 90.0f //Should be 90
+#define ALT_GEAR_RATIO 90.0f
 #define AZ_GEAR_RATIO 48.5625f
 #define DEC_GEAR_RATIO 100.0f
 #define RA_GEAR_RATIO 1000.0f
@@ -40,16 +40,16 @@
 #define RA_POS_DIR 1
 
 #define RA_TIM TIM2
-#define RA_PWM_TIM &htim1
+#define RA_PWM_TIM &htim1 //Main timer - generates step signal
 #define RA_PWM_CH TIM_CHANNEL_2
-#define RA_STEP_TIM &htim2
+#define RA_STEP_TIM &htim2 //Slave timer - interrupts when targeted steps reached
 
 #define DEC_TIM TIM5
-#define DEC_PWM_TIM &htim8
+#define DEC_PWM_TIM &htim8 //Main timer - generates step signal
 #define DEC_PWM_CH TIM_CHANNEL_3
-#define DEC_STEP_TIM &htim5
+#define DEC_STEP_TIM &htim5 //Slave timer - interrupts when targeted steps reached
 
-#define STEPPER_TIMER TIM3
+#define STEPPER_TIMER TIM3 //Timer for ALT/AZ axes - generates periodic interrupts if enabled -> to drive the axes
 
 typedef enum {
     PWM_OUT_P,

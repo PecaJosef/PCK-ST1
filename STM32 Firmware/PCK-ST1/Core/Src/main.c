@@ -145,7 +145,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
 
-  //LED_Tim_Enable();
   //Stepper_IT_Enable();
 
   Stepper_nSleep(GPIO_PIN_SET);
@@ -943,7 +942,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(VIN_ADC_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : EL_LIM_Pin DEC_LIM_Pin RA_LIM_Pin */
+  /*Configure GPIO pins : ALT_LIM_Pin DEC_LIM_Pin RA_LIM_Pin */
   GPIO_InitStruct.Pin = ALT_LIM_Pin|DEC_LIM_Pin|RA_LIM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -958,7 +957,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : STEP_SLEEP_n_Pin EL_EN_Pin EL_DIR_Pin EL_STEP_Pin
+  /*Configure GPIO pins : STEP_SLEEP_n_Pin ALT_EN_Pin ALT_DIR_Pin ALT_STEP_Pin
                            RA_EN_Pin RA_DIR_Pin LED_USB_Pin LED_DC_Pin
                            CAM_SHUTTER_Pin CAM_FOCUS_Pin RPI_PWR_EN_Pin */
   GPIO_InitStruct.Pin = STEP_SLEEP_n_Pin|ALT_EN_Pin|ALT_DIR_Pin|ALT_STEP_Pin
@@ -969,8 +968,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : EL_FAULT_n_Pin RA_FAULT_n_Pin */
-  GPIO_InitStruct.Pin = EL_FAULT_n_Pin|RA_FAULT_n_Pin;
+  /*Configure GPIO pins : ALT_FAULT_n_Pin RA_FAULT_n_Pin */
+  GPIO_InitStruct.Pin = ALT_FAULT_n_Pin|RA_FAULT_n_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

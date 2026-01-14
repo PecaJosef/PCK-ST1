@@ -69,7 +69,7 @@ void Error_Handler(void);
 #define VIN_ADC_GPIO_Port GPIOC
 #define ALT_LIM_Pin GPIO_PIN_2
 #define ALT_LIM_GPIO_Port GPIOA
-#define EL_LIM_EXTI_IRQn EXTI2_IRQn
+#define ALT_LIM_EXTI_IRQn EXTI2_IRQn
 #define DEC_LIM_Pin GPIO_PIN_3
 #define DEC_LIM_GPIO_Port GPIOA
 #define RA_LIM_Pin GPIO_PIN_4
@@ -90,8 +90,8 @@ void Error_Handler(void);
 #define ALT_DIR_GPIO_Port GPIOB
 #define ALT_STEP_Pin GPIO_PIN_10
 #define ALT_STEP_GPIO_Port GPIOB
-#define EL_FAULT_n_Pin GPIO_PIN_11
-#define EL_FAULT_n_GPIO_Port GPIOB
+#define ALT_FAULT_n_Pin GPIO_PIN_11
+#define ALT_FAULT_n_GPIO_Port GPIOB
 #define RA_EN_Pin GPIO_PIN_12
 #define RA_EN_GPIO_Port GPIOB
 #define RA_DIR_Pin GPIO_PIN_13
@@ -128,6 +128,8 @@ void Error_Handler(void);
 #define CAM_FOCUS_GPIO_Port GPIOB
 #define RPI_PWR_EN_Pin GPIO_PIN_8
 #define RPI_PWR_EN_GPIO_Port GPIOB
+#define IREG_Pin GPIO_PIN_9
+#define IREG_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
