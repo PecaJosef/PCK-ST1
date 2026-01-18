@@ -8985,7 +8985,7 @@
 		)
 		(uuid "b0e1bda3-ada4-4ca1-be75-17075dce5542")
 	)
-	(label "CAM_SHT"
+	(label "CAM_SHTR"
 		(at 31.75 157.48 0)
 		(effects
 			(font
