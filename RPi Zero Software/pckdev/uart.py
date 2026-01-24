@@ -26,9 +26,9 @@ class UARTHandler:
     def process_command(self, cmd):
         """Parse and respond to commands."""
         if cmd.startswith("$ECHO"):
-            self.send("ECHO")
+            self.send("#ECHO")
         else:
-            self.send("UNKNOWN_CMD")
+            self.send("#ERR:UNKNOWN")
 
     def close(self):
         """Close the serial port."""

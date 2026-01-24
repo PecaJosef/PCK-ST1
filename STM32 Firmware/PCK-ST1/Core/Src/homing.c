@@ -13,7 +13,7 @@ void handleHoming()
 	static bool homed = false;
 
 	    if (!homed) {
-	        // Kick off homing for all axes
+	        // Start homing for all axes
 	        Axis_Home_Start(&ALT_AxisMotor, 10.0f, 5.0f);
 	        //Axis_Home_Start(&AZ_Axis_motor, 200.0f, 50.0f);
 	        //Axis_Home_Start(&RA_Axis_motor, 200.0f, 50.0f);

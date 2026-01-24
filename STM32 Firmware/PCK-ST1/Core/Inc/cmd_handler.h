@@ -25,9 +25,9 @@ typedef enum {
     UART_SRC_RPI
 } UART_Source_t;
 
-void CMD_Handler_Init(void);
+void commandHandler_Init(void);
 
-void CMD_Handler_Process(void);
+void commandHandler(void);
 
 void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte);
 

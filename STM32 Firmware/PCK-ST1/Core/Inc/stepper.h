@@ -56,6 +56,7 @@ typedef enum {
     PWM_OUT_N
 } PWM_OutputType_t;
 
+
 typedef enum {
     AXIS_HOMING_IDLE,
     AXIS_HOMING_COARSE,

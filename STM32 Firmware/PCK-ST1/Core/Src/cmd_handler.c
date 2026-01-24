@@ -26,9 +26,9 @@ static void CMD_Execute(char *cmd, UART_Source_t src);
 
 static void moveParsing(char **saveptr, UART_Source_t src);
 
-static void rpiParsing(char **saveptr, UART_Source_t src);
+static void rpiCommandForward(char **saveptr, UART_Source_t src);
 
-void CMD_Handler_Process(void)
+void commandHandler(void)
 {
     if (pc_cmd_ready) {
         CMD_Execute((char *)pc_buffer, UART_SRC_PC);
@@ -40,7 +40,7 @@ void CMD_Handler_Process(void)
     }
 }
 
-void CMD_Handler_Init(void)
+void commandHandler_Init(void)
 {
     pc_index = rpi_index = 0;
     pc_cmd_ready = rpi_cmd_ready = 0;
@@ -102,7 +102,7 @@ static void CMD_Execute(char *cmd, UART_Source_t src)
 	else if (strcmp(token, "$RPI")==0)
 	{
 		//Jump to RPI command sub processing
-		rpiParsing(&saveptr, src);
+		rpiCommandForward(&saveptr, src);
 	}
 	else if(strcmp(token, "$DIS")==0)
 	{
@@ -233,11 +233,11 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 }
 
 
-static void rpiParsing(char **saveptr, UART_Source_t src)
+static void rpiCommandForward(char **saveptr, UART_Source_t src)
 {
 	char *command;
 
-	command = strtok_r(NULL,":",saveptr); //Gets the RPI command name
+	command = strtok_r(NULL,":",saveptr); //Gets the RPI command type
 	if(strcmp(command, "ECHO")==0)
 	{
 		CMD_Send(UART_SRC_RPI, "$ECHO\r\n");
@@ -250,6 +250,11 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 	else if(strcmp(command, "START")==0)
 	{
 		rpiPowerOn();
+	}
+	else if(strcmp(command, "ALIGN")==0)
+	{
+		CMD_Send(UART_SRC_RPI, "$ALIGN\r\n");
+		CMD_Send(UART_SRC_PC, "#ALIGN CMD Sent\r\n");
 	}
 
 }

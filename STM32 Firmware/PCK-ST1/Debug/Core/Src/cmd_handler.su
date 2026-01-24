@@ -1,10 +1,10 @@
-../Core/Src/cmd_handler.c:31:6:CMD_Handler_Process	8	static
-../Core/Src/cmd_handler.c:43:6:CMD_Handler_Init	4	static
+../Core/Src/cmd_handler.c:31:6:commandHandler	8	static
+../Core/Src/cmd_handler.c:43:6:commandHandler_Init	4	static
 ../Core/Src/cmd_handler.c:49:6:CMD_UART_StoreByte	32	static
 ../Core/Src/cmd_handler.c:80:13:CMD_Execute	32	static
 ../Core/Src/cmd_handler.c:142:13:moveParsing	40	static
 ../Core/Src/cmd_handler.c:236:13:rpiParsing	24	static
-../Core/Src/cmd_handler.c:257:6:CMD_Send	16	static
-../Core/Src/cmd_handler.c:265:6:rpiShutdown	8	static
-../Core/Src/cmd_handler.c:270:6:rpiPowerOn	8	static
-../Core/Src/cmd_handler.c:275:6:rpiPowerOff	8	static
+../Core/Src/cmd_handler.c:262:6:CMD_Send	16	static
+../Core/Src/cmd_handler.c:270:6:rpiShutdown	8	static
+../Core/Src/cmd_handler.c:275:6:rpiPowerOn	8	static
+../Core/Src/cmd_handler.c:280:6:rpiPowerOff	8	static

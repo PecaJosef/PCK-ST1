@@ -59,4 +59,6 @@ void Control_loop();
 
 void handleMoving();
 
+void handleAligning();
+
 #endif /* INC_CONTROL_LOOP_H_ */

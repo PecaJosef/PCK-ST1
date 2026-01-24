@@ -1,2 +1,3 @@
-../Core/Src/control_loop.c:74:6:Control_loop	5
-../Core/Src/control_loop.c:107:6:handleMoving	17
+../Core/Src/control_loop.c:74:6:Control_loop	6
+../Core/Src/control_loop.c:111:6:handleMoving	17
+../Core/Src/control_loop.c:153:6:handleAligning	1

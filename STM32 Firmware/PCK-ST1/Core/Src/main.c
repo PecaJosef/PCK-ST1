@@ -219,7 +219,7 @@ int main(void)
 	  while(AZ_Axis_motor.busy){}
   }
 */
-  CMD_Handler_Init();
+  commandHandler_Init();
   UART_IT_Init();
 
   //Stepper_Home(&EL_Axis_motor, 5.0f, EL_HOMING_DIR);
@@ -232,7 +232,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 	Control_loop();
-	CMD_Handler_Process();
+	commandHandler();
 	  /*
 	GPS_Data = Get_GPS_Data();
 	HAL_Delay(500);

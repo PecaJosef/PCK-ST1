@@ -22,7 +22,6 @@ static Warm_up_state_t WarmUpState = WAITING_FOR_BUTTON_PRESS;//WAITING_FOR_GPS_
 void handleWarmingUp()
 {
 
-
     uint8_t btn = readButtonDebounced();
 
     // 1. Check if GPS is alive (sending data)

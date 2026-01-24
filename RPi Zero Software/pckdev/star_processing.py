@@ -302,10 +302,10 @@ def polarAlign(image):
   return ncp_error[0], ncp_error[1], polarisFound, allStarsFound
 
 
-image = cv2.imread("/home/pck/pckdev/star_img/polaris5.jpg")
-NCPErrorX, NCPErrorY, PF, ASF = polarAlign(image)
+#image = cv2.imread("/home/pck/pckdev/star_img/polaris5.jpg")
+#NCPErrorX, NCPErrorY, PF, ASF = polarAlign(image)
 #polaris_img = cv2.imread("/content/polaris5.jpg")
 #generate_vectors(polaris_img, 100)
-print("Polaris found:",PF,"   All stars found: ",ASF)
-print("NCP X Error in arcmin is:", NCPErrorX)
-print("NCP Y Error in arcmin is:", NCPErrorY)
+#print("Polaris found:",PF,"   All stars found: ",ASF)
+#print("NCP X Error in arcmin is:", NCPErrorX)
+#print("NCP Y Error in arcmin is:", NCPErrorY)

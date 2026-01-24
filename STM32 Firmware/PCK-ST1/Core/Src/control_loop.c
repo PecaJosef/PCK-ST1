@@ -17,17 +17,17 @@
  *
  * WARMING_UP
  * 		- checks if GPS and magnetometer are operational (if not -> ERROR state)
- * 			- if magnetometer is calibrated PCK-ST1 waits for RPi to bootup (or times out ~TBDs -> ERROR state)
+ * 			- if magnetometer is calibrated PCK-ST1 waits for RPi to bootup (or times out ~(TBD)s -> ERROR state)
  * 			- if magnetometer calibration data are not present in flash calibration is initiated
  * 		- if RPi boots up correctly and sends OK message LEDs signal to press button for NCP aligning -> ALIGNING
  *
  * ALIGNING
- * 		- drives AZ and EL axis based on GPS and magnetometer data
+ * 		- drives AZ and ALT axis based on GPS and magnetometer data
  * 		- sends "take star picture" to RPi
  * 			- if only Polaris found - point to the Polaris (RPi waits for another "take star picture" command)
  * 			- if NCP found - point to NCP estimated position (repeat taking picture for better accuracy)
  * 			- if no stars are found -> ERROR state
- *		- turns off EL and AZ motor after successful aligning - reduces power (AZ may stay powered to prevent accidental movement - TBD)
+ *		- reduces ALT and AZ motor current after successful aligning
  *		- jumps into IDLE state
  *
  * IDLE
@@ -37,6 +37,7 @@
 #include "warming_up.h"
 #include "control_loop.h"
 #include "homing.h"
+#include "cmd_handler.h"
 
 ControlState_t controlState;
 ControlState_t prevControlState;
@@ -91,6 +92,10 @@ void Control_loop()
 	        	handleMoving();
 	        	break;
 
+	        case ALIGNING:
+	        	handleAligning();
+	        	break;
+
 	        // add more states as needed
 	        default:
 	            break;
@@ -137,7 +142,26 @@ void handleMoving()
 		DEC_MoveRequest.moveRequested = false;
 	}
 
+}
 
+/*
+ * ALIGNING STATE
+ * Commands the RPi to start the alignment process (sends $ALIGN command)
+ * Waits for the RPi response
+ * Moves certain arcmin towards the NCP position
+ */
+
+void handleAligning()
+{
+	//Wait for button press to initiate polar alignment procedure
+
+	//Send $ALIGN command to RPi
+
+	//Wait for response
+
+	//Check the response
+		//If Polaris found and error >1 arcmin -> perform move towards NCP
+		//Repeat send $ALIGN command
 }
 
 
