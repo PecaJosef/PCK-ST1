@@ -1,12 +1,10 @@
-
-
 import serial
 import time
 
 class UARTHandler:
     def __init__(self, port="/dev/serial0", baudrate=115200, timeout=1):
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
-        time.sleep(2)  # Give some time for the connection to settle
+        time.sleep(1)  # Give some time for the connection to settle
         print(f"[UART] Connected to {port} at {baudrate} baud")
 
     def read_line(self):

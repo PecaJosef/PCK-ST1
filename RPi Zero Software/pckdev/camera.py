@@ -1,34 +1,42 @@
 from picamera2 import Picamera2
 import cv2
-import time
+
+PAcam = Picamera2()
+
+def cameraConnected():
+    cam_info = Picamera2.global_camera_info()
+    if len(cam_info) == 0:
+        return False
+    else:
+        return True
 
 # Initialize camera
-picam2 = Picamera2()
-picam2.configure(picam2.create_still_configuration())
-picam2.start()
+def initCamera():
+    
+    PAcam.configure(PAcam.create_still_configuration())
+    PAcam.start()
 
-# Allow warm-up
-time.sleep(1)
 
-# Set manual exposure and gain
-picam2.set_controls({
+def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/False]
+    #Set camera exposure and gain
+    PAcam.set_controls({
     "AeEnable": False,
-    "ExposureTime": 10000000,   # in microseconds
-    "AnalogueGain": 16.0
-})
+    "ExposureTime": exposure*1000000,   # in microseconds
+    "AnalogueGain": gain
+    })
 
-time.sleep(0.2)
+    # Capture image as RGB
+    image_rgb = PAcam.capture_array()
 
-# Capture image as RGB
-image_rgb = picam2.capture_array()
+    # Convert to BGR for OpenCV - not mandatory, later turned to greyscale anyway
+    image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
-# Convert to BGR for OpenCV
-image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+    # Rotate image by 180 degrees
+    if flip == True:
+        image_rotated = cv2.rotate(image_bgr, cv2.ROTATE_180)
+        return image_rotated
+    else:
+        return image_bgr
+        
+    
 
-# Rotate image by 180 degrees
-image_rotated = cv2.rotate(image_bgr, cv2.ROTATE_180)
-
-# Save image
-cv2.imwrite("img.jpg", image_rotated)
-
-print("Image captured and saved as img.jpg (rotated 180°).")

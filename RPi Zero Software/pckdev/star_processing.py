@@ -301,7 +301,6 @@ def polarAlign(image):
   #Function should return polarisFound (True/False), allStarsFound (True,False), NCP error (arcmin) - [0,0] if not found
   return ncp_error[0], ncp_error[1], polarisFound, allStarsFound
 
-
 #image = cv2.imread("/home/pck/pckdev/star_img/polaris5.jpg")
 #NCPErrorX, NCPErrorY, PF, ASF = polarAlign(image)
 #polaris_img = cv2.imread("/content/polaris5.jpg")
