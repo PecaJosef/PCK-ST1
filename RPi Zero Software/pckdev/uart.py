@@ -1,5 +1,6 @@
 import serial
 import time
+from polaralignment import alignmentError
 
 class UARTHandler:
     def __init__(self, port="/dev/serial0", baudrate=115200, timeout=1):
@@ -25,6 +26,8 @@ class UARTHandler:
         """Parse and respond to commands."""
         if cmd.startswith("$ECHO"):
             self.send("#ECHO")
+        elif cmd.startswith("$ALIGN"):
+            alignmentError(self)
         else:
             self.send("#ERR:UNKNOWN")
 

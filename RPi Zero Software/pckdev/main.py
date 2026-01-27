@@ -1,11 +1,13 @@
 from uart import UARTHandler
 import camera
 import time
-import polaralignment
 
 def main():
     uart = UARTHandler(port="/dev/serial0", baudrate=115200)
-    camera.initCamera()
+    if camera.cameraConnected() == True:
+        camera.initCamera()
+    else:
+        print("ERROR:Camera not connected\r\n")
 
     try:
         uart.send("#READY") #Sends #READY after the RPi boots up and the Python started
