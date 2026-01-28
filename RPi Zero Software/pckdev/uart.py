@@ -1,7 +1,7 @@
 import serial
 import time
 #from commandprocessing import alignmentError
-import commandprocessing
+import cmdprocessing
 
 class UARTHandler:
     def __init__(self, port="/dev/ttyAMA0", baudrate=115200, timeout=1):
@@ -28,9 +28,9 @@ class UARTHandler:
         if cmd.startswith("$ECHO"):
             self.send("#ECHO")
         elif cmd.startswith("$ALIGN"):
-            alignmentError(self)
+            cmdprocessing.alignmentError(self)
         elif cmd.startswith("$SHUTDOWN"):
-            rpiShutdown(self)
+            cmdprocessing.rpiShutdown(self)
         else:
             self.send("#ERR:UNKNOWN")
 
