@@ -231,9 +231,9 @@ def draw_ncp(ncp_coordinates, polaris_coordinates, yildun_coordinates, ov_cephei
 
 def getAlignmentError(image):
   #Loads sets of star vectors
-  polaris_vectors = np.load('/home/pck/pckdev/star_vectors/polaris_vectors.npy')
-  yildun_vectors = np.load('/home/pck/pckdev/star_vectors/yildun_vectors.npy')
-  ov_cephei_vectors = np.load('/home/pck/pckdev/star_vectors/ov_cephei_vectors.npy')
+  polaris_vectors = np.load("star_vectors/polaris_vectors.npy")
+  yildun_vectors = np.load("star_vectors/yildun_vectors.npy")
+  ov_cephei_vectors = np.load("star_vectors/ov_cephei_vectors.npy")
 
   default_pix_per_arcmin = 4608/(14.334*60) #Default pixels per arminute - Later load from config file
 
@@ -297,7 +297,7 @@ def getAlignmentError(image):
 
       draw_ncp(ncp_coordinates, polaris_coordinates, yildun_coordinates, ov_cephei_coordinates, image)
 
-    elif polaris_coordinates.size !=0 and (yildun_coordinates.size == 0 or ov_cephei_coordinates.size == 0) #Polaris found but cannot trilaterate - insufficent stars found
+    elif polaris_coordinates.size !=0 and (yildun_coordinates.size == 0 or ov_cephei_coordinates.size == 0): #Polaris found but cannot trilaterate - insufficent stars found
       image_center = np.array([image.shape[1] // 2, image.shape[0] // 2])
       ncp_error = (image_center - polaris_coordinates)/default_pix_per_arcmin
       allStarsFound = False

@@ -1,9 +1,10 @@
 import serial
 import time
-from polaralignment import alignmentError
+#from commandprocessing import alignmentError
+import commandprocessing
 
 class UARTHandler:
-    def __init__(self, port="/dev/serial0", baudrate=115200, timeout=1):
+    def __init__(self, port="/dev/ttyAMA0", baudrate=115200, timeout=1):
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
         time.sleep(1)  # Give some time for the connection to settle
         print(f"[UART] Connected to {port} at {baudrate} baud")
@@ -28,6 +29,8 @@ class UARTHandler:
             self.send("#ECHO")
         elif cmd.startswith("$ALIGN"):
             alignmentError(self)
+        elif cmd.startswith("$SHUTDOWN"):
+            rpiShutdown(self)
         else:
             self.send("#ERR:UNKNOWN")
 

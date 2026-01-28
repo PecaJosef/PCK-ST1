@@ -10,13 +10,13 @@ def main():
         print("ERROR:Camera not connected\r\n")
 
     try:
-        uart.send("#READY") #Sends #READY after the RPi boots up and the Python started
+        uart.send("#RDY") #Sends #READY after the RPi boots up and the Python started
 
         while True:
             cmd = uart.read_line()
             if cmd:
                 uart.process_command(cmd)
-            time.sleep(0.01)  # small delay to prevent high CPU usage
+            time.sleep(0.01)
     except KeyboardInterrupt:
         print("\n[MAIN] Exiting...")
     finally:
