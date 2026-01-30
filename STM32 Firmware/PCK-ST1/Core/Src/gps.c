@@ -139,7 +139,6 @@ bool GPS_IsAlive()
 	{
 		return false;
 	}
-
 }
 
 // Initialize UART + DMA reception

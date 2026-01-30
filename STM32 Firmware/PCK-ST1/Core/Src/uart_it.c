@@ -34,12 +34,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1) //Controller/PC uart
     {
-    	CMD_UART_StoreByte(UART_SRC_PC, uart1_rx_byte);
+    	CMD_UART_StoreByte(PC_UART_SRC, uart1_rx_byte);
         HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
     }
     else if (huart->Instance == UART5) //RPi uart
     {
-        CMD_UART_StoreByte(UART_SRC_RPI, uart5_rx_byte);
+        CMD_UART_StoreByte(RPI_UART_SRC, uart5_rx_byte);
         HAL_UART_Receive_IT(&huart5, &uart5_rx_byte, 1);
     }
 }

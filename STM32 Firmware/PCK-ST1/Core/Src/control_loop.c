@@ -42,9 +42,13 @@
 ControlState_t controlState;
 ControlState_t prevControlState;
 
-Align_t Align_data = {
-	.elevation_angle = 0,
+Align_t alignmentData = {
+	.altAngle = 0,
 	.declination = 0,
+	.polarisFound = 0,
+	.ncpFound = 0,
+	.azError = 0,
+	.altError = 0,
 };
 
 

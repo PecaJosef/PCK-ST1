@@ -22,20 +22,22 @@ static uint16_t rpi_index = 0;
 static uint8_t pc_cmd_ready = 0;
 static uint8_t rpi_cmd_ready = 0;
 
-static void CMD_Execute(char *cmd, UART_Source_t src);
+static void executeCommand(char *cmd, UART_Source_t src);
 
 static void moveParsing(char **saveptr, UART_Source_t src);
 
-static void rpiCommandForward(char **saveptr, UART_Source_t src);
+static void rpiParsing(char **saveptr, UART_Source_t src);
+
+static void polarAlignmentParsing (char **saveptr, UART_Source_t src);
 
 void commandHandler(void)
 {
     if (pc_cmd_ready) {
-        CMD_Execute((char *)pc_buffer, UART_SRC_PC);
+        executeCommand((char *)pc_buffer, PC_UART_SRC);
         pc_cmd_ready = 0;
     }
     if (rpi_cmd_ready) {
-        CMD_Execute((char *)rpi_buffer, UART_SRC_RPI);
+        executeCommand((char *)rpi_buffer, RPI_UART_SRC);
         rpi_cmd_ready = 0;
     }
 }
@@ -52,7 +54,7 @@ void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte)
     uint16_t *idx;
     uint8_t *ready;
 
-    if (src == UART_SRC_PC)
+    if (src == PC_UART_SRC)
     {
     	buf = pc_buffer; idx = &pc_index; ready = &pc_cmd_ready;
     }
@@ -77,7 +79,7 @@ void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte)
     }
 }
 
-static void CMD_Execute(char *cmd, UART_Source_t src)
+static void executeCommand(char *cmd, UART_Source_t src)
 {
 	char *token;
 	char *saveptr;
@@ -91,19 +93,30 @@ static void CMD_Execute(char *cmd, UART_Source_t src)
 	}
 	else if(strcmp(token, "$MOVE")==0)
 	{
+		//Move commands parsing
 		moveParsing(&saveptr, src);
 	}
-
-
-	else if(strcmp(token, "ECHO")==0 && src == UART_SRC_RPI)
+	else if(strcmp(token, "$PA")==0)
 	{
-		CMD_Send(UART_SRC_PC, "#RPI:ECHO\r\n"); //sends response from RPi (ECHO) to PC
+		//Polar alignment commands processing
+		polarAlignmentParsing(&saveptr, src);
 	}
 	else if (strcmp(token, "$RPI")==0)
 	{
-		//Jump to RPI command sub processing
-		rpiCommandForward(&saveptr, src);
+		//RPI commands processing and forwarding
+		rpiParsing(&saveptr, src);
 	}
+
+
+	else if(strcmp(token, "#ECHO")==0 && src == RPI_UART_SRC)
+	{
+		CMD_Send(PC_UART_SRC, "#RPI:ECHO\r\n"); //sends response from RPi (ECHO) to PC
+	}
+	else if(strcmp(token, "#RDY")==0 && src == RPI_UART_SRC)
+	{
+		CMD_Send(PC_UART_SRC, "#RPI:RDY\r\n"); //sends response from RPi (ECHO) to PC
+	}
+
 	else if(strcmp(token, "$DIS")==0)
 	{
 		stepperDisable(&ALT_AxisMotor);
@@ -118,7 +131,7 @@ static void CMD_Execute(char *cmd, UART_Source_t src)
 		}
 	else
 	{
-		CMD_Send(src, "ERR:Unknown command\r\n");
+		CMD_Send(src, "ERR:UNKNOWN\r\n");
 
 		//For debugging only - comment out for normal use
 		#define CMD_DEBUG
@@ -155,7 +168,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 
 		if(axis == NULL || angle == NULL || speed == NULL)
 		{
-			CMD_Send(src, "#ERR:Wrong format\r\n");
+			CMD_Send(src, "#ERR:FORMAT\r\n");
 			return;
 		}
 
@@ -171,7 +184,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			}
 			else
 			{
-				CMD_Send(src, "ERR:Axis busy\r\n");
+				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
 		else if(strcmp(axis, "EL")==0)
@@ -186,7 +199,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			}
 			else
 			{
-				CMD_Send(src, "ERR:Axis busy\r\n");
+				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
 		else if(strcmp(axis, "DEC")==0)
@@ -199,7 +212,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			}
 			else
 			{
-				CMD_Send(src, "ERR:Axis busy\r\n");
+				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
 		else if(strcmp(axis, "RA")==0)
@@ -212,14 +225,13 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			}
 			else
 			{
-				CMD_Send(src, "ERR:Axis busy\r\n");
+				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
 		else
 		{
 			//Wrong Axis name -> Error
-			CMD_Send(src, "#ERR:Wrong axis name\r\n");
-
+			CMD_Send(src, "#ERR:AXIS_NAME\r\n");
 			return;
 		}
 		command  = strtok_r(NULL, "$",saveptr);
@@ -233,15 +245,15 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 }
 
 
-static void rpiCommandForward(char **saveptr, UART_Source_t src)
+static void rpiParsing(char **saveptr, UART_Source_t src)
 {
 	char *command;
 
 	command = strtok_r(NULL,":",saveptr); //Gets the RPI command type
 	if(strcmp(command, "ECHO")==0)
 	{
-		CMD_Send(UART_SRC_RPI, "$ECHO\r\n");
-		CMD_Send(UART_SRC_PC, "Sent ECHO to RPi\r\n");
+		CMD_Send(RPI_UART_SRC, "$ECHO\r\n");
+		CMD_Send(PC_UART_SRC, "Sent ECHO to RPi\r\n");
 	}
 	else if(strcmp(command, "SHUTDOWN")==0)
 	{
@@ -253,15 +265,76 @@ static void rpiCommandForward(char **saveptr, UART_Source_t src)
 	}
 	else if(strcmp(command, "ALIGN")==0)
 	{
-		CMD_Send(UART_SRC_RPI, "$ALIGN\r\n");
-		CMD_Send(UART_SRC_PC, "#ALIGN CMD Sent\r\n");
+		CMD_Send(RPI_UART_SRC, "$ALIGN\r\n");
+		CMD_Send(PC_UART_SRC, "#ALIGN CMD Sent\r\n");
 	}
 
 }
 
+void polarAlignmentParsing (char **saveptr, UART_Source_t src)
+{
+	char *command;
+
+	command = strtok_r(NULL, ":", saveptr);
+
+	if(strcmp(command, "DEV")==0)
+	{
+		//Gets the PA data from RPi - $PA:DEV:A:B:X.xxxxx:Y.yyyyy,
+		//where A marks if the NCP was found successfully, B marks if the Polaris was found, X value marks deviation in AZ axis and Y value in ALT axis
+		char *ncpFound_c = strtok_r(NULL, ":", saveptr);
+		char *polarisFound_c = strtok_r(NULL, ":", saveptr);
+		char *azError_c = strtok_r(NULL, ":", saveptr);
+		char *altError_c = strtok_r(NULL, ":", saveptr);
+
+		//Return if part of the command is missing
+		if (polarisFound_c == NULL || ncpFound_c == NULL || azError_c == NULL || altError_c == NULL)
+		{
+			CMD_Send(src, "ERR:FORMAT\n\r");
+			return;
+		}
+		//Convert the ncpFound_c to bool while checking the formating
+		if (ncpFound_c[1] == '\0')
+		{
+			alignmentData.ncpFound = (ncpFound_c[0] == '1');
+		}
+		else
+		{
+			CMD_Send(src, "ERR:FORMAT\n\r");
+			return;
+		}
+		//Convert the polarisFound_c to bool while checking the formating
+		if (polarisFound_c[1] == '\0')
+				{
+					alignmentData.polarisFound = (polarisFound_c[0] == '1');
+				}
+				else
+				{
+					CMD_Send(src, "ERR:FORMAT\n\r");
+					return;
+				}
+		//Convert the error values to floats
+		alignmentData.altError = atof(altError_c);
+		alignmentData.azError = atof(azError_c);
+		return;
+	}
+
+	else if(strcmp(command, "START")==0)
+	{
+		//Start Polar Alignment process manually
+	}
+	else if(strcmp(command, "ABORT")==0)
+	{
+
+	}
+	else
+	{
+		CMD_Send(src, "ERR:UNKNOWN\n\r");
+	}
+}
+
 void CMD_Send(UART_Source_t src, const char *msg)
 {
-    if (src == UART_SRC_PC)
+    if (src == PC_UART_SRC)
         HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
     else
         HAL_UART_Transmit(&huart5, (uint8_t*)msg, strlen(msg), 100);
@@ -269,7 +342,7 @@ void CMD_Send(UART_Source_t src, const char *msg)
 
 void rpiShutdown()
 {
-	CMD_Send(UART_SRC_RPI, "$SHUTDOWN");
+	CMD_Send(RPI_UART_SRC, "$SHUTDOWN");
 }
 
 void rpiPowerOn()

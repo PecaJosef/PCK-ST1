@@ -28,8 +28,12 @@ typedef enum {
 }ControlState_t;
 
 typedef struct {
-	float elevation_angle;
+	float altAngle;
 	float declination;
+	bool polarisFound;
+	bool ncpFound;
+	float azError;
+	float altError;
 }Align_t;
 
 typedef struct {
@@ -48,7 +52,7 @@ typedef struct{
 extern ControlState_t controlState;
 extern ControlState_t prevControlState;
 
-extern Align_t Align_data;
+extern Align_t alignmentData;
 
 extern MoveRequest_t AZ_MoveRequest;
 extern MoveRequest_t EL_MoveRequest;

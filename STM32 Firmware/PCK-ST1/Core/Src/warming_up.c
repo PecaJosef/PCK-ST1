@@ -36,8 +36,7 @@ void handleWarmingUp()
         gpsConfigured = true;
     }
 
-    // 3. Wait for valid GPS fix
-
+    //Wait for valid GPS fix
     switch (WarmUpState)
     {
 		case WAITING_FOR_GPS_FIX:
@@ -45,14 +44,13 @@ void handleWarmingUp()
 			{
 				gpsLastCheck = HAL_GetTick();
 				GPS_Data = Get_GPS_Data();
-				//Calculate elevation from GPS longitude
-				Align_data.elevation_angle = 90.0f-GPS_Data.longitude;
+				//Calculate altitude angle from GPS longitude
+				alignmentData.altAngle = 90.0f-GPS_Data.longitude;
 				// Compute magnetic declination from GPS fix
 				float wmm_date = wmm_get_date(GPS_Data.year, GPS_Data.month, GPS_Data.day);
 				float declination;
 				E0000(GPS_Data.latitude, GPS_Data.longitude, wmm_date, &declination);
 				// Move on to next state
-
 			}
 			break;
 		case WAITING_FOR_BUTTON_PRESS:
@@ -64,7 +62,7 @@ void handleWarmingUp()
 		case WAITING_FOR_BUTTON_RELEASE:
 			if (btn == RELEASED) // released
 			{
-				controlState = LOW_POWER_IDLE;
+				controlState = LOW_POWER_IDLE; //Change state to ALIGN
 			}
 			break;
 	}

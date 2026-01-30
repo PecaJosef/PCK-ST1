@@ -21,8 +21,8 @@ extern UART_HandleTypeDef huart5;
 
 
 typedef enum {
-    UART_SRC_PC,
-    UART_SRC_RPI
+    PC_UART_SRC,
+    RPI_UART_SRC
 } UART_Source_t;
 
 void commandHandler_Init(void);

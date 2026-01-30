@@ -138,8 +138,7 @@ MagCalib_t CalibrateMagnetometer(Stepper_motor *AZ_motor, float step_angle, floa
     return calib;
 }
 */
-static void eigen2x2(float a, float b, float c, float *l1, float *l2,
-                     float *vx1, float *vy1, float *vx2, float *vy2)
+static void eigen2x2(float a, float b, float c, float *l1, float *l2,float *vx1, float *vy1, float *vx2, float *vy2)
 {
     // Symmetric matrix [[a, b],[b, c]]
     float tr = a + c;
