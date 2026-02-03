@@ -5128,6 +5128,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "SMF22A-E3-08"
+			(at 104.14 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "466f4ef0-e4e7-4d27-bd23-ee5546b8b54b")
 		)
@@ -5190,6 +5199,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 121.92 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM1555C2A391JE01D"
+			(at 121.666 101.346 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5266,6 +5284,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM155R61A106ME11D"
+			(at 120.65 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "b3c5572c-12a8-48a6-ad2c-a674396a9718")
 		)
@@ -5325,6 +5352,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 243.84 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW040224K0FKEDC"
 			(at 243.84 113.03 0)
 			(effects
 				(font
@@ -5400,6 +5436,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW0402100KFKEE"
+			(at 203.2 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "811fb4d0-5818-4434-aa97-3eb2a7773a9b")
 		)
@@ -5459,6 +5504,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 251.46 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402200KFKEDHP"
 			(at 251.46 97.79 0)
 			(effects
 				(font
@@ -5552,7 +5606,7 @@
 		(at 54.61 102.87 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -5712,6 +5766,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW040224K0FKEDC"
+			(at 251.46 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "b45b95a4-ce59-4612-ad75-4548ee15bc01")
 		)
@@ -5771,6 +5834,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 203.2 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402100KFKEE"
 			(at 203.2 102.87 0)
 			(effects
 				(font
@@ -5978,6 +6050,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM155R61A106ME11D"
+			(at 164.846 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "37118e63-79b2-41c0-870a-332ca34273b5")
 		)
@@ -6045,6 +6126,24 @@
 				(hide yes)
 			)
 		)
+		(property "Alternative PN" "RCC0402200KFKED"
+			(at 236.22 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402200KFKEDHP"
+			(at 236.22 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "5a419dcb-5875-4e10-9b85-c109bd6fa28e")
 		)
@@ -6104,6 +6203,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 215.9 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402100KFKEE"
 			(at 215.9 118.11 0)
 			(effects
 				(font
@@ -6244,6 +6352,24 @@
 				(hide yes)
 			)
 		)
+		(property "Alternative PN" "RCC0402200KFKED"
+			(at 243.84 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402200KFKEDHP"
+			(at 243.84 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "f3a7ec38-c166-46f3-af1d-a5c8116eac97")
 		)
@@ -6313,6 +6439,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM1555C2A391JE01D"
+			(at 113.03 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "73e7801d-e703-4950-af76-81c33e881230")
 		)
@@ -6372,6 +6507,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 205.74 86.36 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW04020000Z0EDC"
 			(at 205.74 86.36 0)
 			(effects
 				(font
@@ -6449,6 +6593,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "C3216X5R1E476M160AC"
+			(at 149.606 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "0f67e6fd-dfad-43ab-800e-731e0e3d8c15")
 		)
@@ -6469,7 +6622,7 @@
 		(at 149.86 34.29 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -6651,6 +6804,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM155R61A106ME11D"
+			(at 180.594 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "6228f7d0-ffb2-4d82-9f70-afaf8b7cf6dd")
 		)
@@ -6710,6 +6872,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 213.36 86.36 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402100KFKEE"
 			(at 213.36 86.36 0)
 			(effects
 				(font
@@ -6850,6 +7021,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW0402100KFKEE"
+			(at 210.82 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "baa5496d-9372-48d6-a491-1c2a21d5c383")
 		)
@@ -6919,6 +7099,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM188R61E475KE11D"
+			(at 135.89 44.196 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "b97254b2-bdac-49bb-bd4e-cd703b64f90b")
 		)
@@ -6978,6 +7167,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 130.81 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402100KFKEE"
 			(at 130.81 81.28 0)
 			(effects
 				(font
@@ -7172,6 +7370,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "TPD4E05U06DQAR"
+			(at 88.9 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "7"
 			(uuid "1ad95657-fdab-484e-835b-e3788f538caf")
 		)
@@ -7328,6 +7535,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW040210K0FKEDC"
+			(at 236.22 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "ff72c695-3f7a-4aa7-8a07-48d989707f74")
 		)
@@ -7445,6 +7661,15 @@
 					(size 1.27 1.27)
 				)
 				(justify left top)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "TPS25730DREFR"
+			(at 191.77 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)

@@ -2658,7 +2658,7 @@
 		(at 165.1 133.35 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -2828,7 +2828,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "220nF/16V"
+		(property "Value" "220nF"
 			(at 186.436 97.79 0)
 			(effects
 				(font
@@ -2857,6 +2857,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 184.15 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GCM155R71C224KE02J"
+			(at 184.15 94.234 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2943,6 +2952,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW04020000Z0EDC"
+			(at 133.35 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "71d1a6b8-2add-43f5-ac11-3c8043718489")
 		)
@@ -2976,7 +2994,7 @@
 		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(uuid "57e289d1-84eb-4391-a8eb-202cc0efe26f")
@@ -3075,7 +3093,7 @@
 				)
 			)
 		)
-		(property "Value" "DRV8434"
+		(property "Value" "DRV8434/24"
 			(at 154.432 111.506 90)
 			(effects
 				(font
@@ -3122,7 +3140,7 @@
 				(hide yes)
 			)
 		)
-		(property "Mouser Part Number" "595-DRV8426RGER"
+		(property "Mouser Part Number" "DRV8434RGER"
 			(at -324.74 124.46 0)
 			(effects
 				(font
@@ -3152,13 +3170,31 @@
 				(hide yes)
 			)
 		)
-		(property "Manufacturer_Part_Number" "DRV8426RGER"
+		(property "Manufacturer_Part_Number" "DRV8434RGER"
 			(at -624.74 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 				(justify left top)
+				(hide yes)
+			)
+		)
+		(property "Alternative PN" "DRV8424RGER"
+			(at 160.02 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "DRV8434RGER"
+			(at 160.02 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -3276,7 +3312,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10nF/16V"
+		(property "Value" "10nF"
 			(at 138.176 62.23 0)
 			(effects
 				(font
@@ -3305,6 +3341,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 135.89 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155R71H103JA88D"
+			(at 135.636 58.674 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3357,7 +3402,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22nF/16V"
+		(property "Value" "22nF"
 			(at 194.056 107.95 0)
 			(effects
 				(font
@@ -3386,6 +3431,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 191.77 106.68 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155R71E223JA61D"
+			(at 192.278 103.632 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3472,6 +3526,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW0402100KFKEE"
+			(at 115.57 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "f832b885-b49b-40c4-a3bb-e4a8fa638159")
 		)
@@ -3545,6 +3608,24 @@
 			)
 		)
 		(property "Description" "Polarized capacitor"
+			(at 166.37 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Alternative PN" "TAJD107K020RNJ"
+			(at 166.37 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "293D107X9020D2TE3"
 			(at 166.37 60.96 0)
 			(effects
 				(font
@@ -3675,7 +3756,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1u/6.3V"
+		(property "Value" "1uF"
 			(at 114.046 124.46 0)
 			(effects
 				(font
@@ -3703,6 +3784,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 111.76 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155Z71A105KE01J"
 			(at 111.76 123.19 0)
 			(effects
 				(font
@@ -3868,6 +3958,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW04020000Z0EDC"
+			(at 140.97 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "83dc27f6-581a-479c-89ed-903f6dd2ab00")
 		)
@@ -3991,7 +4090,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10nF/16V"
+		(property "Value" "10nF"
 			(at 153.416 62.23 0)
 			(effects
 				(font
@@ -4020,6 +4119,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 151.13 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155R71H103JA88D"
+			(at 151.384 58.928 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4183,6 +4291,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW04020000Z0EDC"
+			(at 125.73 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "c8a2011a-a118-4ed4-bd38-0dae9aee49ac")
 		)
@@ -4262,6 +4379,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW04020000Z0EDC"
+			(at 133.35 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "7ac689a2-073d-4163-946f-628ca300e748")
 		)
@@ -4333,6 +4459,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 125.73 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW04020000Z0EDC"
 			(at 125.73 129.54 0)
 			(effects
 				(font

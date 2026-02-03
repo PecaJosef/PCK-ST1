@@ -4838,6 +4838,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW04024K99FKED"
+			(at 111.76 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "476a2144-3e27-4bc9-96fc-008d2e45e369")
 		)
@@ -5107,6 +5116,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" " 74439323010"
+			(at 118.11 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "7cc64e3c-8c50-4701-a9ba-cdbb249bd38f")
 		)
@@ -5359,6 +5377,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "SMF22A-E3-08"
+			(at 59.69 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "b649eee0-b4bd-4acb-a766-1d1abaaf0b62")
 		)
@@ -5421,6 +5448,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 83.82 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "C3216X5R1E476M160AC"
+			(at 83.82 65.278 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5513,7 +5549,7 @@
 		(at 245.11 123.19 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -5629,6 +5665,24 @@
 				(hide yes)
 			)
 		)
+		(property "Alternative PN" "TAJD107K020RNJ"
+			(at 38.1 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "293D107X9020D2TE3"
+			(at 38.1 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "656f8367-fa67-4d18-82eb-fc27285fc277")
 		)
@@ -5649,7 +5703,7 @@
 		(at 60.96 110.49 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -5729,7 +5783,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "22uF/16V"
+		(property "Value" "22uF/25V"
 			(at 134.366 133.35 0)
 			(effects
 				(font
@@ -5757,6 +5811,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 132.08 132.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CL21A226MAYNNNE"
 			(at 132.08 132.08 0)
 			(effects
 				(font
@@ -5798,7 +5861,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100n/6.3V"
+		(property "Value" "100n"
 			(at 263.906 138.43 0)
 			(effects
 				(font
@@ -5827,6 +5890,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 261.62 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155R71C104JA88D"
+			(at 262.636 135.128 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5959,6 +6031,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 158.75 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW040222K0FKEDHP"
 			(at 158.75 137.16 0)
 			(effects
 				(font
@@ -6154,6 +6235,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "TPS62135RGXR"
+			(at 111.76 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "5"
 			(uuid "c7f5d834-5093-465f-9764-2969d8c0eabe")
 		)
@@ -6201,7 +6291,7 @@
 		(at 59.69 55.88 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -6368,6 +6458,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "TPS2121RUXR"
+			(at 133.35 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "10"
 			(uuid "09f1f333-b99b-42b7-a476-fd5cbd92c8ce")
 		)
@@ -6467,6 +6566,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM188R61E106KA73J"
+			(at 53.34 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "ca984990-94ee-4078-a0e4-a6513e661be8")
 		)
@@ -6487,7 +6595,7 @@
 		(at 40.64 66.04 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -6605,6 +6713,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW0402100KFKEE"
+			(at 158.75 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "a8450db1-8684-4cfe-acce-b9dd3dbcb86c")
 		)
@@ -6672,6 +6789,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW040275K0FKED"
+			(at 120.65 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "3d596ee1-3327-4344-81a3-08b0cd67ed13")
 		)
@@ -6692,7 +6818,7 @@
 		(at 255.27 64.77 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -6806,6 +6932,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW0402100KFKEE"
+			(at 66.04 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "27190eab-5a0f-45b6-9cea-c084ff9838af")
 		)
@@ -6839,7 +6974,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1n/6.3V"
+		(property "Value" "1n"
 			(at 251.206 138.43 0)
 			(effects
 				(font
@@ -6868,6 +7003,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 248.92 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRT1555C1H102FA02D"
+			(at 248.92 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6934,6 +7078,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 123.19 132.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW0402604KFKEDC"
 			(at 123.19 132.08 0)
 			(effects
 				(font
@@ -7258,6 +7411,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "TLV70033DDCR"
+			(at 220.98 62.23 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "5"
 			(uuid "2e3d6d0e-8a57-44c9-b53e-0043cd64807b")
 		)
@@ -7334,6 +7496,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW04024K99FKED"
+			(at 120.65 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "94975e81-3a3e-43b5-8f14-2bd303115290")
 		)
@@ -7354,7 +7525,7 @@
 		(at 137.16 116.84 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -7462,6 +7633,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 74.93 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155R71H222JA01J"
 			(at 74.93 124.46 0)
 			(effects
 				(font
@@ -7603,6 +7783,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW040275K0FKED"
+			(at 111.76 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "766390f4-1ba9-45f5-8c5d-d3356876b2e1")
 		)
@@ -7665,6 +7854,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 167.64 137.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155R71C104JA88D"
+			(at 167.894 136.144 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8003,6 +8201,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM155Z71A105KE01J"
+			(at 170.18 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "1607b1b7-cf05-4155-bfa9-9d1169c27b74")
 		)
@@ -8101,7 +8308,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1u/6.3V"
+		(property "Value" "1uF"
 			(at 253.746 74.93 0)
 			(effects
 				(font
@@ -8130,6 +8337,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 251.46 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155Z71A105KE01J"
+			(at 251.206 72.644 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8256,6 +8472,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "TPS22975DSGR"
+			(at 209.55 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "4"
 			(uuid "f5479207-d393-4658-b1d8-ea86ce23ab6f")
 		)
@@ -8310,7 +8535,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1u/6.3V"
+		(property "Value" "1uF"
 			(at 209.296 74.93 0)
 			(effects
 				(font
@@ -8339,6 +8564,15 @@
 		)
 		(property "Description" "Unpolarized capacitor"
 			(at 207.01 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "GRM155Z71A105KE01J"
+			(at 207.01 73.152 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8479,6 +8713,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "CRCW0402100KFKEE"
+			(at 123.19 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "f77d311f-f4ed-44cf-9f75-7d836b1d3de2")
 		)
@@ -8512,7 +8755,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1u/6.3V"
+		(property "Value" "1uF"
 			(at 206.756 142.24 0)
 			(effects
 				(font
@@ -8548,6 +8791,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part Number" "GRM155Z71A105KE01J"
+			(at 204.216 139.192 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "bb511c62-6524-4678-8738-b349b7d6521b")
 		)
@@ -8568,7 +8820,7 @@
 		(at 48.26 171.45 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -8677,6 +8929,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 177.8 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part Number" "CRCW040233K0FKEDHP"
 			(at 177.8 74.93 0)
 			(effects
 				(font
