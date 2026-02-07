@@ -44,9 +44,9 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  ../Core/Inc/stepper.h ../Core/Inc/mag.h ../Core/Inc/gps.h \
- ../Core/Inc/exti.h ../Core/Inc/homing.h ../Core/Inc/control_loop.h \
- ../Core/Inc/gps.h ../Core/Inc/button.h ../Core/Inc/wmm.h \
- ../Core/Inc/wmm.h ../Core/Inc/control_loop.h ../Core/Inc/cmd_handler.h \
+ ../Core/Inc/exti.h ../Core/Inc/control_loop.h ../Core/Inc/gps.h \
+ ../Core/Inc/button.h ../Core/Inc/wmm.h ../Core/Inc/wmm.h \
+ ../Core/Inc/control_loop.h ../Core/Inc/cmd_handler.h \
  ../Core/Inc/uart_it.h
 ../Core/Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
@@ -101,7 +101,6 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/mag.h:
 ../Core/Inc/gps.h:
 ../Core/Inc/exti.h:
-../Core/Inc/homing.h:
 ../Core/Inc/control_loop.h:
 ../Core/Inc/gps.h:
 ../Core/Inc/button.h:

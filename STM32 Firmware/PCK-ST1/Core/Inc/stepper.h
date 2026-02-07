@@ -34,7 +34,7 @@
 #define RA_STEP_PER_DEG ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/(360))
 
 //Positive direction is opposite to Homing direction -> while homing the stepper moves in negative direction towards endstop
-#define AZ_POS_DIR 1
+#define AZ_POS_DIR 0
 #define ALT_POS_DIR 1
 #define DEC_POS_DIR 1
 #define RA_POS_DIR 1

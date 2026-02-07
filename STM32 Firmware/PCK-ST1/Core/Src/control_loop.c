@@ -9,7 +9,7 @@
  * LOW_POWER_IDLE
 * 		- waits for power button power up sequence (short press, long press)
  * 		- after powering sequence LEDs start to blink
- * 		- another button press initiates homing -> HOMING state, powers up RPi
+ * 		- another button press initiates homing -> HOMING state, powers up RPi - button press is part of the homing state
  *
  * HOMING
  * 		- homes all axis
@@ -31,35 +31,99 @@
  *		- jumps into IDLE state
  *
  * IDLE
- * 		- waits for commands from PC/Controller or RPi (BTE app)
+ * 		- waits for commands from PC/Controller or RPi (?BTE app)
+ *
+ * SHUTDOWN
+ * 		- the SHUTDOWN state is initiate after a button is held for 5s (TBD)
+ * 		- All LEDs light up (LED1-4), the the button is released and user should confirm the shutdown by press-holding the button again - LEDs turn off in seqence (similar to power on)
+ * 		- if not confirmed, PCK-ST1 return to its previous state (after 10s - TBD)
+ * 		- after a shutdown is initiated the main board stays "alive", to safely turn off RPi
+ *
+ *
+ *
  */
-#include "low_power_idle.h"
-#include "warming_up.h"
+
+
+//#include "low_power_idle.h"
+//#include "warming_up.h"
 #include "control_loop.h"
-#include "homing.h"
+//#include "homing.h"
 #include "cmd_handler.h"
+#include "mag.h"
 
 ControlState_t controlState;
 ControlState_t prevControlState;
 
-Align_t alignmentData = {
-	.altAngle = 0,
-	.declination = 0,
-	.polarisFound = 0,
-	.ncpFound = 0,
-	.azError = 0,
-	.altError = 0,
-};
+StatusFlags_t statusFlags;
+
+/*
+ *	LOW POWER IDLE variables and defines
+ */
+
+#define LED_DELAY 500
+#define HOLD_TIME 4*LED_DELAY
+#define RESET_TIME 1000
+
+#define ROUGH_ALIGNMENT_THRESHOLD 2.0f
+#define ALIGNMENT_TRIES
+
+//---Low Power Idle internal states---
+typedef enum {
+	BTN_SEQ_WAIT_FIRST_PRESS,
+	BTN_SEQ_WAIT_FIRST_RELEASE,
+	BTN_SEQ_WAIT_SECOND_PRESS,
+	BTN_SEQ_HOLDING,
+	BTN_SEQ_DONE
+} LowPowerIdleState_t;
+
+//---Axis homing internal states---
+typedef enum {
+	HOMING_WAITING_FOR_BUTTON_PRESS,
+	HOMING_WAITING_FOR_BUTTON_RELEASE,
+	HOMING_PROCESS,
+}HomingState_t;
+
+//---Warming up internal states---
+typedef enum {
+	CHECK_AND_CONFIG_GPS,
+	WAITING_FOR_GPS_FIX,
+}WarmingUpState_t;
+
+//---Polar alignment internal states---
+typedef enum {
+	ALIGN_WAITING_FOR_BUTTON_PRESS,
+	ALIGN_WAITING_FOR_BUTTON_RELEASE,
+	ROUGH_ALIGNMENT_AZ,
+	ROUGH_ALIGNMENT_AZ_CHECK,
+	ROUGH_ALIGNMENT_ALT,
+	ROUGH_ALIGNMENT_ALT_CHECK,
+	PRECISE_ALIGN_CMD,
+	PRECISE_ALIGN_WAIT,
+	PRECISE_ALIGNMENT,
+	ALIGNMENT_DONE,
+}AlignState_t;
 
 
-//AXIS_MOVING variables
+static LowPowerIdleState_t btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
+static HomingState_t homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
+static WarmingUpState_t WarmUpState = CHECK_AND_CONFIG_GPS;
+static AlignState_t alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
+
+static uint32_t secondPressStart = 0;
+static uint32_t lastLedTime = 0;
+static int ledStep = 0;
+
+static GPS_Data_t gpsData;
+
+MagCalib_t magCalib;
+
 
 MoveRequest_t AZ_MoveRequest = {
 		.angle = 0,
 		.speed = 0,
 		.moveRequested = false,
 };
-MoveRequest_t EL_MoveRequest = {
+MoveRequest_t ALT_MoveRequest = {
 		.angle = 0,
 		.speed = 0,
 		.moveRequested = false,
@@ -75,36 +139,414 @@ MoveRequest_t RA_MoveRequest = {
 		.moveRequested = false,
 };
 
+Align_t alignmentData = {
+	.altAngle = 0,
+	.declination = 0,
+	.alignmentDataUpdated = false,
+	.polarisFound = 0,
+	.ncpFound = 0,
+	.azError = 0,
+	.altError = 0,
+	.alignmentTriesCounter = 0,
+};
 
-void Control_loop()
+
+static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
+static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
+
+static void blinkLeds();
+
+void controlLoop()
 {
 	switch (controlState)
-	    {
-	        case LOW_POWER_IDLE:
-	            handleLowPowerIdle();   // checks button sequence
-	            break;
+	{
+		case LOW_POWER_IDLE:
+			handleLowPowerIdle();
+			break;
 
-	        case HOMING:
-				handleHoming();
-				break;
+		case HOMING:
+			handleHoming();
+			break;
 
-	        case WARMING_UP:
-	            handleWarmingUp();      // your warming up logic
-	            break;
+		case CALIBRATION:
+			handleCalibration();
+			break;
 
-	        case AXIS_MOVING:
-	        	handleMoving();
-	        	break;
+		case WARMING_UP:
+			handleWarmingUp();
+			break;
 
-	        case ALIGNING:
-	        	handleAligning();
-	        	break;
+		case ALIGNMENT:
+			handleAligning();
+			break;
+		case IDLE:
+			//handleIdle();
+			break;
 
-	        // add more states as needed
-	        default:
-	            break;
-	    }
+		case AXIS_MOVING:
+			handleMoving();
+			break;
+
+		case SHUTDOWN:
+			//handleShutdown();
+			break;
+		case FAULT:
+			uartSend(PC_UART_SRC, "FAULT\r\n");
+			break;
+
+		default:
+			break;
+	}
 }
+
+/*
+ * LOW POWER IDLE STATE
+ *
+ *
+ *
+ */
+void handleLowPowerIdle() {
+	uint8_t btn = readButtonDebounced();
+
+	switch (btnSeqState) {
+		case BTN_SEQ_WAIT_FIRST_PRESS:
+			if (btn == PRESSED) // pressed
+			{
+				btnSeqState = BTN_SEQ_WAIT_FIRST_RELEASE;
+				// turn on LEDs initially
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+			}
+			break;
+
+		case BTN_SEQ_WAIT_FIRST_RELEASE:
+			if (btn == RELEASED) // released
+			{
+				btnSeqState = BTN_SEQ_WAIT_SECOND_PRESS;
+				secondPressStart = HAL_GetTick(); // start 2s window
+			}
+			break;
+
+		case BTN_SEQ_WAIT_SECOND_PRESS:
+			if ((HAL_GetTick() - secondPressStart) > RESET_TIME)
+			{
+				// Timeout, reset sequence
+				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
+				ledStep = 0;
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+			} else if (btn == PRESSED) { // pressed again
+				btnSeqState = BTN_SEQ_HOLDING;
+				secondPressStart = HAL_GetTick();
+				lastLedTime = secondPressStart;
+				ledStep = 0;
+				/*
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+				*/
+			}
+			break;
+
+		case BTN_SEQ_HOLDING:
+			if (btn == RELEASED) // released too early → reset
+			{
+				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
+				ledStep = 0;
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				break;
+			}
+			// Check how long held
+			uint32_t heldTime = HAL_GetTick() - secondPressStart;
+
+			// light LEDs progressively
+			if ((heldTime / LED_DELAY) > ledStep && ledStep < 4)
+			{
+				ledStep++;
+				switch (ledStep) {
+					case 1: HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET); break;
+					case 2: HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET); break;
+					case 3: HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); break;
+					case 4: HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET); break;
+				}
+			}
+
+			if (heldTime >= HOLD_TIME) {
+				btnSeqState = BTN_SEQ_DONE;
+				HAL_GPIO_WritePin(PWR_BTN_LED_GPIO_Port, PWR_BTN_LED_Pin, GPIO_PIN_SET);
+			}
+			break;
+
+		case BTN_SEQ_DONE:
+			if (btn == RELEASED)
+			{
+				controlState = HOMING;
+				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS; //reset for next time
+
+				uartSend(PC_UART_SRC, "HOMING\r\n");
+			}
+			break;
+
+	}
+}
+
+/*
+ * HOMING STATE
+ *
+ *
+ *
+ */
+
+void handleHoming()
+{
+	static bool homing = false;
+	uint8_t btn = readButtonDebounced();
+
+	switch(homingState)
+	{
+		case HOMING_WAITING_FOR_BUTTON_PRESS:
+			blinkLeds();
+
+			if (btn == PRESSED) // pressed
+			{
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				homingState = HOMING_WAITING_FOR_BUTTON_RELEASE;
+			}
+			break;
+
+		case HOMING_WAITING_FOR_BUTTON_RELEASE:
+			if (btn == RELEASED)
+			{
+				ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+				AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+				RA_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+				DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+				homingState = HOMING_PROCESS;
+			}
+			break;
+
+		case HOMING_PROCESS:
+			if (!homing)
+			{
+				// Start homing for all axes
+				axisHomingStart(&ALT_AxisMotor, 10.0f, 5.0f);
+				//Axis_Home_Start(&AZ_Axis_motor, 200.0f, 50.0f);
+				//Axis_Home_Start(&RA_Axis_motor, 200.0f, 50.0f);
+				//Axis_Home_Start(&DEC_Axis_motor, 200.0f, 50.0f);
+
+				homing = true;
+			}
+
+			// Update all axes in parallel
+			axisHomingUpdate(&ALT_AxisMotor, 10.0f, 7.5f);
+			axisHomingUpdate(&AZ_AxisMotor, 10.0f, 7.5f);
+			axisHomingUpdate(&RA_AxisMotor, 1.5f, 1.0f);
+			axisHomingUpdate(&DEC_AxisMotor, 1.5f, 1.0f);
+
+			// Check if all done
+			if (!ALT_AxisMotor.homing && !AZ_AxisMotor.homing && !RA_AxisMotor.homing && !DEC_AxisMotor.homing)
+			{
+				homing = false;
+				stepperDisable(&ALT_AxisMotor);
+
+				ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+				AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+				RA_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+				DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+
+				controlState = CALIBRATION;
+				uartSend(PC_UART_SRC, "CALIB\r\n");
+			}
+			break;
+	}
+}
+
+static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
+{
+    if (!Axis) return;
+    if (!Axis->enabled)
+	{
+    	stepperEnable(Axis);
+	}
+
+    Axis->homing = true;
+    __HAL_GPIO_EXTI_CLEAR_IT(Axis->ENDSTOP_Pin);
+    HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
+
+    if (HAL_GPIO_ReadPin(Axis->ENDSTOP_Port, Axis->ENDSTOP_Pin) == GPIO_PIN_RESET)
+    {
+        // Endstop already pressed → skip coarse, go to backoff
+        Axis->homing_state = AXIS_HOMING_BACKOFF;
+        stepperMove(Axis, 5.0f, fineSpeed);
+    }
+    else
+    {
+        // Normal coarse move towards switch
+        Axis->homing_state = AXIS_HOMING_COARSE;
+        stepperMove(Axis, -360.0f, coarseSpeed); // 180° is just "long enough"
+    }
+}
+
+static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
+{
+    if (!Axis->homing) return;
+
+    if (!Axis->busy) {  // Move finished without trigger
+        switch (Axis->homing_state)
+        {
+        case AXIS_HOMING_BACKOFF:
+            // Backoff done → now fine approach
+        	__HAL_GPIO_EXTI_CLEAR_IT(Axis->ENDSTOP_Pin);
+        	HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
+
+            Axis->homing_state = AXIS_HOMING_FINE;
+            stepperMove(Axis, -10.0f, fineSpeed);
+            break;
+
+        case AXIS_HOMING_FINE:
+            // Should have been triggered by interrupt. If not, treat as done anyway
+            Axis->homing_state = AXIS_HOMING_DONE;
+            Axis->homing = false;
+            Axis->Position = 0;
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+void endstopReached(StepperMotor_t *Axis)
+{
+	stepperStop(Axis);
+
+	if (!Axis->homing) return;
+
+	switch (Axis->homing_state) {
+	case AXIS_HOMING_COARSE:
+		// First hit → back off
+		Axis->homing_state = AXIS_HOMING_BACKOFF;
+		stepperMove(Axis, 5.0f, 5.0f);
+		break;
+
+	case AXIS_HOMING_FINE:
+		// Final hit → success
+		Axis->homing_state = AXIS_HOMING_DONE;
+		Axis->homing = false;
+		Axis->Position = 0;
+		break;
+
+	default:
+		break;
+	}
+}
+
+/*
+ * CALIBRATION STATE
+ *
+ *
+ */
+
+void handleCalibration()
+{
+	#define CALIB_FROM_FLASH
+
+	#ifdef CALIB_FROM_FLASH
+	  if (!LoadCalibrationFromFlash(&magCalib))
+	  {
+		magCalib = CalibrateMagnetometer(&AZ_AxisMotor, 1.0f, 7.5f);
+		SaveCalibrationToFlash(&magCalib);
+	  }
+	#else
+	  magCalib = CalibrateMagnetometer(&AZ_AxisMotor, 1.0f, 7.5f);
+	  SaveCalibrationToFlash(&magCalib);
+	#endif
+
+	controlState = WARMING_UP;
+	uartSend(PC_UART_SRC, "WARMUP\r\n");
+	return;
+}
+
+
+/*
+ * WRMING UP STATE
+ *
+ *
+ *
+ *
+ */
+
+void handleWarmingUp()
+{
+	static bool gpsConfigured = false;
+	static uint32_t gpsLastCheck = 0;
+    //uint8_t btn = readButtonDebounced();
+
+    switch (WarmUpState)
+    {
+    	case CHECK_AND_CONFIG_GPS:
+    		// 1. Check if GPS is alive (sending data)
+			if (!gpsIsAlive()) {
+				//controlState = FAULT;
+				break;
+			}
+
+			// 2. Configure GPS once
+			if (!gpsConfigured) {
+				uartSend(PC_UART_SRC, "GPS_CONF\r\n");
+				GPS_Config();
+				gpsConfigured = true;
+			}
+			WarmUpState = WAITING_FOR_GPS_FIX;
+		break;
+
+    	case WAITING_FOR_GPS_FIX:
+    		//Wait for valid GPS fix
+			if ((HAL_GetTick()-gpsLastCheck)>1000)
+			{
+				gpsLastCheck = HAL_GetTick();
+
+				uartSend(PC_UART_SRC, "GPS\r\n");
+
+				gpsData = getGPSData();
+
+				if (gpsData.fix == true)
+				{
+					//Calculate altitude angle from GPS longitude
+					alignmentData.altAngle = 90.0f-gpsData.latitude;
+
+					printf("altAngle %f \r\n", alignmentData.altAngle);
+
+					// Compute magnetic declination from GPS fix
+					float wmm_date = wmm_get_date(gpsData.year, gpsData.month, gpsData.day);
+					float declination;
+					E0000(gpsData.latitude, gpsData.longitude, wmm_date, &declination);
+					// Move on to next state
+					controlState = ALIGNMENT;
+
+					uartSend(PC_UART_SRC, "ALIGNMENT\r\n");
+					break;
+				}
+				else
+				{
+					break;
+				}
+			}
+
+	}
+}
+
 
 /*
  * MOVING STATE
@@ -118,7 +560,7 @@ void handleMoving()
 	//If all axis are not busy and there is no move requested the control loop shall return to the previous state
 	if(!AZ_AxisMotor.busy && !ALT_AxisMotor.busy && !RA_AxisMotor.busy && !DEC_AxisMotor.busy)
 	{
-		if(!AZ_MoveRequest.moveRequested && !EL_MoveRequest.moveRequested && !RA_MoveRequest.moveRequested && !DEC_MoveRequest.moveRequested)
+		if(!AZ_MoveRequest.moveRequested && !ALT_MoveRequest.moveRequested && !RA_MoveRequest.moveRequested && !DEC_MoveRequest.moveRequested)
 		{
 			controlState = prevControlState;
 			return;
@@ -130,10 +572,10 @@ void handleMoving()
 		stepperMove(&AZ_AxisMotor, AZ_MoveRequest.angle, AZ_MoveRequest.speed);
 		AZ_MoveRequest.moveRequested = false;
 	}
-	else if(EL_MoveRequest.moveRequested && !ALT_AxisMotor.busy)
+	else if(ALT_MoveRequest.moveRequested && !ALT_AxisMotor.busy)
 	{
-		stepperMove(&ALT_AxisMotor, EL_MoveRequest.angle, EL_MoveRequest.speed);
-		EL_MoveRequest.moveRequested = false;
+		stepperMove(&ALT_AxisMotor, ALT_MoveRequest.angle, ALT_MoveRequest.speed);
+		ALT_MoveRequest.moveRequested = false;
 	}
 	else if(RA_MoveRequest.moveRequested && !RA_AxisMotor.busy)
 	{
@@ -145,7 +587,6 @@ void handleMoving()
 		stepperMove(&DEC_AxisMotor, DEC_MoveRequest.angle, DEC_MoveRequest.speed);
 		DEC_MoveRequest.moveRequested = false;
 	}
-
 }
 
 /*
@@ -157,16 +598,124 @@ void handleMoving()
 
 void handleAligning()
 {
-	//Wait for button press to initiate polar alignment procedure
+	uint8_t btn = readButtonDebounced();
+	static bool roughCorrection = false;
 
-	//Send $ALIGN command to RPi
+	switch(alignmentState)
+	{
+	case ALIGN_WAITING_FOR_BUTTON_PRESS:
+		//Turns the LEDs on and off at around 2Hz - signaling the alignment is ready to begin
+		blinkLeds();
 
-	//Wait for response
+		if (btn == PRESSED) // pressed
+		{
+			HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+			alignmentState = ALIGN_WAITING_FOR_BUTTON_RELEASE;
+		}
+		break;
+	case ALIGN_WAITING_FOR_BUTTON_RELEASE:
+		if (btn == RELEASED)
+		{
+			roughCorrection = false;
+			alignmentState = ROUGH_ALIGNMENT_AZ;
+		}
+		break;
 
-	//Check the response
-		//If Polaris found and error >1 arcmin -> perform move towards NCP
-		//Repeat send $ALIGN command
+	case ROUGH_ALIGNMENT_AZ:
+		float azAngle = getCalibratedHeading(&magCalib, alignmentData.declination);
+
+		char dbgbuff[32];
+		sprintf(dbgbuff,"Heading: %f\r\n", azAngle);
+		uartSend(PC_UART_SRC, dbgbuff);
+
+		if (azAngle<=180.0)
+		{
+			stepperMove(&AZ_AxisMotor, -azAngle, 5.0f);
+		}
+		else
+		{
+			stepperMove(&AZ_AxisMotor, 360.0f-azAngle, 5.0f);
+		}
+
+		alignmentState = ROUGH_ALIGNMENT_AZ_CHECK;
+
+		break;
+
+	case ROUGH_ALIGNMENT_AZ_CHECK:
+
+		//Waits for the rough alignment move to complete
+		if (AZ_AxisMotor.busy == true)
+		{
+			break;
+		}
+
+		float azAngleError = getCalibratedHeading(&magCalib, alignmentData.declination);
+
+		if ((360.0-ROUGH_ALIGNMENT_THRESHOLD) >= azAngleError && azAngleError >= ROUGH_ALIGNMENT_THRESHOLD  && roughCorrection == false)
+		{
+			roughCorrection = true;
+			alignmentState = ROUGH_ALIGNMENT_AZ;
+		}
+		else
+		{
+			alignmentState = ROUGH_ALIGNMENT_ALT;
+		}
+
+		break;
+
+	case ROUGH_ALIGNMENT_ALT:
+
+		stepperMove(&ALT_AxisMotor, alignmentData.altAngle, 5.0f);
+		alignmentState = ROUGH_ALIGNMENT_ALT_CHECK;
+		break;
+
+	case ROUGH_ALIGNMENT_ALT_CHECK:
+		if (ALT_AxisMotor.busy == true)
+		{
+			break;
+		}
+		else
+		{
+			alignmentData.alignmentTriesCounter = 0;
+			alignmentState = PRECISE_ALIGN_CMD;
+		}
+		break;
+
+	case PRECISE_ALIGN_CMD:
+
+		break;
+
+	case PRECISE_ALIGN_WAIT:
+
+		break;
+
+	case PRECISE_ALIGNMENT:
+
+
+		break;
+
+	default:
+		break;
+	}
+
 }
 
+static void blinkLeds()
+{
+	static uint32_t ledLastTicks = 0;
 
+	if ((HAL_GetTick() - ledLastTicks) >= 250)
+	{
+		ledLastTicks = HAL_GetTick();
+
+		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+		HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+		HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
+	}
+
+}
 

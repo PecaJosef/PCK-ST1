@@ -1,5 +1,5 @@
 Core/Src/control_loop.o: ../Core/Src/control_loop.c \
- ../Core/Inc/low_power_idle.h ../Core/Inc/control_loop.h \
+ ../Core/Inc/control_loop.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h \
  ../Core/Inc/stm32l4xx_hal_conf.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc.h \
@@ -42,10 +42,8 @@ Core/Src/control_loop.o: ../Core/Src/control_loop.c \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  ../Core/Inc/main.h ../Core/Inc/gps.h ../Core/Inc/button.h \
- ../Core/Inc/wmm.h ../Core/Inc/stepper.h ../Core/Inc/warming_up.h \
- ../Core/Inc/control_loop.h ../Core/Inc/homing.h \
- ../Core/Inc/cmd_handler.h
-../Core/Inc/low_power_idle.h:
+ ../Core/Inc/control_loop.h ../Core/Inc/wmm.h ../Core/Inc/stepper.h \
+ ../Core/Inc/cmd_handler.h ../Core/Inc/mag.h
 ../Core/Inc/control_loop.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Core/Inc/stm32l4xx_hal_conf.h:
@@ -92,9 +90,8 @@ Core/Src/control_loop.o: ../Core/Src/control_loop.c \
 ../Core/Inc/main.h:
 ../Core/Inc/gps.h:
 ../Core/Inc/button.h:
+../Core/Inc/control_loop.h:
 ../Core/Inc/wmm.h:
 ../Core/Inc/stepper.h:
-../Core/Inc/warming_up.h:
-../Core/Inc/control_loop.h:
-../Core/Inc/homing.h:
 ../Core/Inc/cmd_handler.h:
+../Core/Inc/mag.h:

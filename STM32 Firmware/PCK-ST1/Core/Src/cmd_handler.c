@@ -35,6 +35,8 @@ void commandHandler(void)
     if (pc_cmd_ready) {
         executeCommand((char *)pc_buffer, PC_UART_SRC);
         pc_cmd_ready = 0;
+
+        printf("C\r\n");
     }
     if (rpi_cmd_ready) {
         executeCommand((char *)rpi_buffer, RPI_UART_SRC);
@@ -83,13 +85,14 @@ static void executeCommand(char *cmd, UART_Source_t src)
 {
 	char *token;
 	char *saveptr;
+	//uartSend(PC_UART_SRC, "H\r\n");
 
 	token = strtok_r(cmd, ":", &saveptr);
 	if (!token) return;
 
 	if (strcmp(token, "$ECHO")==0)
 	{
-		CMD_Send(src, "ECHO\r\n");
+		uartSend(src, "ECHO\r\n");
 	}
 	else if(strcmp(token, "$MOVE")==0)
 	{
@@ -110,11 +113,11 @@ static void executeCommand(char *cmd, UART_Source_t src)
 
 	else if(strcmp(token, "#ECHO")==0 && src == RPI_UART_SRC)
 	{
-		CMD_Send(PC_UART_SRC, "#RPI:ECHO\r\n"); //sends response from RPi (ECHO) to PC
+		uartSend(PC_UART_SRC, "#RPI:ECHO\r\n"); //sends response from RPi (ECHO) to PC
 	}
 	else if(strcmp(token, "#RDY")==0 && src == RPI_UART_SRC)
 	{
-		CMD_Send(PC_UART_SRC, "#RPI:RDY\r\n"); //sends response from RPi (ECHO) to PC
+		uartSend(PC_UART_SRC, "#RPI:RDY\r\n"); //sends response from RPi (ECHO) to PC
 	}
 
 	else if(strcmp(token, "$DIS")==0)
@@ -131,7 +134,7 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		}
 	else
 	{
-		CMD_Send(src, "ERR:UNKNOWN\r\n");
+		uartSend(src, "ERR:UNKNOWN\r\n");
 
 		//For debugging only - comment out for normal use
 		#define CMD_DEBUG
@@ -168,7 +171,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 
 		if(axis == NULL || angle == NULL || speed == NULL)
 		{
-			CMD_Send(src, "#ERR:FORMAT\r\n");
+			uartSend(src, "#ERR:FORMAT\r\n");
 			return;
 		}
 
@@ -184,22 +187,22 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			}
 			else
 			{
-				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
+				uartSend(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
-		else if(strcmp(axis, "EL")==0)
+		else if(strcmp(axis, "ALT")==0)
 		{
-			if(EL_MoveRequest.moveRequested==false)
+			if(ALT_MoveRequest.moveRequested==false)
 			{
-				EL_MoveRequest.angle = atof(angle);
-				EL_MoveRequest.speed = atof(speed);
-				//CMD_Send(UART_SRC_PC, "EL\r\n");
-				//printf("Move EL angle:%.5f speed:%.5f\r\n",EL_MoveRequest.angle, EL_MoveRequest.speed);
-				EL_MoveRequest.moveRequested = true;
+				ALT_MoveRequest.angle = atof(angle);
+				ALT_MoveRequest.speed = atof(speed);
+				//CMD_Send(UART_SRC_PC, "ALT\r\n");
+				//printf("Move ALT angle:%.5f speed:%.5f\r\n",ALT_MoveRequest.angle, ALT_MoveRequest.speed);
+				ALT_MoveRequest.moveRequested = true;
 			}
 			else
 			{
-				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
+				uartSend(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
 		else if(strcmp(axis, "DEC")==0)
@@ -212,7 +215,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			}
 			else
 			{
-				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
+				uartSend(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
 		else if(strcmp(axis, "RA")==0)
@@ -225,13 +228,13 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			}
 			else
 			{
-				CMD_Send(src, "ERR:AXIS_BUSY\r\n");
+				uartSend(src, "ERR:AXIS_BUSY\r\n");
 			}
 		}
 		else
 		{
 			//Wrong Axis name -> Error
-			CMD_Send(src, "#ERR:AXIS_NAME\r\n");
+			uartSend(src, "#ERR:AXIS_NAME\r\n");
 			return;
 		}
 		command  = strtok_r(NULL, "$",saveptr);
@@ -252,8 +255,8 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 	command = strtok_r(NULL,":",saveptr); //Gets the RPI command type
 	if(strcmp(command, "ECHO")==0)
 	{
-		CMD_Send(RPI_UART_SRC, "$ECHO\r\n");
-		CMD_Send(PC_UART_SRC, "Sent ECHO to RPi\r\n");
+		uartSend(RPI_UART_SRC, "$ECHO\r\n");
+		uartSend(PC_UART_SRC, "Sent ECHO to RPi\r\n");
 	}
 	else if(strcmp(command, "SHUTDOWN")==0)
 	{
@@ -265,8 +268,8 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 	}
 	else if(strcmp(command, "ALIGN")==0)
 	{
-		CMD_Send(RPI_UART_SRC, "$ALIGN\r\n");
-		CMD_Send(PC_UART_SRC, "#ALIGN CMD Sent\r\n");
+		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
+		uartSend(PC_UART_SRC, "#ALIGN CMD Sent\r\n");
 	}
 
 }
@@ -289,7 +292,7 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 		//Return if part of the command is missing
 		if (polarisFound_c == NULL || ncpFound_c == NULL || azError_c == NULL || altError_c == NULL)
 		{
-			CMD_Send(src, "ERR:FORMAT\n\r");
+			uartSend(src, "ERR:FORMAT\n\r");
 			return;
 		}
 		//Convert the ncpFound_c to bool while checking the formating
@@ -299,7 +302,7 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 		}
 		else
 		{
-			CMD_Send(src, "ERR:FORMAT\n\r");
+			uartSend(src, "ERR:FORMAT\n\r");
 			return;
 		}
 		//Convert the polarisFound_c to bool while checking the formating
@@ -309,7 +312,7 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 				}
 				else
 				{
-					CMD_Send(src, "ERR:FORMAT\n\r");
+					uartSend(src, "ERR:FORMAT\n\r");
 					return;
 				}
 		//Convert the error values to floats
@@ -328,21 +331,25 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 	}
 	else
 	{
-		CMD_Send(src, "ERR:UNKNOWN\n\r");
+		uartSend(src, "ERR:UNKNOWN\n\r");
 	}
 }
 
-void CMD_Send(UART_Source_t src, const char *msg)
+void uartSend(UART_Source_t src, const char *msg)
 {
     if (src == PC_UART_SRC)
         HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-    else
+    else if (src == RPI_UART_SRC)
         HAL_UART_Transmit(&huart5, (uint8_t*)msg, strlen(msg), 100);
+    else
+	{
+		return;
+	}
 }
 
 void rpiShutdown()
 {
-	CMD_Send(RPI_UART_SRC, "$SHUTDOWN");
+	uartSend(RPI_UART_SRC, "$SHUTDOWN");
 }
 
 void rpiPowerOn()

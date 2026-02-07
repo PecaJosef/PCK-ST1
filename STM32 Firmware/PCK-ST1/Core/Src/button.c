@@ -8,7 +8,7 @@
 
 // --- Debounce + sequence tracking ---
 static uint32_t btnLastChangeTime = 0;
-static uint8_t btnStableState = 1;   // 1 = released, 0 = pressed
+static uint8_t btnStableState = 1;
 static uint8_t btnLastRead = 1;
 
 

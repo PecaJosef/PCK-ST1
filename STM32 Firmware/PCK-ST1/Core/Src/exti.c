@@ -14,7 +14,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         HAL_NVIC_DisableIRQ(EXTI2_IRQn);
 
         //Call Endstop_reached function
-        Endstop_Reached(&ALT_AxisMotor);
+        endstopReached(&ALT_AxisMotor);
     }
 }
 

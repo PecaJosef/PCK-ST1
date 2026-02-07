@@ -57,6 +57,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
 I2C_HandleTypeDef hi2c3;
 
 TIM_HandleTypeDef htim1;
@@ -147,30 +148,15 @@ int main(void)
 
   //Stepper_IT_Enable();
 
-  Stepper_nSleep(GPIO_PIN_SET);
   //Stepper_Enable(&EL_Axis_motor);
   //Stepper_Enable(&EL_Axis_motor);
   //Stepper_Enable(&AZ_Axis_motor);
   //Stepper_Enable(&RA_Axis_motor);
 
-//#define CALIB_FROM_FLASH
-  Mag_Init(&hi2c3);
-  MagCalib_t calib;
 
-/*
-#define CALIB_FROM_FLASH
 
-#ifdef CALIB_FROM_FLASH
-  if (!LoadCalibrationFromFlash(&calib))
-  {
-	calib = CalibrateMagnetometer(&AZ_Axis_motor, 1.0f, 7.5f);
-	SaveCalibrationToFlash(&calib);
-  }
-#else
-  calib = CalibrateMagnetometer(&AZ_Axis_motor, 1.0f, 7.5f);
-  SaveCalibrationToFlash(&calib);
-#endif
-*/
+  //Mag_Init(&hi2c3);
+  //MagCalib_t magCalib;
 
   /* USER CODE END 2 */
 
@@ -219,11 +205,12 @@ int main(void)
 	  while(AZ_Axis_motor.busy){}
   }
 */
+  Stepper_nSleep(GPIO_PIN_SET);
+  Mag_Init(&hi2c3);
   commandHandler_Init();
   UART_IT_Init();
+  GPS_Init_DMA();
 
-  //Stepper_Home(&EL_Axis_motor, 5.0f, EL_HOMING_DIR);
-  //CMD_Send(UART_SRC_PC, "START\r\n");
 
   while (1)
   {
@@ -231,7 +218,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	Control_loop();
+	controlLoop();
 	commandHandler();
 	  /*
 	GPS_Data = Get_GPS_Data();

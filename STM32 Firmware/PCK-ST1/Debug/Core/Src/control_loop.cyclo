@@ -1,3 +1,11 @@
-../Core/Src/control_loop.c:79:6:Control_loop	6
-../Core/Src/control_loop.c:116:6:handleMoving	17
-../Core/Src/control_loop.c:158:6:handleAligning	1
+../Core/Src/control_loop.c:159:6:controlLoop	8
+../Core/Src/control_loop.c:208:6:handleLowPowerIdle	19
+../Core/Src/control_loop.c:308:6:handleHoming	12
+../Core/Src/control_loop.c:375:13:axisHomingStart	4
+../Core/Src/control_loop.c:401:13:axisHomingUpdate	5
+../Core/Src/control_loop.c:430:6:endstopReached	4
+../Core/Src/control_loop.c:461:6:handleCalibration	2
+../Core/Src/control_loop.c:490:6:handleWarmingUp	7
+../Core/Src/control_loop.c:558:6:handleMoving	17
+../Core/Src/control_loop.c:599:6:handleAligning	15
+../Core/Src/control_loop.c:706:13:blinkLeds	2

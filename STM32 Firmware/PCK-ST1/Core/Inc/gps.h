@@ -35,11 +35,11 @@ typedef struct {
 
 void GPS_Init_DMA(void);
 
-GPS_Data_t Get_GPS_Data(void);
+GPS_Data_t getGPSData(void);
 
 void GPS_Config(void);
 
-bool GPS_IsAlive();
+bool gpsIsAlive();
 
 bool GPS_ValidFix();
 
