@@ -18,19 +18,20 @@ def initCamera():
 
 
 def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/False]
-    PAcam.start()
-    time.sleep(1)
     #Set camera exposure and gain
     PAcam.set_controls({
     "AeEnable": False,
     "ExposureTime": exposure*1000000,   # in microseconds
     "AnalogueGain": gain
     })
-
+    
+    PAcam.start()
+    time.sleep(1)
+    
     # Capture image as RGB
     image_rgb = PAcam.capture_array()
 
-    PAcamera.stop()
+    PAcam.stop()
     # Convert to BGR for OpenCV - not mandatory, later turned to greyscale anyway
     image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 

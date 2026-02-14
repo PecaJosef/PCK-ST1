@@ -2,7 +2,7 @@ from camera import captureImage
 from star_processing import getAlignmentError
 import math
 import subprocess
-from time import sleep
+import time
 
 import cv2
 

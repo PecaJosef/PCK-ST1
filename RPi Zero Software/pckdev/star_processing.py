@@ -4,6 +4,13 @@ import numpy as np
 import math
 #import matplotlib.pyplot as plt
 
+polaris_vectors = np.load("star_vectors/polaris_vectors.npy")
+yildun_vectors = np.load("star_vectors/yildun_vectors.npy")
+ov_cephei_vectors = np.load("star_vectors/ov_cephei_vectors.npy")
+
+default_pix_per_arcmin = 4608/(14.334*60) #Default pixels per arminute - Later load from config file
+
+
 def brightest_stars(number_of_stars, image):
   gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
   # Apply Gaussian blur to reduce noise
@@ -37,6 +44,63 @@ def brightest_stars(number_of_stars, image):
   star_centers = np.array(star_centers)
   return star_centers
 
+
+def find_polaris(center_star, surrounding_stars, matched_vectors_threshold, star_pattern):
+    # Ensure float32 for speed
+    star_pattern = star_pattern.astype(np.float32)
+    
+    # 1. Use your ORIGINAL vector direction: Center - Surrounding
+    vectors_to_center = (center_star - surrounding_stars).astype(np.float32) 
+    
+    # 2. Normalize
+    norms = np.linalg.norm(vectors_to_center, axis=1)[:, np.newaxis]
+    normalized_vectors = vectors_to_center / (norms + 1e-9)
+
+    max_matched_vectors = 0
+    max_matched_angle = 0
+
+    matching_angles = []
+
+    # 3. Loosen threshold slightly (0.999 is approx 2.5 degrees of tolerance)
+    cos_threshold = 0.99999 
+
+    for angle in np.arange(-180, 180, 0.25):
+        angle_radians = np.radians(angle)
+        c, s = np.cos(angle_radians), np.sin(angle_radians)
+        
+        # 4. Rotation Matrix (Standard clockwise/counter-clockwise check)
+        rotation_matrix = np.array([[np.cos(angle_radians), -np.sin(angle_radians)],
+                                  [np.sin(angle_radians), np.cos(angle_radians)]])
+        
+        # Rotate image vectors
+        rotated_vectors = np.dot(normalized_vectors, rotation_matrix)
+
+        # 5. Compare against database
+        dot_matrix = np.dot(rotated_vectors, star_pattern.T)
+
+        # Find best database match for each image star
+        best_matches_per_vector = np.max(dot_matrix, axis=1)
+        num_matching_pairs = np.count_nonzero(best_matches_per_vector > cos_threshold)
+
+        if num_matching_pairs >= 15:
+          matching_angles.append(angle)
+          print("Angle:", angle, "Matching Pairs:", num_matching_pairs)
+
+          if num_matching_pairs > max_matched_vectors:
+            max_matched_vectors = num_matching_pairs
+            max_matched_angle = angle
+
+    # Call the function
+
+    #print("Max number of matching vectors:", max_macthed_vectors)
+    #print("Angle with the maximum number of matching vectors:", max_macthed_angle)
+    if max_matched_vectors > matched_vectors_threshold:
+      return True, max_matched_angle
+    else:
+      return False, None
+
+#Old function ---
+"""
 def find_polaris(center_star, surrounding_stars, matched_vectors_threshold, star_pattern):
   vectors_to_center = center_star - surrounding_stars
 
@@ -76,6 +140,7 @@ def find_polaris(center_star, surrounding_stars, matched_vectors_threshold, star
     return True, max_macthed_angle
   else:
     return False, None
+"""
 
 def check_star(center_star, surrounding_stars, matched_vectors_threshold, star_pattern, img_angle):
   vectors_to_center = center_star - surrounding_stars
@@ -231,11 +296,6 @@ def draw_ncp(ncp_coordinates, polaris_coordinates, yildun_coordinates, ov_cephei
 
 def getAlignmentError(image):
   #Loads sets of star vectors
-  polaris_vectors = np.load("star_vectors/polaris_vectors.npy")
-  yildun_vectors = np.load("star_vectors/yildun_vectors.npy")
-  ov_cephei_vectors = np.load("star_vectors/ov_cephei_vectors.npy")
-
-  default_pix_per_arcmin = 4608/(14.334*60) #Default pixels per arminute - Later load from config file
 
   #Check if the image was loaded successfully
   if image is None:
