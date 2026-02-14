@@ -1,5 +1,6 @@
 from picamera2 import Picamera2
 import cv2
+import time
 
 PAcam = Picamera2()
 
@@ -14,10 +15,11 @@ def cameraConnected():
 def initCamera():
     
     PAcam.configure(PAcam.create_still_configuration())
-    PAcam.start()
 
 
 def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/False]
+    PAcam.start()
+    time.sleep(1)
     #Set camera exposure and gain
     PAcam.set_controls({
     "AeEnable": False,
@@ -28,6 +30,7 @@ def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/Fals
     # Capture image as RGB
     image_rgb = PAcam.capture_array()
 
+    PAcamera.stop()
     # Convert to BGR for OpenCV - not mandatory, later turned to greyscale anyway
     image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
