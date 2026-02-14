@@ -11,7 +11,7 @@ def alignmentError(uart):
     
     #star_image = captureImage(5,16,True) #10s exposure, 16 gain, flip the image
     NCPErrorX, NCPErrorY, polarisFound, PAsuccesful = getAlignmentError(star_image)
-    pae_msg = f"#PA:DEV:{int(PAsuccesful)}:{int(polarisFound)}:{NCPErrorX:.5f}:{NCPErrorY:.5f}"
+    pae_msg = f"$PA:DEV:{int(PAsuccesful)}:{int(polarisFound)}:{NCPErrorX:.5f}:{NCPErrorY:.5f}"
     uart.send(pae_msg)
     return
 
