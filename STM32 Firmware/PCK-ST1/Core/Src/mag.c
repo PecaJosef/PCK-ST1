@@ -246,22 +246,7 @@ void SaveCalibrationToFlash(MagCalib_t *calib)
     }
     HAL_FLASH_Lock();
 }
-/*
-bool LoadCalibrationFromFlash(MagCalib_t *calib)
-{
-    uint32_t *addr = (uint32_t*)CALIB_FLASH_ADDR;
-    if(addr[0] != 0xDEADBEEF) return false;
 
-    calib->x_offset = *((float*)&addr[1]);
-    calib->y_offset = *((float*)&addr[2]);
-
-    for(int i=0;i<2;i++)
-        for(int j=0;j<2;j++)
-            calib->softiron[i][j] = *((float*)&addr[3 + i*2 + j]);
-
-    return true;
-}
-*/
 bool LoadCalibrationFromFlash(MagCalib_t *calib)
 {
     // Cast the Flash address directly to your wrapper struct type

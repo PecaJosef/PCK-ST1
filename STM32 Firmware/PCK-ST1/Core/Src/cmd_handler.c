@@ -271,6 +271,10 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
 		uartSend(PC_UART_SRC, "#ALIGN CMD Sent\r\n");
 	}
+	else
+	{
+		uartSend(src, "$ERR:UNKNOWN\r\n");
+	}
 
 }
 

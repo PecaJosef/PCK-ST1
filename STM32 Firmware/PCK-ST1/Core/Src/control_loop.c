@@ -103,6 +103,10 @@ typedef enum {
 	ALIGNMENT_DONE,
 }AlignState_t;
 
+typedef struct {
+	uint32_t timeoutDeadline;
+	bool timeoutActive;
+}Timeout_t;
 
 static LowPowerIdleState_t btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
 static HomingState_t homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
@@ -114,6 +118,10 @@ static uint32_t lastLedTime = 0;
 static int ledStep = 0;
 
 static GPS_Data_t gpsData;
+Timeout_t timeoutControlLoop = {
+		.timeoutActive = false,
+		.timeoutDeadline = 0,
+};
 
 MagCalib_t magCalib;
 
@@ -155,6 +163,9 @@ static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineS
 static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
 
 static void blinkLeds();
+void timeoutStart(Timeout_t *timeout, uint32_t seconds);
+void timeoutReset(Timeout_t *timeout);
+bool timeoutReached(Timeout_t *timeout);
 
 void controlLoop()
 {
@@ -508,11 +519,19 @@ void handleWarmingUp()
 				GPS_Config();
 				gpsConfigured = true;
 			}
+			timeoutStart(&timeoutControlLoop, 60);
 			WarmUpState = WAITING_FOR_GPS_FIX;
 		break;
 
     	case WAITING_FOR_GPS_FIX:
     		//Wait for valid GPS fix
+    		if (timeoutReached(&timeoutControlLoop)) {
+				timeoutReset(&timeoutControlLoop);
+				uartSend(PC_UART_SRC, "ERROR: GPS Timeout\r\n");
+				controlState = FAULT; // Jump to FAULT state
+				break;
+			}
+
 			if ((HAL_GetTick()-gpsLastCheck)>1000)
 			{
 				gpsLastCheck = HAL_GetTick();
@@ -523,6 +542,7 @@ void handleWarmingUp()
 
 				if (gpsData.fix == true)
 				{
+					timeoutReset(&timeoutControlLoop);
 					//Calculate altitude angle from GPS longitude
 					alignmentData.altAngle = 90.0f-gpsData.latitude;
 
@@ -719,3 +739,22 @@ static void blinkLeds()
 
 }
 
+void timeoutStart(Timeout_t *timeout, uint32_t seconds)
+{
+    timeout->timeoutDeadline = HAL_GetTick() + (seconds * 1000);
+    timeout->timeoutActive = true;
+}
+
+void timeoutReset(Timeout_t *timeout)
+{
+    timeout->timeoutActive = false;
+}
+
+bool timeoutReached(Timeout_t *timeout)
+{
+    if (timeout->timeoutActive && (HAL_GetTick() >= timeout->timeoutDeadline))
+    {
+        return true;
+    }
+    return false;
+}

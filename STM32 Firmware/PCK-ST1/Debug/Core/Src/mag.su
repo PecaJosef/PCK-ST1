@@ -6,4 +6,4 @@
 ../Core/Src/mag.c:109:12:CalibrateMagnetometer	176	static
 ../Core/Src/mag.c:194:7:getCalibratedHeading	48	static
 ../Core/Src/mag.c:218:6:SaveCalibrationToFlash	88	static
-../Core/Src/mag.c:265:6:LoadCalibrationFromFlash	32	static
+../Core/Src/mag.c:250:6:LoadCalibrationFromFlash	32	static
