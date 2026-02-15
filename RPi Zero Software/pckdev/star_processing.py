@@ -268,6 +268,8 @@ def getAlignmentError(image):
     #Gets centers of brightest stars
     star_centers = brightest_stars(stars_to_find, image) #Number of stars to be found, image
     #print(star_centers.shape) #just for debugging to see how many stars were found
+    if (star_centers.size != stars_to_find): #Return if the number of stars is lower than the required amount
+      return 0,0,False,False
 
     polaris_coordinates = np.array([])
     yildun_coordinates = np.array([])
