@@ -3,7 +3,9 @@ import camera
 import time
 
 def main():
-    uart = UARTHandler(port="/dev/serial0", baudrate=115200)
+    #uart = UARTHandler(port="/dev/serial0", baudrate=115200) #For Raspberry Pi 5
+    uart = UARTHandler(port="/dev/ttyAMA0", baudrate=115200) #For Raspberry Pi Zero 2W
+    
     if camera.cameraConnected() == True:
         camera.initCamera()
     else:
