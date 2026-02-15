@@ -64,9 +64,9 @@ def find_polaris(center_star, surrounding_stars, matched_vectors_threshold, star
     matching_angles = []
 
     #Dot product threshold
-    cos_threshold = 0.99999 
+    cos_threshold = 0.999 #cos(+-2.5°) = 0.999048...
 
-    for angle in np.arange(-180, 180, 0.25):
+    for angle in np.arange(-180, 180, 2.5):
         angle_radians = np.radians(angle)
         
         # 4. Rotation Matrix (Standard clockwise/counter-clockwise check)
@@ -83,7 +83,7 @@ def find_polaris(center_star, surrounding_stars, matched_vectors_threshold, star
         best_matches_per_vector = np.max(dot_matrix, axis=1)
         num_matching_pairs = np.count_nonzero(best_matches_per_vector > cos_threshold)
 
-        if num_matching_pairs >= 15:
+        if num_matching_pairs >= 30:
           matching_angles.append(angle)
           print("Angle:", angle, "Matching Pairs:", num_matching_pairs)
 
@@ -91,55 +91,13 @@ def find_polaris(center_star, surrounding_stars, matched_vectors_threshold, star
             max_matched_vectors = num_matching_pairs
             max_matched_angle = angle
 
-    #print("Max number of matching vectors:", max_macthed_vectors)
+    #print("Max number of matching vectors:", max_matched_vectors)
     #print("Angle with the maximum number of matching vectors:", max_macthed_angle)
     if max_matched_vectors >= matched_vectors_threshold:
-      return True, max_matched_angle
+      PolarisFound = check_star(center_star, surrounding_stars, matched_vectors_threshold, star_pattern, max_matched_angle)
+      return PolarisFound, max_matched_angle
     else:
       return False, None
-
-#Old function ---
-"""
-def find_polaris(center_star, surrounding_stars, matched_vectors_threshold, star_pattern):
-  vectors_to_center = center_star - surrounding_stars
-
-  normalized_vectors = vectors_to_center / np.linalg.norm(vectors_to_center, axis=1)[:, np.newaxis]
-  #print(normalized_vectors)
-  #np.save('star_vectors.npy', normalized_vectors)
-  #star_pattern = np.load('star_vectors.npy')
-
-  matching_angles = []
-  max_macthed_vectors = 0
-  max_macthed_angle = 0
-
-  for angle in np.arange(-180, 180, 0.25):
-      angle_radians = np.radians(angle)
-      rotation_matrix = np.array([[np.cos(angle_radians), -np.sin(angle_radians)],
-                                  [np.sin(angle_radians), np.cos(angle_radians)]])
-      rotated_vectors = np.dot(normalized_vectors, rotation_matrix)
-
-      # Find matching pairs using broadcasting and isclose
-      matching_pairs_indices = np.where(np.isclose(star_pattern[:, np.newaxis], rotated_vectors, atol=0.005).all(axis=2))
-
-      # If at least 20 pairs are found, append the angle
-      if len(matching_pairs_indices[0]) >= 20:
-          matching_angles.append(angle)
-          #print("Angle:", angle, "Matching Pairs:", len(matching_pairs_indices[0]))
-
-          num_matching_pairs = len(matching_pairs_indices[0])
-          if num_matching_pairs > max_macthed_vectors:
-            max_macthed_vectors = num_matching_pairs
-            max_macthed_angle = angle
-
-  # Call the function
-
-  #print("Max number of matching vectors:", max_macthed_vectors)
-  #print("Angle with the maximum number of matching vectors:", max_macthed_angle)
-  if max_macthed_vectors > matched_vectors_threshold:
-    return True, max_macthed_angle
-  else:
-    return False, None
-"""
 
 def check_star(center_star, surrounding_stars, matched_vectors_threshold, star_pattern, img_angle):
   #vectors_to_center = center_star - surrounding_stars
