@@ -4,9 +4,9 @@ import numpy as np
 import math
 #import matplotlib.pyplot as plt
 
-polaris_vectors = np.load("/content/polaris_vectors.npy")
-yildun_vectors = np.load("/content/yildun_vectors.npy")
-ov_cephei_vectors = np.load("/content/ov_cephei_vectors.npy")
+polaris_vectors = np.load("star_vectors/polaris_vectors.npy")
+yildun_vectors = np.load("star_vectors/yildun_vectors.npy")
+ov_cephei_vectors = np.load("star_vectors/ov_cephei_vectors.npy")
 
 default_pix_per_arcmin = 4608/(14.334*60) #Default pixels per arminute - Later load from config file
 
