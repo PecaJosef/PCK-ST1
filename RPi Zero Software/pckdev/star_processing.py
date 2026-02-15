@@ -12,6 +12,7 @@ default_pix_per_arcmin = 4608/(14.334*60) #Default pixels per arminute - Later l
 
 stars_to_find = 35
 stars_threshold = 30
+stars_to_loop_through = 8
 
 def brightest_stars(number_of_stars, image):
   gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -314,7 +315,7 @@ def getAlignmentError(image):
     yildun_coordinates = np.array([])
     ov_cephei_coordinates = np.array([])
 
-    for index, star in enumerate(star_centers):
+    for index, star in enumerate(star_centers[:stars_to_loop_through]):
       polarisFound, img_angle = find_polaris(star, np.append(star_centers[:index],star_centers[(index+1):], axis=0), stars_threshold, polaris_vectors) #Check if current star is Polaris and at which angle the Polaris was found compared to the vector set
       if polarisFound == True:
         print("Polaris is in the image at: X =", star[0], "Y =", star[1])
@@ -323,13 +324,13 @@ def getAlignmentError(image):
     print("IMG is at angle:", img_angle)
 
     if polaris_coordinates.size != 0:
-      for index, star in enumerate(star_centers):
+      for index, star in enumerate(star_centers[:stars_to_loop_through]):
         if check_star(star, np.append(star_centers[:index],star_centers[(index+1):], axis=0), stars_threshold, yildun_vectors, img_angle): #Checks if current star is Yildun
           print("Yildun is in the image at: X =", star[0], "Y =", star[1])
           yildun_coordinates = star
           break
 
-      for index, star in enumerate(star_centers):
+      for index, star in enumerate(star_centers[:stars_to_loop_through]):
         #print(index)
         #print(star_centers[:index])
         if check_star(star, np.append(star_centers[:index],star_centers[(index+1):], axis=0), stars_threshold, ov_cephei_vectors, img_angle): #Checks if current star is OV Cephei
