@@ -23,7 +23,7 @@ def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/Fals
     "ExposureTime": exposure*1000000,   # in microseconds
     "AnalogueGain": gain
     })
-    time.sleep(0.5)
+    time.sleep(2)
     
     # Capture image as RGB
     image_rgb = PAcam.capture_array()
