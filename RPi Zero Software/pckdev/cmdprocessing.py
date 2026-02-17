@@ -9,7 +9,7 @@ import cv2
 def alignmentError(uart):
     #star_image = cv2.imread("star_img/polaris4_1.jpg")
 
-    star_image = captureImage(10, 4, False) #10s exposure, 16 gain, flip the image
+    star_image = captureImage(10, 16.0, False) #10s exposure, 16 gain, do not flip the image
 
     cv2.imwrite('stars.jpg', star_image)
 
