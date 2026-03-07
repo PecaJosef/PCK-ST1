@@ -148,6 +148,12 @@ def starCorrelation(star_vectors, database_vectors, threshold, angle_step, debug
 def findPolaris(star_candidates, stars, database_vectors, threshold, radius_arcmin, star_count, debug = False): #Radius is in arcmin default 75arcmin (355px)
   for star in star_candidates:
       radius_stars = getStarsInRadius(star, stars, radius_arcmin * defaultPixPerArcmin)
+
+      #Check if too many stars were found near polaris and exit in case it did
+      if (len(radius_stars) > 50):
+        print("Too many stars in radius, probably picked up some noise -> ABORT")
+        return False, None, None
+
       print("Number of stars in radius:", len(radius_stars))
       star_vectors = star - radius_stars[:star_count]
       polarisFound,_,angle = starCorrelation(star_vectors, database_vectors, threshold, 0.25, debug)
@@ -434,7 +440,13 @@ def getAlignmentError(image, debug=False):
   
   ncpFound, NCP_coordinates, NCP_error, RA_angle = getNCPposition(Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, image_center, star_distances, star_RA_hours)
 
-  if (debug):
+  if (debug and ncpFound):
     drawNCP(image, NCP_coordinates, Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, RA_angle)
 
-  return NCP_error[0], NCP_error[1], polarisFound, ncpFound
+
+  if (polarisFound == True and ncpFound == True):
+    return NCP_error[0], NCP_error[1], polarisFound, ncpFound
+  elif (polarisFound == True and ncpFound == False):
+    return Polaris[0],Polaris[1],polarisFound,ncpFound
+  else:
+    return 0,0,polarisFound,ncpFound
