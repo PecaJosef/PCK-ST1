@@ -9,12 +9,12 @@ import cv2
 def alignmentError(uart):
     #star_image = cv2.imread("star_img/polaris4_1.jpg")
 
-    star_image = captureImage(15, 8.0, True) #10s exposure, 8 gain, flip the image
+    star_image = captureImage(10, 8.0, True) #10s exposure, 8 gain, flip the image
 
     cv2.imwrite('stars.jpg', star_image)
 
-    NCPErrorX, NCPErrorY, polarisFound, PAsuccesful = getAlignmentError(star_image)
-    pae_msg = f"$PA:DEV:{int(PAsuccesful)}:{int(polarisFound)}:{NCPErrorX:.5f}:{NCPErrorY:.5f}"
+    NCPErrorX, NCPErrorY, polarisFound, ncpFound = getAlignmentError(star_image)
+    pae_msg = f"$PA:DEV:{int(ncpFound)}:{int(polarisFound)}:{NCPErrorX:.5f}:{NCPErrorY:.5f}"
     uart.send(pae_msg)
     return
 
