@@ -14,7 +14,7 @@ def alignmentError(uart):
     cv2.imwrite('stars.jpg', star_image)
 
     NCPErrorX, NCPErrorY, polarisFound, ncpFound = getAlignmentError(star_image)
-    pae_msg = f"$PA:DEV:{int(ncpFound)}:{int(polarisFound)}:{NCPErrorX:.5f}:{NCPErrorY:.5f}"
+    pae_msg = f"$PA:DEV:{int(ncpFound)}:{int(polarisFound)}:{-NCPErrorX:.5f}:{-NCPErrorY:.5f}"
     uart.send(pae_msg)
     return
 

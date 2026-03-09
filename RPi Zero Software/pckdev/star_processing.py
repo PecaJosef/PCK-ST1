@@ -447,6 +447,7 @@ def getAlignmentError(image, debug=False):
   if (polarisFound == True and ncpFound == True):
     return NCP_error[0], NCP_error[1], polarisFound, ncpFound
   elif (polarisFound == True and ncpFound == False):
-    return Polaris[0],Polaris[1],polarisFound,ncpFound
+    Polaris_error = (image_center-Polaris) / defaultPixPerArcmin
+    return Polaris_error[0],Polaris_error[1],polarisFound,ncpFound
   else:
     return 0,0,polarisFound,ncpFound
