@@ -1,0 +1,2 @@
+../Core/Src/telemetry.c:11:7:getVoltage	24	static
+../Core/Src/telemetry.c:34:6:updatePosition	24	static

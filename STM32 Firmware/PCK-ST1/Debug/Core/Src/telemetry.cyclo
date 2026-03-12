@@ -1,0 +1,2 @@
+../Core/Src/telemetry.c:11:7:getVoltage	2
+../Core/Src/telemetry.c:34:6:updatePosition	3
