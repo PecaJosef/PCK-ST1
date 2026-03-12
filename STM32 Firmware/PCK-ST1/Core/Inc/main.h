@@ -65,8 +65,6 @@ void Error_Handler(void);
 #define PWR_BTN_GPIO_Port GPIOC
 #define AZ_LIM_Pin GPIO_PIN_15
 #define AZ_LIM_GPIO_Port GPIOC
-#define VIN_ADC_Pin GPIO_PIN_3
-#define VIN_ADC_GPIO_Port GPIOC
 #define ALT_LIM_Pin GPIO_PIN_2
 #define ALT_LIM_GPIO_Port GPIOA
 #define ALT_LIM_EXTI_IRQn EXTI2_IRQn

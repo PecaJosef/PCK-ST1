@@ -13,8 +13,13 @@
 #include "stdbool.h"
 
 #define STEPS_PER_REV 200.0f
-#define STEPPER_TIMER_FREQ 10000
-#define STEPPER_TIMER_HI_FREQ 2000000
+#define STEPPER_TIMER_FREQ 7500
+#define STEPPER_TIMER_HI_FREQ 1000000
+#define STEPPER_TIMER_PRESCALE 64
+#define CORE_FREQ 64000000
+#define DEG 60.0f
+
+
 
 //Define microstepping for each axis
 #define ALT_MICROSTEPPING 2
@@ -28,10 +33,12 @@
 #define DEC_GEAR_RATIO 100.0f
 #define RA_GEAR_RATIO 1000.0f
 
-#define ALT_STEP_PER_DEG ((STEPS_PER_REV*ALT_MICROSTEPPING*ALT_GEAR_RATIO)/(360))
-#define AZ_STEP_PER_DEG ((STEPS_PER_REV*AZ_MICROSTEPPING*AZ_GEAR_RATIO)/(360))
-#define DEC_STEP_PER_DEG ((STEPS_PER_REV*DEC_MICROSTEPPING*DEC_GEAR_RATIO)/(360))
-#define RA_STEP_PER_DEG ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/(360))
+#define ARCMIN_FULL_ROT (360.0*60)
+
+#define ALT_STEPS_PER_ARCMIN ((STEPS_PER_REV*ALT_MICROSTEPPING*ALT_GEAR_RATIO)/ARCMIN_FULL_ROT)
+#define AZ_STEPS_PER_ARCMIN ((STEPS_PER_REV*AZ_MICROSTEPPING*AZ_GEAR_RATIO)/ARCMIN_FULL_ROT)
+#define DEC_STEPS_PER_ARCMIN ((STEPS_PER_REV*DEC_MICROSTEPPING*DEC_GEAR_RATIO)/ARCMIN_FULL_ROT)
+#define RA_STEPS_PER_ARCMIN ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/ARCMIN_FULL_ROT)
 
 //Positive direction is opposite to Homing direction -> while homing the stepper moves in negative direction towards endstop
 #define AZ_POS_DIR 0
@@ -39,17 +46,21 @@
 #define DEC_POS_DIR 1
 #define RA_POS_DIR 1
 
-#define RA_TIM TIM2
 #define RA_PWM_TIM &htim1 //Main timer - generates step signal
 #define RA_PWM_CH TIM_CHANNEL_2
-#define RA_STEP_TIM &htim2 //Slave timer - interrupts when targeted steps reached
+#define RA_TIM TIM2
+#define RA_STEP_COUNTER_TIM &htim2 //Slave timer - interrupts when targeted steps reached
 
-#define DEC_TIM TIM5
 #define DEC_PWM_TIM &htim8 //Main timer - generates step signal
 #define DEC_PWM_CH TIM_CHANNEL_3
-#define DEC_STEP_TIM &htim5 //Slave timer - interrupts when targeted steps reached
+#define DEC_TIM TIM5
+#define DEC_STEP_COUNTER_TIM &htim5 //Slave timer - interrupts when targeted steps reached
 
 #define STEPPER_TIMER TIM3 //Timer for ALT/AZ axes - generates periodic interrupts if enabled -> to drive the axes
+#define STEPPER_TIMER_PTR &htim3
+
+#define SECONDS_IN_DAY 86164
+#define TRACKING_FREQ ((STEPS_PER_REV*RA_GEAR_RATIO*RA_MICROSTEPPING)/SECONDS_IN_DAY)
 
 typedef enum {
     PWM_OUT_P,
@@ -66,6 +77,13 @@ typedef enum {
 } AxisHomingState_t;
 
 typedef struct {
+	bool direction;
+	int32_t lastStepsRead;
+	int32_t stepPosition;
+	float angularPosition;
+} axisPosition_t;
+
+typedef struct {
 	GPIO_TypeDef *STEP_Port;
 	uint16_t STEP_Pin;
 	GPIO_TypeDef *EN_Port;
@@ -75,19 +93,20 @@ typedef struct {
 	GPIO_TypeDef *ENDSTOP_Port;
 	uint16_t ENDSTOP_Pin;
 	IRQn_Type EXTI_IRQn;
-	const float Steps_per_deg;
+	const float stepsPerArcmin;
 	bool enabled;
 	bool busy;
-	bool High_precision;
+	bool highPrecisionAxis;
 	bool homing;
 	bool Positive_dir;
 	AxisHomingState_t homing_state;
-	float Position;
-	uint32_t Steps_remaining; //Number of steps to make
+	axisPosition_t Position;
 
 	//Low precision stepper motors
-	uint32_t Step_interval_ticks; //Number of interrupt ticks between each step
-	uint32_t Tick_counter;	//Interrupt ticks counter
+	uint32_t StepsCounter; //Number of steps already made in single move
+	uint32_t StepsTarget; //Number of steps to make
+	uint32_t TicksPerStep; //Number of interrupt ticks between each step
+	uint32_t TickCounter;	//Interrupt ticks counter
 
 	//High precision stepper motors
 	TIM_HandleTypeDef *PWM_Timer; //PWM (STEP) signal timer
@@ -109,7 +128,9 @@ extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim8;
 
-void Stepper_IT_Handeler();
+void stepperInit();
+
+void stepperInterruptHandler();
 
 void Stepper_IT_Enable();
 
@@ -125,7 +146,7 @@ void stepperHome(StepperMotor_t *Axis, float speed, bool direction);
 
 void Stepper_nSleep(bool n_sleep);
 
-void STEP_Generating(StepperMotor_t *Axis);
+void stepsGenerating(StepperMotor_t *Axis);
 
 void stepperStop(StepperMotor_t *Axis);
 

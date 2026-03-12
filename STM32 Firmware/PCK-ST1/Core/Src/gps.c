@@ -108,12 +108,12 @@ static void gpsParseLine(char *line)
             gpsData.time[sizeof(gpsData.time) - 1] = '\0';
         }
         // parse date (ddmmyy)
-                if (date && strlen(date) == 6)
-                {
-                    gpsData.day   = (uint8_t)((date[0] - '0') * 10 + (date[1] - '0'));
-                    gpsData.month = (uint8_t)((date[2] - '0') * 10 + (date[3] - '0'));
-                    gpsData.year  = (uint8_t)((date[4] - '0') * 10 + (date[5] - '0'));
-                }
+		if (date && strlen(date) == 6)
+		{
+			gpsData.day   = (uint8_t)((date[0] - '0') * 10 + (date[1] - '0'));
+			gpsData.month = (uint8_t)((date[2] - '0') * 10 + (date[3] - '0'));
+			gpsData.year  = (uint8_t)((date[4] - '0') * 10 + (date[5] - '0'));
+		}
 
         // If status is not 'A' (Active/valid), there is no fix
         if (!status || status[0] != 'A') {
@@ -208,7 +208,7 @@ GPS_Data_t getGPSData(void)
 
 #ifdef GPS_DEBUG
         uartSend(PC_UART_SRC, "GPS_HERE\r\n");
-        strcpy(sentence, "$GNRMC,154745.00,A,4912.46246,N,01635.99785,E,0.050,,230825,,,A,V*1E");
+        strcpy(sentence, "$GNRMC,154745.00,A,4912.46246,N,01635.99785,E,0.050,,180226,,,A,V*1E");
         printf("%03u   %s\r\n",last_read_ptr, sentence);
         uartSend(PC_UART_SRC, sentence);
         uartSend(PC_UART_SRC, "\r\n");

@@ -1,9 +1,7 @@
 ../Core/Src/mag.c:16:19:Mag_Init	3
 ../Core/Src/mag.c:30:6:magIsAlive	4
-../Core/Src/mag.c:54:19:Mag_ReadRaw	3
-../Core/Src/mag.c:72:7:ReadMagHeading	3
-../Core/Src/mag.c:83:13:eigen2x2	5
-../Core/Src/mag.c:109:12:CalibrateMagnetometer	9
-../Core/Src/mag.c:194:7:getCalibratedHeading	4
-../Core/Src/mag.c:218:6:SaveCalibrationToFlash	4
-../Core/Src/mag.c:250:6:LoadCalibrationFromFlash	2
+../Core/Src/mag.c:54:19:magReadRaw	3
+../Core/Src/mag.c:71:12:calibrationMatrix	1
+../Core/Src/mag.c:124:7:getCalibratedHeading	2
+../Core/Src/mag.c:147:6:SaveCalibrationToFlash	4
+../Core/Src/mag.c:179:6:LoadCalibrationFromFlash	2

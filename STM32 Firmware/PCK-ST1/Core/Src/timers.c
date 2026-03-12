@@ -16,7 +16,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   else if(htim->Instance == STEPPER_TIMER)
   {
 	  //Stepper timer AZ,EL
-	  Stepper_IT_Handeler();
+	  stepperInterruptHandler();
   }
   else if (htim->Instance == DEC_TIM)
   {

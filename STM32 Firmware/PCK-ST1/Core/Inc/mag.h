@@ -49,12 +49,11 @@ typedef struct {
 HAL_StatusTypeDef Mag_Init(I2C_HandleTypeDef *hi2c);
 
 // Read raw magnetometer data
-HAL_StatusTypeDef Mag_ReadRaw(MagRawData_t *data);
-
-// Compute heading in degrees (0–360)
-float ReadMagHeading(void);
+HAL_StatusTypeDef magReadRaw(MagRawData_t *data);
 
 MagCalib_t CalibrateMagnetometer(StepperMotor_t *AZ_motor, float step_angle, float speed);
+
+MagCalib_t calibrationMatrix(int32_t sumX, int32_t sumY, int64_t sumXX, int64_t sumYY, int64_t sumXY, int16_t totalCalSamples);//, float offsetX, float offsetY);
 
 float getCalibratedHeading(MagCalib_t *calib, float declination);
 

@@ -1,0 +1,28 @@
+/*
+ * telemetry.h
+ *
+ *  Created on: Mar 11, 2026
+ *      Author: pecka
+ */
+
+#ifndef INC_TELEMETRY_H_
+#define INC_TELEMETRY_H_
+
+#include "stm32l4xx_hal.h"
+#include "usbd_cdc_if.h"
+#include "main.h"
+
+#define DIVIDER_R_UP 100000
+#define DIVIDER_R_DOWN 22000
+#define VREF 3.3f
+#define ADC_MAX 4095
+
+extern ADC_HandleTypeDef hadc1;
+
+float getVoltage(void);
+
+
+
+
+
+#endif /* INC_TELEMETRY_H_ */

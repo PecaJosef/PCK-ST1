@@ -19,19 +19,25 @@ StepperMotor_t ALT_AxisMotor = {
 	.ENDSTOP_Port = ALT_LIM_GPIO_Port,
 	.ENDSTOP_Pin = ALT_LIM_Pin,
 	.EXTI_IRQn = EXTI2_IRQn,
-	.Steps_per_deg = ALT_STEP_PER_DEG,
+	.stepsPerArcmin = ALT_STEPS_PER_ARCMIN,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
-	.High_precision = false,
+	.highPrecisionAxis = false,
 	.homing_state = AXIS_HOMING_IDLE,
-	.Position = -1,
 	.Positive_dir = !ALT_POS_DIR,
+	.Position = {
+				.direction = true,
+				.lastStepsRead = 0,
+				.stepPosition = 0,
+				.angularPosition = 0,
+				},
 
 	//Low precision stepper motors
-	.Steps_remaining = 0,
-	.Step_interval_ticks = 0,
-	.Tick_counter = 0,
+	.StepsCounter = 0,
+	.StepsTarget = 0,
+	.TicksPerStep = 0,
+	.TickCounter = 0,
 };
 
 StepperMotor_t AZ_AxisMotor = {
@@ -44,19 +50,25 @@ StepperMotor_t AZ_AxisMotor = {
 	//.ENDSTOP_Port = ,
 	//.ENDSTOP_Pin = ,
 	//.EXTI_IRQn = ,
-	.Steps_per_deg = AZ_STEP_PER_DEG,
+	.stepsPerArcmin = AZ_STEPS_PER_ARCMIN,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
-	.High_precision = false,
+	.highPrecisionAxis = false,
 	.homing_state = AXIS_HOMING_IDLE,
-	.Position = -1,
 	.Positive_dir = !AZ_POS_DIR,
+	.Position = {
+				.direction = true,
+				.lastStepsRead = 0,
+				.stepPosition = 0,
+				.angularPosition = 0,
+				},
 
 	//Low precision stepper motors
-	.Steps_remaining = 0,
-	.Step_interval_ticks = 0,
-	.Tick_counter = 0,
+	.StepsCounter = 0,
+	.StepsTarget = 0,
+	.TicksPerStep = 0,
+	.TickCounter = 0,
 };
 
 StepperMotor_t RA_AxisMotor = {
@@ -69,19 +81,24 @@ StepperMotor_t RA_AxisMotor = {
 	//.ENDSTOP_Port = ,
 	//.ENDSTOP_Pin = ,
 	//.EXTI_IRQn = ,
-	.Steps_per_deg = RA_STEP_PER_DEG,
+	.stepsPerArcmin = RA_STEPS_PER_ARCMIN,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
-	.High_precision = true,
+	.highPrecisionAxis = true,
 	.homing_state = AXIS_HOMING_IDLE,
-	.Position = -1,
 	.Positive_dir = !RA_POS_DIR,
+	.Position = {
+				.direction = true,
+				.lastStepsRead = 0,
+				.stepPosition = 0,
+				.angularPosition = 0,
+				},
 
 	//High precision stepper motors
 	.PWM_Timer = RA_PWM_TIM,
 	.PWM_Channel = RA_PWM_CH,
-	.Step_Counter_Timer = RA_STEP_TIM,
+	.Step_Counter_Timer = RA_STEP_COUNTER_TIM,
 	.PWM_Type = PWM_OUT_N,
 
 };
@@ -96,33 +113,51 @@ StepperMotor_t DEC_AxisMotor = {
 	//.ENDSTOP_Port = ,
 	//.ENDSTOP_Pin = ,
 	//.EXTI_IRQn = ,
-	.Steps_per_deg = DEC_STEP_PER_DEG,
+	.stepsPerArcmin = DEC_STEPS_PER_ARCMIN,
 	.enabled = false,
 	.busy = false,
 	.homing = false,
-	.High_precision = true,
+	.highPrecisionAxis = true,
 	.homing_state = AXIS_HOMING_IDLE,
-	.Position = -1,
 	.Positive_dir = !DEC_POS_DIR,
+	.Position = {
+				.direction = true,
+				.lastStepsRead = 0,
+				.stepPosition = 0,
+				.angularPosition = 0,
+				},
 
 	//High precision stepper motors
 	.PWM_Timer = DEC_PWM_TIM,
 	.PWM_Channel = DEC_PWM_CH,
-	.Step_Counter_Timer = DEC_STEP_TIM,
+	.Step_Counter_Timer = DEC_STEP_COUNTER_TIM,
 	.PWM_Type = PWM_OUT_P,
 };
 
 
-void Stepper_IT_Handeler()
+void stepperInit()
+{
+	//Low precision timer init
+	__HAL_TIM_SET_PRESCALER(STEPPER_TIMER_PTR, STEPPER_TIMER_PRESCALE-1); //1MHz base timer clock
+	uint16_t lowPrecisionArr = ((CORE_FREQ/STEPPER_TIMER_PRESCALE)/STEPPER_TIMER_FREQ)-1;
+	__HAL_TIM_SET_AUTORELOAD(STEPPER_TIMER_PTR, lowPrecisionArr);
+
+	//High precision timer init
+	__HAL_TIM_SET_PRESCALER(RA_PWM_TIM, (CORE_FREQ/STEPPER_TIMER_HI_FREQ)-1); //High precision gearbox RA axis base timer frequency
+	__HAL_TIM_SET_PRESCALER(DEC_PWM_TIM, (CORE_FREQ/STEPPER_TIMER_HI_FREQ)-1); //High precision gearbox DEC axis base timer frequency
+
+}
+
+void stepperInterruptHandler()
 {
     if (ALT_AxisMotor.enabled)
     {
-    	STEP_Generating(&ALT_AxisMotor);
+    	stepsGenerating(&ALT_AxisMotor);
     }
 
     if (AZ_AxisMotor.enabled)
     {
-        STEP_Generating(&AZ_AxisMotor);
+        stepsGenerating(&AZ_AxisMotor);
     }
 }
 
@@ -139,7 +174,7 @@ void Stepper_IT_Disable()
 void stepperEnable(StepperMotor_t *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_SET);
-	if(!Axis->High_precision)
+	if(!Axis->highPrecisionAxis)
 	{
 		Stepper_IT_Enable();
 	}
@@ -149,7 +184,7 @@ void stepperEnable(StepperMotor_t *Axis)
 void stepperDisable(StepperMotor_t *Axis)
 {
 	HAL_GPIO_WritePin(Axis->EN_Port,Axis->EN_Pin, GPIO_PIN_RESET);
-	if(!Axis->High_precision)
+	if(!Axis->highPrecisionAxis)
 	{
 		Stepper_IT_Disable();
 	}
@@ -157,8 +192,7 @@ void stepperDisable(StepperMotor_t *Axis)
 }
 
 
-////!!!!!!!Remove the bool dir from the function. Direction is set based on the angle (negative/positive)
-void stepperMove(StepperMotor_t *Axis, float angle, float speed) //Speed is in deg/s
+void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in arcmin, speed is in deg/s!
 {
 	if (!Axis || speed <= 0.0f || angle == 0.0f)
 	        return;
@@ -171,28 +205,33 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed) //Speed is in d
 		//Set direction
 		if(angle > 0.0f)
 		{
+			Axis->Position.direction = Axis->Positive_dir; //Sets direction for position tracking
 			HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, Axis->Positive_dir);
 		}
 		else
 		{
+			Axis->Position.direction = !Axis->Positive_dir;
 			HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, !Axis->Positive_dir);
 		}
 
 		angle = fabsf(angle);
 
 
-		if (!Axis->High_precision)
+		if (!Axis->highPrecisionAxis) //Low precision gearbox axes - AZ and ALT
 		{
 			//Steps calculation
-			Axis->Steps_remaining = (uint32_t)(2*angle*Axis->Steps_per_deg); //Times two because of toggle STEP pin -> twice lower steps
+			Axis->StepsTarget = (uint32_t)ceilf(2*angle*Axis->stepsPerArcmin); //Times two because of toggle STEP pin -> twice lower steps
+
+			printf("Steps: %d\r\n", Axis->StepsTarget);
+
 			//Steps per second calculation
-			Axis->Step_interval_ticks = (uint32_t)(STEPPER_TIMER_FREQ/(2*speed*Axis->Steps_per_deg));
-			Axis->Tick_counter = 0;
+			Axis->TicksPerStep = (uint32_t)ceilf(STEPPER_TIMER_FREQ/(2*60*speed*Axis->stepsPerArcmin));
+			Axis->TickCounter = 0;
 		}
-		else if (Axis->High_precision)
+		else if (Axis->highPrecisionAxis)
 		{
-			uint32_t steps = (uint32_t)(angle*Axis->Steps_per_deg);
-			uint32_t arr = (uint32_t)(STEPPER_TIMER_HI_FREQ / (speed*Axis->Steps_per_deg));
+			uint32_t steps = (uint32_t)ceilf(angle*Axis->stepsPerArcmin);
+			uint32_t arr = (uint32_t)ceilf(STEPPER_TIMER_HI_FREQ / (60*speed*Axis->stepsPerArcmin));
 			uint32_t ccr = arr / 2;
 
 			//Set PWM (STEP) timer frequency
@@ -235,13 +274,13 @@ void stepperHome(StepperMotor_t *Axis, float speed, bool dir)
 				stepperEnable(Axis);
 			}
 
-			if (!Axis->High_precision)
+			if (!Axis->highPrecisionAxis)
 			{
 				//Steps calculation
-				Axis->Steps_remaining = (uint32_t)(2*90.0f*Axis->Steps_per_deg); //Times two because of toggle STEP pin -> twice lower steps
+				Axis->StepsTarget = (uint32_t)(2*90.0f*Axis->stepsPerArcmin); //Times two because of toggle STEP pin -> twice lower steps
 				//Steps per second calculation
-				Axis->Step_interval_ticks = (uint32_t)(STEPPER_TIMER_FREQ/(2*speed*Axis->Steps_per_deg));
-				Axis->Tick_counter = 0;
+				Axis->TicksPerStep = (uint32_t)(STEPPER_TIMER_FREQ/(2*speed*Axis->stepsPerArcmin));
+				Axis->TickCounter = 0;
 			}
 
 			else
@@ -258,7 +297,7 @@ void stepperHome(StepperMotor_t *Axis, float speed, bool dir)
 void stepperStop(StepperMotor_t *Axis)
 {
 
-	if (Axis->High_precision)
+	if (Axis->highPrecisionAxis)
 	{
 		//Stop PWM timer
 		if (Axis->PWM_Type == PWM_OUT_P)
@@ -272,9 +311,10 @@ void stepperStop(StepperMotor_t *Axis)
 		//Stop STEP counting timer
 		HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
 		}
-	else if (!Axis->High_precision)
+	else if (!Axis->highPrecisionAxis)
 	{
-		Axis->Steps_remaining = 0;
+		Axis->StepsTarget = 0;
+		Axis->StepsCounter = 0;
 	}
 
 	//stepperDisable(Axis);
@@ -282,25 +322,31 @@ void stepperStop(StepperMotor_t *Axis)
 
 }
 
-void STEP_Generating(StepperMotor_t *Axis)
+void stepsGenerating(StepperMotor_t *Axis)
 {
-	if (Axis->Steps_remaining == 0)
+	if (Axis->StepsCounter >= Axis->StepsTarget)
 	        {
 				Axis->busy= false;
-				//stepperDisable(Axis);
+				//Lower the motor current
+
+				//Update axis position based on the StepsTarget
+
+				//reset StepsCounter and StepsTarget
+				Axis->StepsCounter = 0;
+				Axis->StepsTarget = 0;
 	            return;
 	        }
-	        if (Axis->Tick_counter == 0)
+	        if (Axis->TickCounter == 0)
 	        {
 	            // Generate one step pulse
 	            HAL_GPIO_TogglePin(Axis->STEP_Port, Axis->STEP_Pin);
 
-	            Axis->Steps_remaining--;
-	            Axis->Tick_counter = Axis->Step_interval_ticks;
+	            Axis->StepsCounter++;
+	            Axis->TickCounter = Axis->TicksPerStep;
 	        }
 	        else
 	        {
-	        	Axis->Tick_counter--;
+	        	Axis->TickCounter--;
 	        }
 }
 
@@ -309,34 +355,4 @@ void Stepper_nSleep(bool n_sleep)
 {
 	HAL_GPIO_WritePin(STEP_SLEEP_n_GPIO_Port,STEP_SLEEP_n_Pin, n_sleep); //1 = enabled
 }
-
-
-
-
-/*
-void Stepper_Move_RA(float angle, float speed, bool dir)
-{
-	uint32_t steps = (uint32_t)(angle*RA_STEP_PER_DEG);
-
-	uint32_t arr = (uint32_t)(STEPPER_TIMER_HI_FREQ / (speed*RA_STEP_PER_DEG));
-    uint32_t ccr = arr / 2;
-
-    // DIR
-    HAL_GPIO_WritePin(RA_DIR_GPIO_Port, RA_DIR_Pin, dir);
-
-    // Set TIM8 frequency
-    __HAL_TIM_SET_AUTORELOAD(&htim1, arr-1);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, ccr);
-
-    // Set TIM5 target steps
-    __HAL_TIM_SET_AUTORELOAD(&htim2, steps - 1);
-
-    __HAL_TIM_SET_COUNTER(&htim2, 0);
-    __HAL_TIM_CLEAR_IT(&htim2, TIM_IT_UPDATE);
-
-    // Start TIM5 (slave counter) and TIM8 (pulse generator)
-    HAL_TIM_Base_Start_IT(&htim2);
-    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
-}
-*/
 

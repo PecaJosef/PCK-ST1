@@ -36,7 +36,6 @@ void commandHandler(void)
         executeCommand((char *)pc_buffer, PC_UART_SRC);
         pc_cmd_ready = 0;
 
-        printf("C\r\n");
     }
     if (rpi_cmd_ready) {
         executeCommand((char *)rpi_buffer, RPI_UART_SRC);
@@ -135,9 +134,10 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	else
 	{
 		uartSend(src, "ERR:UNKNOWN\r\n");
+		uartSend(PC_UART_SRC, "ERR:UNKNOWN\r\n");
 
 		//For debugging only - comment out for normal use
-		#define CMD_DEBUG
+		//#define CMD_DEBUG
 
 		#ifdef CMD_DEBUG
 		for(uint8_t i=0;i<10;i++)
@@ -179,7 +179,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 		{
 			if(AZ_MoveRequest.moveRequested==false)
 			{
-				AZ_MoveRequest.angle = atof(angle);
+				AZ_MoveRequest.angle = atof(angle)*DEG;
 				AZ_MoveRequest.speed = atof(speed);
 				//CMD_Send(UART_SRC_PC, "AZ\r\n");
 				//printf("Move AZ angle:%.5f speed:%.5f\r\n",AZ_MoveRequest.angle, AZ_MoveRequest.speed);
@@ -194,7 +194,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 		{
 			if(ALT_MoveRequest.moveRequested==false)
 			{
-				ALT_MoveRequest.angle = atof(angle);
+				ALT_MoveRequest.angle = atof(angle)*DEG;
 				ALT_MoveRequest.speed = atof(speed);
 				//CMD_Send(UART_SRC_PC, "ALT\r\n");
 				//printf("Move ALT angle:%.5f speed:%.5f\r\n",ALT_MoveRequest.angle, ALT_MoveRequest.speed);
@@ -209,7 +209,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 		{
 			if(DEC_MoveRequest.moveRequested==false)
 			{
-				DEC_MoveRequest.angle = atof(angle);
+				DEC_MoveRequest.angle = atof(angle)*DEG;
 				DEC_MoveRequest.speed = atof(speed);
 				DEC_MoveRequest.moveRequested = true;
 			}
@@ -222,7 +222,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 		{
 			if(RA_MoveRequest.moveRequested==false)
 			{
-				RA_MoveRequest.angle = atof(angle);
+				RA_MoveRequest.angle = atof(angle)*DEG;
 				RA_MoveRequest.speed = atof(speed);
 				RA_MoveRequest.moveRequested = true;
 			}
@@ -311,17 +311,18 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 		}
 		//Convert the polarisFound_c to bool while checking the formating
 		if (polarisFound_c[1] == '\0')
-				{
-					alignmentData.polarisFound = (polarisFound_c[0] == '1');
-				}
-				else
-				{
-					uartSend(src, "ERR:FORMAT\n\r");
-					return;
-				}
+		{
+			alignmentData.polarisFound = (polarisFound_c[0] == '1');
+		}
+		else
+		{
+			uartSend(src, "ERR:FORMAT\n\r");
+			return;
+		}
 		//Convert the error values to floats
 		alignmentData.altError = atof(altError_c);
 		alignmentData.azError = atof(azError_c);
+		alignmentData.alignmentDataUpdated = true;
 		return;
 	}
 

@@ -65,7 +65,11 @@ StatusFlags_t statusFlags;
 #define RESET_TIME 1000
 
 #define ROUGH_ALIGNMENT_THRESHOLD 2.0f
-#define ALIGNMENT_TRIES
+#define ALIGNMENT_TRIES 3
+#define PRECISE_ALIGNMENT_THRESHOLD 0.5f
+
+#define CALIB_STEP 2.5f
+#define CALIB_MINMAX_SAMPLES 5
 
 //---Low Power Idle internal states---
 typedef enum {
@@ -103,6 +107,15 @@ typedef enum {
 	ALIGNMENT_DONE,
 }AlignState_t;
 
+typedef enum {
+    CAL_IDLE,
+    CAL_ROTATION_CHECK,   // Moving to -180
+    CAL_SAMPLING,     // Moving 0 to 360 and taking samples
+    CAL_POST_ROTATION_CHECK,  // Returning to 0
+    CAL_COMPUTE       // Calculating final matrix
+} CalibState_t;
+
+
 typedef struct {
 	uint32_t timeoutDeadline;
 	bool timeoutActive;
@@ -112,6 +125,12 @@ static LowPowerIdleState_t btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
 static HomingState_t homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
 static WarmingUpState_t WarmUpState = CHECK_AND_CONFIG_GPS;
 static AlignState_t alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
+static CalibState_t calState = CAL_IDLE;
+
+static uint16_t currentCalSample = 0;
+static uint16_t totalCalSamples = 360/CALIB_STEP;
+static int32_t sumX, sumY;
+static int64_t sumXX, sumYY, sumXY;
 
 static uint32_t secondPressStart = 0;
 static uint32_t lastLedTime = 0;
@@ -212,9 +231,6 @@ void controlLoop()
 
 /*
  * LOW POWER IDLE STATE
- *
- *
- *
  */
 void handleLowPowerIdle() {
 	uint8_t btn = readButtonDebounced();
@@ -311,9 +327,6 @@ void handleLowPowerIdle() {
 
 /*
  * HOMING STATE
- *
- *
- *
  */
 
 void handleHoming()
@@ -376,6 +389,7 @@ void handleHoming()
 				RA_AxisMotor.homing_state = AXIS_HOMING_IDLE;
 				DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
 
+				homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
 				controlState = CALIBRATION;
 				uartSend(PC_UART_SRC, "CALIB\r\n");
 			}
@@ -399,13 +413,13 @@ static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineS
     {
         // Endstop already pressed → skip coarse, go to backoff
         Axis->homing_state = AXIS_HOMING_BACKOFF;
-        stepperMove(Axis, 5.0f, fineSpeed);
+        stepperMove(Axis, 5.0f*DEG, fineSpeed);
     }
     else
     {
         // Normal coarse move towards switch
         Axis->homing_state = AXIS_HOMING_COARSE;
-        stepperMove(Axis, -360.0f, coarseSpeed); // 180° is just "long enough"
+        stepperMove(Axis, -360.0f*DEG, coarseSpeed); // 180° is just "long enough"
     }
 }
 
@@ -422,14 +436,14 @@ static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fine
         	HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
 
             Axis->homing_state = AXIS_HOMING_FINE;
-            stepperMove(Axis, -10.0f, fineSpeed);
+            stepperMove(Axis, -10.0f*DEG, fineSpeed);
             break;
 
         case AXIS_HOMING_FINE:
             // Should have been triggered by interrupt. If not, treat as done anyway
             Axis->homing_state = AXIS_HOMING_DONE;
             Axis->homing = false;
-            Axis->Position = 0;
+            Axis->Position.angularPosition = 0;
             break;
 
         default:
@@ -448,14 +462,14 @@ void endstopReached(StepperMotor_t *Axis)
 	case AXIS_HOMING_COARSE:
 		// First hit → back off
 		Axis->homing_state = AXIS_HOMING_BACKOFF;
-		stepperMove(Axis, 5.0f, 5.0f);
+		stepperMove(Axis, 5.0f*DEG, 5.0f);
 		break;
 
 	case AXIS_HOMING_FINE:
 		// Final hit → success
 		Axis->homing_state = AXIS_HOMING_DONE;
 		Axis->homing = false;
-		Axis->Position = 0;
+		Axis->Position.angularPosition = 0;
 		break;
 
 	default:
@@ -465,13 +479,99 @@ void endstopReached(StepperMotor_t *Axis)
 
 /*
  * CALIBRATION STATE
- *
- *
  */
+#define CALIB_DIS
 
 void handleCalibration()
 {
-	#define CALIB_FROM_FLASH
+	#ifdef CALIB_DIS
+	controlState = WARMING_UP;
+	return;
+
+	#else
+	switch (calState)
+	{
+		case CAL_IDLE:
+			//Initialize calibration accumulators
+			sumX = sumY = sumXX = sumYY = sumXY = 0;
+			currentCalSample = 0;
+
+			//Rotate the star tracker (-180°)
+			stepperMove(&AZ_AxisMotor, -180.0f*DEG, 15.0f);
+			calState = CAL_ROTATION_CHECK;
+			break;
+
+		case CAL_ROTATION_CHECK:
+			if (AZ_AxisMotor.busy)
+			{
+				break;
+			}
+			else
+			{
+				calState = CAL_SAMPLING;
+			}
+			break;
+
+		case CAL_SAMPLING:
+			//Check if the AZ motor is still running
+			if (AZ_AxisMotor.busy)
+			{
+				break;
+			}
+
+			MagRawData_t calibData;
+			if (magReadRaw(&calibData) == HAL_OK)
+			{
+				int16_t x = calibData.x;
+				int16_t y = calibData.y;
+
+				sumX += x;
+				sumY += y;
+				sumXX += x*x;
+				sumYY += y*y;
+				sumXY += x*y;
+
+				//Move to next measurement point
+				stepperMove(&AZ_AxisMotor, CALIB_STEP*DEG, 10.0f);
+
+				currentCalSample++;
+			}
+
+			//Jump to next state if the full 360° measurement finished
+			if (currentCalSample >= totalCalSamples)
+			{
+				//Measurement sweep finished - initiate rotation back to initial position (-180°)
+				stepperMove(&AZ_AxisMotor, -180.0f*DEG, 15.0f);
+				calState = CAL_POST_ROTATION_CHECK;
+			}
+			break;
+
+		case CAL_POST_ROTATION_CHECK:
+			if (AZ_AxisMotor.busy)
+			{
+				break;
+			}
+			else
+			{
+				calState = CAL_COMPUTE;
+			}
+			break;
+
+		case CAL_COMPUTE:
+			//Compute the calibration matrix
+
+			magCalib = calibrationMatrix(sumX, sumY, sumXX, sumYY, sumXY, totalCalSamples);// offsetX, offsetY);
+			SaveCalibrationToFlash(&magCalib);
+
+			//Reset calibration state and jump to the warming up state
+			controlState = WARMING_UP;
+			uartSend(PC_UART_SRC, "WARMUP\r\n");
+			calState = CAL_IDLE; // Reset local state
+			break;
+	}
+
+	/*
+	//#define CALIB_FROM_FLASH
 
 	#ifdef CALIB_FROM_FLASH
 	  if (!LoadCalibrationFromFlash(&magCalib))
@@ -487,11 +587,16 @@ void handleCalibration()
 	controlState = WARMING_UP;
 	uartSend(PC_UART_SRC, "WARMUP\r\n");
 	return;
+	*/
+#endif
+
 }
 
 
+
+
 /*
- * WRMING UP STATE
+ * WARMING UP STATE
  *
  *
  *
@@ -546,12 +651,16 @@ void handleWarmingUp()
 					//Calculate altitude angle from GPS longitude
 					alignmentData.altAngle = 90.0f-gpsData.latitude;
 
-					printf("altAngle %f \r\n", alignmentData.altAngle);
+					//printf("altAngle %f \r\n", alignmentData.altAngle);
 
 					// Compute magnetic declination from GPS fix
 					float wmm_date = wmm_get_date(gpsData.year, gpsData.month, gpsData.day);
 					float declination;
 					E0000(gpsData.latitude, gpsData.longitude, wmm_date, &declination);
+					alignmentData.declination = declination;
+
+					//Reset the internal state machine
+					WarmUpState = CHECK_AND_CONFIG_GPS;
 					// Move on to next state
 					controlState = ALIGNMENT;
 
@@ -567,47 +676,6 @@ void handleWarmingUp()
 	}
 }
 
-
-/*
- * MOVING STATE
- *
- * Whenever a move command comes it should fill at least one of the move request structures with sufficient info to move the axis
- *
- */
-
-void handleMoving()
-{
-	//If all axis are not busy and there is no move requested the control loop shall return to the previous state
-	if(!AZ_AxisMotor.busy && !ALT_AxisMotor.busy && !RA_AxisMotor.busy && !DEC_AxisMotor.busy)
-	{
-		if(!AZ_MoveRequest.moveRequested && !ALT_MoveRequest.moveRequested && !RA_MoveRequest.moveRequested && !DEC_MoveRequest.moveRequested)
-		{
-			controlState = prevControlState;
-			return;
-		}
-	}
-
-	if(AZ_MoveRequest.moveRequested && !AZ_AxisMotor.busy)
-	{
-		stepperMove(&AZ_AxisMotor, AZ_MoveRequest.angle, AZ_MoveRequest.speed);
-		AZ_MoveRequest.moveRequested = false;
-	}
-	else if(ALT_MoveRequest.moveRequested && !ALT_AxisMotor.busy)
-	{
-		stepperMove(&ALT_AxisMotor, ALT_MoveRequest.angle, ALT_MoveRequest.speed);
-		ALT_MoveRequest.moveRequested = false;
-	}
-	else if(RA_MoveRequest.moveRequested && !RA_AxisMotor.busy)
-	{
-		stepperMove(&RA_AxisMotor, RA_MoveRequest.angle, RA_MoveRequest.speed);
-		RA_MoveRequest.moveRequested = false;
-	}
-	else if(DEC_MoveRequest.moveRequested && !DEC_AxisMotor.busy)
-	{
-		stepperMove(&DEC_AxisMotor, DEC_MoveRequest.angle, DEC_MoveRequest.speed);
-		DEC_MoveRequest.moveRequested = false;
-	}
-}
 
 /*
  * ALIGNING STATE
@@ -651,14 +719,8 @@ void handleAligning()
 		sprintf(dbgbuff,"Heading: %f\r\n", azAngle);
 		uartSend(PC_UART_SRC, dbgbuff);
 
-		if (azAngle<=180.0)
-		{
-			stepperMove(&AZ_AxisMotor, -azAngle, 5.0f);
-		}
-		else
-		{
-			stepperMove(&AZ_AxisMotor, 360.0f-azAngle, 5.0f);
-		}
+		//Move by the magnetic heading angle in the opposite direction
+		//stepperMove(&AZ_AxisMotor, -azAngle*DEG, 5.0f);
 
 		alignmentState = ROUGH_ALIGNMENT_AZ_CHECK;
 
@@ -674,7 +736,7 @@ void handleAligning()
 
 		float azAngleError = getCalibratedHeading(&magCalib, alignmentData.declination);
 
-		if ((360.0-ROUGH_ALIGNMENT_THRESHOLD) >= azAngleError && azAngleError >= ROUGH_ALIGNMENT_THRESHOLD  && roughCorrection == false)
+		if (azAngleError <= ROUGH_ALIGNMENT_THRESHOLD && azAngleError >= -ROUGH_ALIGNMENT_THRESHOLD  && roughCorrection == false)
 		{
 			roughCorrection = true;
 			alignmentState = ROUGH_ALIGNMENT_AZ;
@@ -688,7 +750,7 @@ void handleAligning()
 
 	case ROUGH_ALIGNMENT_ALT:
 
-		stepperMove(&ALT_AxisMotor, alignmentData.altAngle, 5.0f);
+		stepperMove(&ALT_AxisMotor, alignmentData.altAngle*DEG, 5.0f);
 		alignmentState = ROUGH_ALIGNMENT_ALT_CHECK;
 		break;
 
@@ -699,29 +761,115 @@ void handleAligning()
 		}
 		else
 		{
+			//stepperMove(&RA_AxisMotor, 60.0*DEG, 2.0);
+
 			alignmentData.alignmentTriesCounter = 0;
 			alignmentState = PRECISE_ALIGN_CMD;
 		}
 		break;
 
 	case PRECISE_ALIGN_CMD:
+		if (RA_AxisMotor.busy == true)
+		{
+			break;
+		}
 
+		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
+		alignmentData.alignmentDataUpdated = false;
+		alignmentState = PRECISE_ALIGN_WAIT;
 		break;
 
 	case PRECISE_ALIGN_WAIT:
-
+		if (alignmentData.alignmentDataUpdated == false)
+		{
+			break;
+		}
+		else
+		{
+			alignmentState = PRECISE_ALIGNMENT;
+		}
 		break;
 
 	case PRECISE_ALIGNMENT:
+		if ((fabsf(alignmentData.azError) <= PRECISE_ALIGNMENT_THRESHOLD && fabsf(alignmentData.altAngle) <= PRECISE_ALIGNMENT_THRESHOLD) || alignmentData.alignmentTriesCounter >= ALIGNMENT_TRIES)
+		{
+			//If the alignment error is less than PRECISE_ALIGNMENT_THRESHOLD in both axes or a ALIGNMENT_TRIES are exceeded, the system proceeds to ALIGNMENT_DONE state
+			alignmentData.alignmentTriesCounter = 0;
+			alignmentState = ALIGNMENT_DONE;
+			break;
+		}
+		stepperMove(&AZ_AxisMotor, alignmentData.azError/cos(gpsData.latitude*(M_PI/180)), 5.0f);
+		stepperMove(&ALT_AxisMotor, alignmentData.altError, 5.0f);
+		alignmentData.alignmentTriesCounter++;
 
+		//stepperMove(&RA_AxisMotor, -60.0*DEG, 2.0);
+		alignmentState = PRECISE_ALIGN_CMD;
+		break;
 
+	case ALIGNMENT_DONE:
+		if (ALT_AxisMotor.busy == true || AZ_AxisMotor.busy == true || RA_AxisMotor.busy == true)
+		{
+			break;
+		}
+		else
+		{
+			//Reset the internal state machine
+			alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
+			alignmentData.alignmentTriesCounter = 0;
+			alignmentData.alignmentDataUpdated = false;
+
+			controlState = LOW_POWER_IDLE;
+		}
 		break;
 
 	default:
 		break;
+
+	}
+}
+
+/*
+ * MOVING STATE
+ *
+ * Whenever a move command comes it should fill at least one of the move request structures with sufficient info to move the axis
+ *
+ */
+
+void handleMoving()
+{
+	//If all axis are not busy and there is no move requested the control loop shall return to the previous state
+	if(!AZ_AxisMotor.busy && !ALT_AxisMotor.busy && !RA_AxisMotor.busy && !DEC_AxisMotor.busy)
+	{
+		if(!AZ_MoveRequest.moveRequested && !ALT_MoveRequest.moveRequested && !RA_MoveRequest.moveRequested && !DEC_MoveRequest.moveRequested)
+		{
+			controlState = prevControlState;
+			return;
+		}
 	}
 
+	if(AZ_MoveRequest.moveRequested && !AZ_AxisMotor.busy)
+	{
+		stepperMove(&AZ_AxisMotor, AZ_MoveRequest.angle, AZ_MoveRequest.speed);
+		AZ_MoveRequest.moveRequested = false;
+	}
+	if(ALT_MoveRequest.moveRequested && !ALT_AxisMotor.busy)
+	{
+		stepperMove(&ALT_AxisMotor, ALT_MoveRequest.angle, ALT_MoveRequest.speed);
+		ALT_MoveRequest.moveRequested = false;
+	}
+	if(RA_MoveRequest.moveRequested && !RA_AxisMotor.busy)
+	{
+		stepperMove(&RA_AxisMotor, RA_MoveRequest.angle, RA_MoveRequest.speed);
+		RA_MoveRequest.moveRequested = false;
+	}
+	if(DEC_MoveRequest.moveRequested && !DEC_AxisMotor.busy)
+	{
+		stepperMove(&DEC_AxisMotor, DEC_MoveRequest.angle, DEC_MoveRequest.speed);
+		DEC_MoveRequest.moveRequested = false;
+	}
 }
+
+
 
 static void blinkLeds()
 {
