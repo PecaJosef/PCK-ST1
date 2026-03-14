@@ -90,6 +90,7 @@ typedef enum {
 //---Warming up internal states---
 typedef enum {
 	CHECK_AND_CONFIG_GPS,
+	WAITING_FOR_GPS_ACK,
 	WAITING_FOR_GPS_FIX,
 }WarmingUpState_t;
 
@@ -221,7 +222,7 @@ void controlLoop()
 			//handleShutdown();
 			break;
 		case FAULT:
-			uartSend(PC_UART_SRC, "FAULT\r\n");
+			//uartSend(PC_UART_SRC, "FAULT\r\n");
 			break;
 
 		default:
@@ -480,7 +481,7 @@ void endstopReached(StepperMotor_t *Axis)
 /*
  * CALIBRATION STATE
  */
-#define CALIB_DIS
+//#define CALIB_DIS
 
 void handleCalibration()
 {
@@ -489,6 +490,14 @@ void handleCalibration()
 	return;
 
 	#else
+	if (LoadCalibrationFromFlash(&magCalib))
+	{
+		controlState = WARMING_UP;
+		//printf("M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",magCalib.softiron[0][0],magCalib.softiron[0][1],magCalib.softiron[1][0],magCalib.softiron[1][1]);
+
+		return;
+	}
+
 	switch (calState)
 	{
 		case CAL_IDLE:
@@ -607,30 +616,71 @@ void handleWarmingUp()
 {
 	static bool gpsConfigured = false;
 	static uint32_t gpsLastCheck = 0;
+	static uint16_t configRetries = 0;
     //uint8_t btn = readButtonDebounced();
 
     switch (WarmUpState)
     {
     	case CHECK_AND_CONFIG_GPS:
-    		// 1. Check if GPS is alive (sending data)
+    		//Check if GPS is alive (sending data)
 			if (!gpsIsAlive()) {
 				//controlState = FAULT;
+				uartSend(PC_UART_SRC, "ERROR:GPS Fault\r\n");
 				break;
 			}
 
-			// 2. Configure GPS once
-			if (!gpsConfigured) {
+			//Configure GPS once
+			if (!gpsConfigured)
+			{
 				uartSend(PC_UART_SRC, "GPS_CONF\r\n");
-				GPS_Config();
-				gpsConfigured = true;
+				gpsConfig();
+				timeoutStart(&timeoutControlLoop, 2); // 2s ACK timeout
+				WarmUpState = WAITING_FOR_GPS_ACK;
 			}
-			timeoutStart(&timeoutControlLoop, 60);
-			WarmUpState = WAITING_FOR_GPS_FIX;
-		break;
+			else
+			{
+				timeoutStart(&timeoutControlLoop, 60);
+				WarmUpState = WAITING_FOR_GPS_FIX;
+			}
+			break;
+
+    	case WAITING_FOR_GPS_ACK:
+    		GPS_Ack_t ack = gpsCheckAck();
+
+			if (ack == GPS_ACK_OK)
+			{
+				uartSend(PC_UART_SRC, "GPS_ACK_OK\r\n");
+				gpsConfigured = true;
+				configRetries = 0;
+				timeoutStart(&timeoutControlLoop, 90);
+				WarmUpState = WAITING_FOR_GPS_FIX;
+			}
+			else if (ack == GPS_ACK_NAK || timeoutReached(&timeoutControlLoop))
+			{
+			    if (ack == GPS_ACK_NAK)
+			    {
+			    	uartSend(PC_UART_SRC, "GPS_ACK_NAK\r\n");
+			    }
+			    else
+				{
+			    	uartSend(PC_UART_SRC, "GPS_ACK_TIMEOUT\r\n");
+				}
+
+			    if (++configRetries >= 3) {
+			        uartSend(PC_UART_SRC, "ERROR:GPS Config Failed\r\n");
+			        controlState = FAULT;
+			    } else {
+			        uartSend(PC_UART_SRC, "GPS_CONF_RETRY\r\n");
+			        gpsConfig();
+			        timeoutStart(&timeoutControlLoop, 2);
+			    }
+			}
+			break;
 
     	case WAITING_FOR_GPS_FIX:
     		//Wait for valid GPS fix
-    		if (timeoutReached(&timeoutControlLoop)) {
+    		if (timeoutReached(&timeoutControlLoop))
+    		{
 				timeoutReset(&timeoutControlLoop);
 				uartSend(PC_UART_SRC, "ERROR: GPS Timeout\r\n");
 				controlState = FAULT; // Jump to FAULT state
@@ -660,7 +710,7 @@ void handleWarmingUp()
 					alignmentData.declination = declination;
 
 					//Reset the internal state machine
-					WarmUpState = CHECK_AND_CONFIG_GPS;
+					WarmUpState = WAITING_FOR_GPS_FIX;
 					// Move on to next state
 					controlState = ALIGNMENT;
 
@@ -720,7 +770,7 @@ void handleAligning()
 		uartSend(PC_UART_SRC, dbgbuff);
 
 		//Move by the magnetic heading angle in the opposite direction
-		//stepperMove(&AZ_AxisMotor, -azAngle*DEG, 5.0f);
+		stepperMove(&AZ_AxisMotor, -azAngle*DEG, 5.0f);
 
 		alignmentState = ROUGH_ALIGNMENT_AZ_CHECK;
 
@@ -761,7 +811,7 @@ void handleAligning()
 		}
 		else
 		{
-			//stepperMove(&RA_AxisMotor, 60.0*DEG, 2.0);
+			stepperMove(&RA_AxisMotor, 60.0*DEG, 2.0);
 
 			alignmentData.alignmentTriesCounter = 0;
 			alignmentState = PRECISE_ALIGN_CMD;
@@ -794,6 +844,7 @@ void handleAligning()
 		if ((fabsf(alignmentData.azError) <= PRECISE_ALIGNMENT_THRESHOLD && fabsf(alignmentData.altAngle) <= PRECISE_ALIGNMENT_THRESHOLD) || alignmentData.alignmentTriesCounter >= ALIGNMENT_TRIES)
 		{
 			//If the alignment error is less than PRECISE_ALIGNMENT_THRESHOLD in both axes or a ALIGNMENT_TRIES are exceeded, the system proceeds to ALIGNMENT_DONE state
+			stepperMove(&RA_AxisMotor, -60.0*DEG, 2.0);
 			alignmentData.alignmentTriesCounter = 0;
 			alignmentState = ALIGNMENT_DONE;
 			break;
@@ -802,7 +853,6 @@ void handleAligning()
 		stepperMove(&ALT_AxisMotor, alignmentData.altError, 5.0f);
 		alignmentData.alignmentTriesCounter++;
 
-		//stepperMove(&RA_AxisMotor, -60.0*DEG, 2.0);
 		alignmentState = PRECISE_ALIGN_CMD;
 		break;
 

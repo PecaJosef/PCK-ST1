@@ -113,7 +113,7 @@ MagCalib_t calibrationMatrix(int32_t sumX, int32_t sumY, int64_t sumXX, int64_t 
 	calib.softiron[1][1] = s1*v1y*v1y + s2*v2y*v2y;
 
 
-	//printf("M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",calib.softiron[0][0],calib.softiron[0][1],calib.softiron[1][0],calib.softiron[1][1]);
+	printf("M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",calib.softiron[0][0],calib.softiron[0][1],calib.softiron[1][0],calib.softiron[1][1]);
 
 	return calib;
 }
@@ -178,16 +178,14 @@ void SaveCalibrationToFlash(MagCalib_t *calib)
 
 bool LoadCalibrationFromFlash(MagCalib_t *calib)
 {
-    // Cast the Flash address directly to your wrapper struct type
+    //Cast the Flash address directly
     StoredCalib_t *flashData = (StoredCalib_t*)CALIB_FLASH_ADDR;
 
-    // 1. Check the magic number
+    //Check the magic number
     if(flashData->magic != 0xDEADBEEF) {
         return false;
     }
 
-    // 2. Use memcpy or direct assignment to copy the nested struct
-    // This handles all internal padding and alignment automatically
     *calib = flashData->calib;
 
     return true;

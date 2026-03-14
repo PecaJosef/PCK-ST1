@@ -8,6 +8,19 @@
 #include "stepper.h"
 
 
+void telemetryHandler()
+{
+
+
+
+
+
+}
+
+
+
+
+
 float getVoltage(void)
 {
     uint32_t adcRaw = 0;
@@ -33,25 +46,25 @@ float getVoltage(void)
 //Updates the step position of selected axis
 void updatePosition(StepperMotor_t *Axis)
 {
+	int32_t deltaSteps = 0;
 	if (!Axis->highPrecisionAxis)
 	{
 
-		//HANDLETHE RETURN TO ZERO AFTER A MOVE
-		int32_t deltaSteps = Axis->StepsCounter - Axis->Position.lastStepsRead;
-
-		if (Axis->Position.direction == true) //If the direction of rotation is positive (true) increase the stepPostition
-		{
-			Axis->Position.stepPosition += deltaSteps;
-		}
-		else
-		{
-			Axis->Position.stepPosition -= deltaSteps;
-		}
+		deltaSteps = Axis->StepsCounter - Axis->Position.lastStepsRead;
 
 	}
 	else if (Axis->highPrecisionAxis)
 	{
+		deltaSteps = __HAL_TIM_GET_COUNTER(Axis->Step_Counter_Timer);
+	}
 
+	if (Axis->Position.direction == true) //If the direction of rotation is positive (true) increase the stepPostition
+	{
+		Axis->Position.stepPosition += deltaSteps;
+	}
+	else
+	{
+		Axis->Position.stepPosition -= deltaSteps;
 	}
 }
 

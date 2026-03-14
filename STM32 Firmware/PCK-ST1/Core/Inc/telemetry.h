@@ -11,6 +11,7 @@
 #include "stm32l4xx_hal.h"
 #include "usbd_cdc_if.h"
 #include "main.h"
+#include "stepper.h"
 
 #define DIVIDER_R_UP 100000
 #define DIVIDER_R_DOWN 22000
@@ -19,8 +20,12 @@
 
 extern ADC_HandleTypeDef hadc1;
 
+
+void telemetryHandler();
+
 float getVoltage(void);
 
+void updatePosition(StepperMotor_t *Axis);
 
 
 

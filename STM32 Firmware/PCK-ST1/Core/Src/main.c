@@ -37,6 +37,7 @@
 #include "stdbool.h"
 #include "cmd_handler.h"
 #include "uart_it.h"
+#include "telemetry.h"
 
 
 /* USER CODE END Includes */
@@ -229,6 +230,7 @@ int main(void)
 
 	controlLoop();
 	commandHandler();
+	telemetryHandler();
 	  /*
 	GPS_Data = Get_GPS_Data();
 	HAL_Delay(500);
