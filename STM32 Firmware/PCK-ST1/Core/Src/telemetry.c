@@ -6,13 +6,25 @@
  */
 #include "telemetry.h"
 #include "stepper.h"
+#include "cmd_handler.h"
 
 
 void telemetryHandler()
 {
+	static uint32_t telemetryLastTicks = 0;
+
+	if (HAL_GetTick() - telemetryLastTicks < TELEMETRY_PERIOD)
+	{
+		return;
+	}
+	telemetryLastTicks = HAL_GetTick();
 
 
+	float voltage = getVoltage();
 
+	char dbgbuff[32];
+	sprintf(dbgbuff,"Voltage: %f\r\n", voltage);
+	uartSend(PC_UART_SRC, dbgbuff);
 
 
 }

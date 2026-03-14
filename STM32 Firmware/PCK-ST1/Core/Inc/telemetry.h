@@ -18,6 +18,8 @@
 #define VREF 3.3f
 #define ADC_MAX 4095
 
+#define TELEMETRY_PERIOD 250
+
 extern ADC_HandleTypeDef hadc1;
 
 

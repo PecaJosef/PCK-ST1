@@ -63,6 +63,11 @@ StatusFlags_t statusFlags;
 #define LED_DELAY 500
 #define HOLD_TIME 4*LED_DELAY
 #define RESET_TIME 1000
+#define LED_BLINK_PERIOD_SHORT 500
+#define LED_BLINK_PERIOD_LONG 1000
+
+#define GPS_FIX_TIMEOUT 90
+#define GPS_CONFIG_RETRIES 5
 
 #define ROUGH_ALIGNMENT_THRESHOLD 2.0f
 #define ALIGNMENT_TRIES 3
@@ -182,7 +187,11 @@ Align_t alignmentData = {
 static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
 static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
 
-static void blinkLeds();
+static void ledsBlink();
+static void ledsRampUp();
+static void pwrButtonBlink();
+
+
 void timeoutStart(Timeout_t *timeout, uint32_t seconds);
 void timeoutReset(Timeout_t *timeout);
 bool timeoutReached(Timeout_t *timeout);
@@ -223,6 +232,7 @@ void controlLoop()
 			break;
 		case FAULT:
 			//uartSend(PC_UART_SRC, "FAULT\r\n");
+			pwrButtonBlink();
 			break;
 
 		default:
@@ -241,19 +251,16 @@ void handleLowPowerIdle() {
 			if (btn == PRESSED) // pressed
 			{
 				btnSeqState = BTN_SEQ_WAIT_FIRST_RELEASE;
-				// turn on LEDs initially
-				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+				//Turn LEDs ON on button press
+				ledsSet(true);
 			}
 			break;
 
 		case BTN_SEQ_WAIT_FIRST_RELEASE:
-			if (btn == RELEASED) // released
+			if (btn == RELEASED) //Released
 			{
 				btnSeqState = BTN_SEQ_WAIT_SECOND_PRESS;
-				secondPressStart = HAL_GetTick(); // start 2s window
+				secondPressStart = HAL_GetTick(); //Start 2s window
 			}
 			break;
 
@@ -263,33 +270,24 @@ void handleLowPowerIdle() {
 				// Timeout, reset sequence
 				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
 				ledStep = 0;
-				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
-			} else if (btn == PRESSED) { // pressed again
+				//Reset LEDs to ON state
+				ledsSet(false);
+			}
+			else if (btn == PRESSED) //Pressed again
+			{
 				btnSeqState = BTN_SEQ_HOLDING;
 				secondPressStart = HAL_GetTick();
 				lastLedTime = secondPressStart;
 				ledStep = 0;
-				/*
-				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
-				*/
 			}
 			break;
 
 		case BTN_SEQ_HOLDING:
 			if (btn == RELEASED) // released too early → reset
 			{
-				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
 				ledStep = 0;
-				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				ledsSet(false);
+				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
 				break;
 			}
 			// Check how long held
@@ -299,17 +297,25 @@ void handleLowPowerIdle() {
 			if ((heldTime / LED_DELAY) > ledStep && ledStep < 4)
 			{
 				ledStep++;
-				switch (ledStep) {
-					case 1: HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET); break;
-					case 2: HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET); break;
-					case 3: HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); break;
-					case 4: HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET); break;
+				switch (ledStep)
+				{
+					case 1:
+						HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+						break;
+					case 2:
+						HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+						break;
+					case 3:
+						HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+						break;
+					case 4:
+						HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+						break;
 				}
 			}
 
 			if (heldTime >= HOLD_TIME) {
 				btnSeqState = BTN_SEQ_DONE;
-				HAL_GPIO_WritePin(PWR_BTN_LED_GPIO_Port, PWR_BTN_LED_Pin, GPIO_PIN_SET);
 			}
 			break;
 
@@ -317,7 +323,7 @@ void handleLowPowerIdle() {
 			if (btn == RELEASED)
 			{
 				controlState = HOMING;
-				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS; //reset for next time
+				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS; //Reset for next time
 
 				uartSend(PC_UART_SRC, "HOMING\r\n");
 			}
@@ -338,14 +344,11 @@ void handleHoming()
 	switch(homingState)
 	{
 		case HOMING_WAITING_FOR_BUTTON_PRESS:
-			blinkLeds();
+			ledsBlink();
 
 			if (btn == PRESSED) // pressed
 			{
-				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				ledsSet(false);
 				homingState = HOMING_WAITING_FOR_BUTTON_RELEASE;
 			}
 			break;
@@ -619,6 +622,8 @@ void handleWarmingUp()
 	static uint16_t configRetries = 0;
     //uint8_t btn = readButtonDebounced();
 
+	ledsRampUp();
+
     switch (WarmUpState)
     {
     	case CHECK_AND_CONFIG_GPS:
@@ -639,7 +644,7 @@ void handleWarmingUp()
 			}
 			else
 			{
-				timeoutStart(&timeoutControlLoop, 60);
+				timeoutStart(&timeoutControlLoop, GPS_FIX_TIMEOUT);
 				WarmUpState = WAITING_FOR_GPS_FIX;
 			}
 			break;
@@ -652,7 +657,7 @@ void handleWarmingUp()
 				uartSend(PC_UART_SRC, "GPS_ACK_OK\r\n");
 				gpsConfigured = true;
 				configRetries = 0;
-				timeoutStart(&timeoutControlLoop, 90);
+				timeoutStart(&timeoutControlLoop, GPS_FIX_TIMEOUT);
 				WarmUpState = WAITING_FOR_GPS_FIX;
 			}
 			else if (ack == GPS_ACK_NAK || timeoutReached(&timeoutControlLoop))
@@ -666,10 +671,13 @@ void handleWarmingUp()
 			    	uartSend(PC_UART_SRC, "GPS_ACK_TIMEOUT\r\n");
 				}
 
-			    if (++configRetries >= 3) {
+			    if (++configRetries >= GPS_CONFIG_RETRIES)
+			    {
 			        uartSend(PC_UART_SRC, "ERROR:GPS Config Failed\r\n");
 			        controlState = FAULT;
-			    } else {
+			    }
+			    else
+			    {
 			        uartSend(PC_UART_SRC, "GPS_CONF_RETRY\r\n");
 			        gpsConfig();
 			        timeoutStart(&timeoutControlLoop, 2);
@@ -714,6 +722,8 @@ void handleWarmingUp()
 					// Move on to next state
 					controlState = ALIGNMENT;
 
+					ledsSet(false);
+
 					uartSend(PC_UART_SRC, "ALIGNMENT\r\n");
 					break;
 				}
@@ -722,7 +732,6 @@ void handleWarmingUp()
 					break;
 				}
 			}
-
 	}
 }
 
@@ -743,14 +752,11 @@ void handleAligning()
 	{
 	case ALIGN_WAITING_FOR_BUTTON_PRESS:
 		//Turns the LEDs on and off at around 2Hz - signaling the alignment is ready to begin
-		blinkLeds();
+		ledsBlink();
 
 		if (btn == PRESSED) // pressed
 		{
-			HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+			ledsSet(false);
 			alignmentState = ALIGN_WAITING_FOR_BUTTON_RELEASE;
 		}
 		break;
@@ -921,11 +927,11 @@ void handleMoving()
 
 
 
-static void blinkLeds()
+static void ledsBlink()
 {
 	static uint32_t ledLastTicks = 0;
 
-	if ((HAL_GetTick() - ledLastTicks) >= 250)
+	if ((HAL_GetTick() - ledLastTicks) >= LED_BLINK_PERIOD_SHORT)
 	{
 		ledLastTicks = HAL_GetTick();
 
@@ -934,7 +940,67 @@ static void blinkLeds()
 		HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
 		HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
 	}
+}
 
+static void ledsRampUp()
+{
+	static uint8_t  currentLED   = 0;
+	static uint32_t lastSwitchTicks = 0;
+
+	if (HAL_GetTick() - lastSwitchTicks < LED_BLINK_PERIOD_SHORT)
+	{
+		return;
+	}
+	lastSwitchTicks = HAL_GetTick();
+
+	//Reset all LEDs
+	ledsSet(false);
+
+	// Light up current one
+	switch (currentLED)
+	{
+		case 0:
+			HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+			break;
+		case 1:
+			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+			break;
+		case 2:
+			HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+			break;
+		case 3:
+			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+			break;
+	}
+
+	currentLED = (currentLED + 1) % 4;
+}
+
+
+static void pwrButtonBlink()
+{
+	static uint32_t ledLastTicks = 0;
+
+		if ((HAL_GetTick() - ledLastTicks) >= LED_BLINK_PERIOD_SHORT)
+		{
+			ledLastTicks = HAL_GetTick();
+
+			HAL_GPIO_TogglePin(PWR_BTN_LED_GPIO_Port, PWR_BTN_LED_Pin);
+		}
+}
+
+
+void ledsSet(bool state)
+{
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, state);
+	HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, state);
+	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, state);
+	HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, state);
+}
+
+void pwrButtonSet(bool state)
+{
+	HAL_GPIO_WritePin(PWR_BTN_LED_GPIO_Port, PWR_BTN_LED_Pin, state);
 }
 
 void timeoutStart(Timeout_t *timeout, uint32_t seconds)

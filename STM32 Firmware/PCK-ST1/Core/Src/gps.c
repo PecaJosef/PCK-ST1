@@ -52,45 +52,7 @@ static void gpsParseLine(char *line)
     if (!type) {
         return;
     }
-    /*
-    // --- GGA sentence handling ---
-    if (strcasecmp(type, "$GNGGA") == 0 || strcasecmp(type, "$GPGGA") == 0) {
-        char *time     = strsep(&stringp, ",");
-        char *lat      = strsep(&stringp, ",");
-        char *lat_dir  = strsep(&stringp, ",");
-        char *lon      = strsep(&stringp, ",");
-        char *lon_dir  = strsep(&stringp, ",");
-        char *fix      = strsep(&stringp, ",");
-        char *sats     = strsep(&stringp, ",");
-        char *hdop     = strsep(&stringp, ",");
-        char *alt      = strsep(&stringp, ",");
 
-        // atoi and atof return 0 for an empty string, which is the desired behavior
-        gpsData.satellites = sats ? (uint8_t)atoi(sats) : 0;
-        gpsData.hdop       = hdop ? atof(hdop) : 0;
-
-        if (time && time[0] != '\0') {
-            strncpy(gpsData.time, time, sizeof(gpsData.time) - 1);
-            gpsData.time[sizeof(gpsData.time) - 1] = '\0';
-        } else {
-            gpsData.time[0] = '\0';
-        }
-
-        // If fix quality is empty or "0", there is no valid fix
-        if (!fix || fix[0] == '\0' || fix[0] == '0') {
-            gpsData.fix = 0;
-            gpsData.latitude  = 0;
-            gpsData.longitude = 0;
-            gpsData.altitude  = 0;
-            return;
-        }
-
-        gpsData.fix = atoi(fix);
-        gpsData.latitude  = nmeaToDecimal(lat) * ((lat_dir && lat_dir[0] == 'S') ? -1 : 1);
-        gpsData.longitude = nmeaToDecimal(lon) * ((lon_dir && lon_dir[0] == 'W') ? -1 : 1);
-        gpsData.altitude  = alt ? atof(alt) : 0;
-    }
-    */
     // --- RMC sentence handling ---
     else if (strcasecmp(type, "$GNRMC") == 0 || strcasecmp(type, "$GPRMC") == 0) {
         char *time     = strsep(&stringp, ",");   // hhmmss.sss
@@ -238,17 +200,18 @@ GPS_Ack_t gpsCheckAck(void)
     while (i != dma_write_ptr && count < GPS_DMA_RX_BUF_SIZE)
     {
         // Look for UBX header 0xB5 0x62
-        if (dma_rx_buf[i] == 0xB5 &&
-            dma_rx_buf[(i + 1) % GPS_DMA_RX_BUF_SIZE] == 0x62)
+        if (dma_rx_buf[i] == 0xB5 && dma_rx_buf[(i + 1) % GPS_DMA_RX_BUF_SIZE] == 0x62)
         {
             uint8_t cls = dma_rx_buf[(i + 2) % GPS_DMA_RX_BUF_SIZE];
             uint8_t id  = dma_rx_buf[(i + 3) % GPS_DMA_RX_BUF_SIZE];
 
-            if (cls == 0x05 && id == 0x01) {
+            if (cls == 0x05 && id == 0x01)
+            {
             	gpsFlushBuffer();
                 return GPS_ACK_OK;
             }
-            if (cls == 0x05 && id == 0x00) {
+            if (cls == 0x05 && id == 0x00)
+            {
             	gpsFlushBuffer();
                 return GPS_ACK_NAK;
             }
