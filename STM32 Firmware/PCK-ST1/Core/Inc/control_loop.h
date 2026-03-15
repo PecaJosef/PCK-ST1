@@ -90,4 +90,8 @@ void handleCalibration();
 
 void endstopReached(StepperMotor_t *Axis);
 
+void ledsSet(bool state);
+
+void pwrButtonSet(bool state);
+
 #endif /* INC_CONTROL_LOOP_H_ */

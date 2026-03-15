@@ -43,7 +43,8 @@ Core/Src/telemetry.o: ../Core/Src/telemetry.c ../Core/Inc/telemetry.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
- ../Core/Inc/main.h ../Core/Inc/stepper.h
+ ../Core/Inc/main.h ../Core/Inc/stepper.h ../Core/Inc/stepper.h \
+ ../Core/Inc/cmd_handler.h
 ../Core/Inc/telemetry.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Core/Inc/stm32l4xx_hal_conf.h:
@@ -92,3 +93,5 @@ Core/Src/telemetry.o: ../Core/Src/telemetry.c ../Core/Inc/telemetry.h \
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
 ../Core/Inc/main.h:
 ../Core/Inc/stepper.h:
+../Core/Inc/stepper.h:
+../Core/Inc/cmd_handler.h:

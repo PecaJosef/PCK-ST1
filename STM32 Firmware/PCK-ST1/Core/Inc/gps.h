@@ -28,18 +28,32 @@ typedef struct {
     uint8_t day;			// Day in dd format
 } GPS_Data_t;
 
+
+// UBX-ACK-ACK:  B5 62 05 01 02 00 06 8A 98 44
+// UBX-ACK-NAK:  B5 62 05 00 02 00 06 8A 97 43
+typedef enum {
+    GPS_ACK_PENDING,
+    GPS_ACK_OK,
+    GPS_ACK_NAK,
+} GPS_Ack_t;
+
+
 #define GPS_UART &huart4 //GPS UART Handler
 #define GPS_DMA_RX_BUF_SIZE 512
 
-#define GPS_DEBUG
+//#define GPS_DEBUG
 
 void GPS_Init_DMA(void);
 
 GPS_Data_t getGPSData(void);
 
-void GPS_Config(void);
+void gpsConfig(void);
+
+void gpsFlushBuffer();
 
 bool gpsIsAlive();
+
+GPS_Ack_t gpsCheckAck(void);
 
 bool GPS_ValidFix();
 

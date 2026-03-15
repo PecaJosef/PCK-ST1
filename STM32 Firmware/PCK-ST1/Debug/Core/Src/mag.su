@@ -1,7 +1,7 @@
 ../Core/Src/mag.c:16:19:Mag_Init	32	static
 ../Core/Src/mag.c:30:6:magIsAlive	24	static
 ../Core/Src/mag.c:54:19:magReadRaw	32	static
-../Core/Src/mag.c:71:12:calibrationMatrix	208	static
+../Core/Src/mag.c:71:12:calibrationMatrix	240	static
 ../Core/Src/mag.c:124:7:getCalibratedHeading	48	static
 ../Core/Src/mag.c:147:6:SaveCalibrationToFlash	88	static
 ../Core/Src/mag.c:179:6:LoadCalibrationFromFlash	32	static

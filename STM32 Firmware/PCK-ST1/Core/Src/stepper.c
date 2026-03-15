@@ -7,7 +7,7 @@
 #include "stepper.h"
 #include "usbd_cdc_if.h"
 #include "math.h"
-
+#include "telemetry.h"
 
 StepperMotor_t ALT_AxisMotor = {
 	.STEP_Port = ALT_STEP_GPIO_Port,
@@ -222,8 +222,6 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in a
 			//Steps calculation
 			Axis->StepsTarget = (uint32_t)ceilf(2*angle*Axis->stepsPerArcmin); //Times two because of toggle STEP pin -> twice lower steps
 
-			printf("Steps: %d\r\n", Axis->StepsTarget);
-
 			//Steps per second calculation
 			Axis->TicksPerStep = (uint32_t)ceilf(STEPPER_TIMER_FREQ/(2*60*speed*Axis->stepsPerArcmin));
 			Axis->TickCounter = 0;
@@ -310,9 +308,18 @@ void stepperStop(StepperMotor_t *Axis)
 		}
 		//Stop STEP counting timer
 		HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
+
+		//Update axis position based on the StepsTarget
+		updatePosition(Axis);
+		Axis->Position.lastStepsRead = 0;
 		}
 	else if (!Axis->highPrecisionAxis)
 	{
+		//Update axis position based on the StepsTarget
+		updatePosition(Axis);
+		Axis->Position.lastStepsRead = 0;
+
+		//Reset StepsCounter and StepsTarget
 		Axis->StepsTarget = 0;
 		Axis->StepsCounter = 0;
 	}
@@ -330,6 +337,8 @@ void stepsGenerating(StepperMotor_t *Axis)
 				//Lower the motor current
 
 				//Update axis position based on the StepsTarget
+				updatePosition(Axis);
+				Axis->Position.lastStepsRead = 0;
 
 				//reset StepsCounter and StepsTarget
 				Axis->StepsCounter = 0;

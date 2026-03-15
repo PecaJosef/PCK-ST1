@@ -1,6 +1,8 @@
-../Core/Src/gps.c:34:15:nmeaToDecimal	48	static
-../Core/Src/gps.c:43:13:gpsParseLine	96	static
-../Core/Src/gps.c:133:6:gpsIsAlive	8	static
-../Core/Src/gps.c:148:6:GPS_Init_DMA	8	static
-../Core/Src/gps.c:154:12:getGPSData	48	static
-../Core/Src/gps.c:223:6:GPS_Config	8	static
+../Core/Src/gps.c:35:15:nmeaToDecimal	48	static
+../Core/Src/gps.c:44:13:gpsParseLine	64	static
+../Core/Src/gps.c:96:6:gpsIsAlive	8	static
+../Core/Src/gps.c:111:6:GPS_Init_DMA	8	static
+../Core/Src/gps.c:117:12:getGPSData	48	static
+../Core/Src/gps.c:182:6:gpsConfig	8	static
+../Core/Src/gps.c:189:6:gpsFlushBuffer	4	static
+../Core/Src/gps.c:194:11:gpsCheckAck	16	static

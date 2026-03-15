@@ -29,7 +29,7 @@
 
 //Define Gear ratios for each axis
 #define ALT_GEAR_RATIO 90.0f
-#define AZ_GEAR_RATIO 48.5625f
+#define AZ_GEAR_RATIO 48.57954f //(5 + 2/11) * (150/16)
 #define DEC_GEAR_RATIO 100.0f
 #define RA_GEAR_RATIO 1000.0f
 

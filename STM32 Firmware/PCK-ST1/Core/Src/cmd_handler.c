@@ -162,6 +162,12 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 
 	command  = strtok_r(NULL, "$",saveptr);
 
+	if(command == NULL)
+	{
+		uartSend(src, "#ERR:FORMAT\r\n");
+		return;
+	}
+
 	while(command != NULL)
 	{
 
