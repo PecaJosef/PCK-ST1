@@ -1,2 +1,0 @@
-../Core/Src/uart_it.c:27:6:UART_IT_Init	1
-../Core/Src/uart_it.c:33:6:HAL_UART_RxCpltCallback	3

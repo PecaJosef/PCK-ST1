@@ -1,8 +1,0 @@
-../Core/Src/gps.c:35:15:nmeaToDecimal	3
-../Core/Src/gps.c:44:13:gpsParseLine	15
-../Core/Src/gps.c:96:6:gpsIsAlive	2
-../Core/Src/gps.c:111:6:GPS_Init_DMA	1
-../Core/Src/gps.c:117:12:getGPSData	12
-../Core/Src/gps.c:182:6:gpsConfig	1
-../Core/Src/gps.c:189:6:gpsFlushBuffer	1
-../Core/Src/gps.c:194:11:gpsCheckAck	9

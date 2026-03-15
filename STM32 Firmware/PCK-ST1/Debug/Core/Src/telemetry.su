@@ -1,5 +1,0 @@
-../Core/Src/telemetry.c:25:6:telemetryHandler	48	static
-../Core/Src/telemetry.c:45:6:adcVoltageInit	8	static
-../Core/Src/telemetry.c:50:7:getVoltage	16	static
-../Core/Src/telemetry.c:57:13:checkPowerInput	8	static
-../Core/Src/telemetry.c:117:6:updatePosition	24	static

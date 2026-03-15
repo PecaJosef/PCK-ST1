@@ -1,7 +1,0 @@
-../Core/Src/mag.c:16:19:Mag_Init	3
-../Core/Src/mag.c:30:6:magIsAlive	4
-../Core/Src/mag.c:54:19:magReadRaw	3
-../Core/Src/mag.c:71:12:calibrationMatrix	1
-../Core/Src/mag.c:124:7:getCalibratedHeading	2
-../Core/Src/mag.c:147:6:SaveCalibrationToFlash	4
-../Core/Src/mag.c:179:6:LoadCalibrationFromFlash	2
