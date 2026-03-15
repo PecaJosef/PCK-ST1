@@ -5,7 +5,7 @@
 ../Core/Src/stepper.c:174:6:stepperEnable	16	static
 ../Core/Src/stepper.c:184:6:stepperDisable	16	static
 ../Core/Src/stepper.c:195:6:stepperMove	40	static
-../Core/Src/stepper.c:266:6:stepperHome	24	static
-../Core/Src/stepper.c:297:6:stepperStop	16	static
-../Core/Src/stepper.c:325:6:stepsGenerating	16	static
-../Core/Src/stepper.c:354:6:Stepper_nSleep	16	static
+../Core/Src/stepper.c:264:6:stepperHome	24	static
+../Core/Src/stepper.c:295:6:stepperStop	16	static
+../Core/Src/stepper.c:332:6:stepsGenerating	16	static
+../Core/Src/stepper.c:363:6:Stepper_nSleep	16	static

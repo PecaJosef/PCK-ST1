@@ -16,20 +16,19 @@
 #define DIVIDER_R_UP 100000
 #define DIVIDER_R_DOWN 22000
 #define VREF 3.3f
-#define ADC_MAX 4095
+#define ADC_MAX 4095.0f
 
 #define TELEMETRY_PERIOD 250
 
 extern ADC_HandleTypeDef hadc1;
 
-
 void telemetryHandler();
+
+void adcVoltageInit();
 
 float getVoltage(void);
 
 void updatePosition(StepperMotor_t *Axis);
-
-
 
 
 #endif /* INC_TELEMETRY_H_ */

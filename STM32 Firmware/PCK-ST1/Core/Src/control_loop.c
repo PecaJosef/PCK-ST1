@@ -51,7 +51,7 @@
 #include "cmd_handler.h"
 #include "mag.h"
 
-ControlState_t controlState;
+ControlState_t controlState = LOW_POWER_IDLE;
 ControlState_t prevControlState;
 
 StatusFlags_t statusFlags;

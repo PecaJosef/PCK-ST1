@@ -1,2 +1,5 @@
-../Core/Src/telemetry.c:11:7:getVoltage	2
-../Core/Src/telemetry.c:34:6:updatePosition	3
+../Core/Src/telemetry.c:25:6:telemetryHandler	2
+../Core/Src/telemetry.c:45:6:adcVoltageInit	1
+../Core/Src/telemetry.c:50:7:getVoltage	1
+../Core/Src/telemetry.c:57:13:checkPowerInput	10
+../Core/Src/telemetry.c:117:6:updatePosition	4
