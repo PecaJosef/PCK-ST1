@@ -8,12 +8,7 @@
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if (htim->Instance == LED_TIMER)
-  {
-	  //LEDs timer
-	  LED_IT_Handeler();
-  }
-  else if(htim->Instance == STEPPER_TIMER)
+  if(htim->Instance == STEPPER_TIMER)
   {
 	  //Stepper timer AZ,EL
 	  stepperInterruptHandler();

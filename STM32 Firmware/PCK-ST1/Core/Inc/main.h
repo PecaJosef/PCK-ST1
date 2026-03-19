@@ -70,8 +70,10 @@ void Error_Handler(void);
 #define ALT_LIM_EXTI_IRQn EXTI2_IRQn
 #define DEC_LIM_Pin GPIO_PIN_3
 #define DEC_LIM_GPIO_Port GPIOA
+#define DEC_LIM_EXTI_IRQn EXTI3_IRQn
 #define RA_LIM_Pin GPIO_PIN_4
 #define RA_LIM_GPIO_Port GPIOA
+#define RA_LIM_EXTI_IRQn EXTI4_IRQn
 #define AZ_EN_Pin GPIO_PIN_5
 #define AZ_EN_GPIO_Port GPIOA
 #define AZ_DIR_Pin GPIO_PIN_6

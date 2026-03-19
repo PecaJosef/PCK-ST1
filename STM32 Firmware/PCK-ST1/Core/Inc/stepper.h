@@ -24,8 +24,11 @@
 //Define microstepping for each axis
 #define ALT_MICROSTEPPING 2
 #define AZ_MICROSTEPPING 4
-#define DEC_MICROSTEPPING 128
-#define RA_MICROSTEPPING 128
+#define DEC_MICROSTEPPING 32
+#define RA_MICROSTEPPING 32
+
+//#define DEC_MICROSTEPPING 128
+//#define RA_MICROSTEPPING 128
 
 //Define Gear ratios for each axis
 #define ALT_GEAR_RATIO 90.0f

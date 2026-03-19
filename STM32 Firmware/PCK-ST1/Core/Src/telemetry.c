@@ -20,8 +20,11 @@ typedef enum {
 
 static void checkPowerInput();
 
-static volatile uint32_t adc_raw = 0;
+//DMA adc_buffer
+static volatile uint16_t adc_buffer[2]; //[0] = VREFINT, [1] = CH4 ADC data
 
+
+//Main telemetry handler
 void telemetryHandler()
 {
 	static uint32_t telemetryLastTicks = 0;
@@ -34,23 +37,34 @@ void telemetryHandler()
 
 	float voltage = getVoltage();
 
-	char dbgbuff[32];
-	sprintf(dbgbuff,"Voltage: %f\r\n", voltage);
-	uartSend(PC_UART_SRC, dbgbuff);
+	updatePosition(&AZ_AxisMotor);
 
+	/*
+	char dbgbuff[32];
+	sprintf(dbgbuff,"Position: %f\r\n", AZ_AxisMotor.Position.angularPosition);
+	uartSend(PC_UART_SRC, dbgbuff);
+	*/
+	//printf("Position: %f\r\n", AZ_AxisMotor.Position.angularPosition);
 	checkPowerInput();
+
 }
 
 
 void adcVoltageInit()
 {
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc_raw, 1);
+	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc_buffer, 2);
 }
 
 float getVoltage(void)
 {
-    float adcVoltage    = (adc_raw * VREF) / ADC_MAX;
-    float inputVoltage  = adcVoltage * ((DIVIDER_R_UP + DIVIDER_R_DOWN) / DIVIDER_R_DOWN);
+    uint16_t vref_raw = adc_buffer[0];
+    uint16_t adc_raw = adc_buffer[1];
+
+    float vref_real = 3.0f * ((float)*VREFINT_CAL_ADDR / (float)vref_raw);
+
+	float adcVoltage = (adc_raw * vref_real) / ADC_MAX;
+    float inputVoltage = adcVoltage * ((DIVIDER_R_UP + DIVIDER_R_DOWN) / DIVIDER_R_DOWN);
     return inputVoltage;
 }
 
@@ -117,15 +131,19 @@ static void checkPowerInput()
 void updatePosition(StepperMotor_t *Axis)
 {
 	int32_t deltaSteps = 0;
+	uint32_t currentStepCount = 0;
 	if (!Axis->highPrecisionAxis)
 	{
-
-		deltaSteps = Axis->StepsCounter - Axis->Position.lastStepsRead;
+		currentStepCount = Axis->StepsCounter;
+		deltaSteps = currentStepCount - Axis->Position.lastStepsRead;
+		Axis->Position.lastStepsRead = currentStepCount;
 
 	}
 	else if (Axis->highPrecisionAxis)
 	{
-		deltaSteps = __HAL_TIM_GET_COUNTER(Axis->Step_Counter_Timer);
+		currentStepCount = __HAL_TIM_GET_COUNTER(Axis->Step_Counter_Timer);
+		deltaSteps = currentStepCount - Axis->Position.lastStepsRead;
+		Axis->Position.lastStepsRead = currentStepCount;
 	}
 
 	if (Axis->Position.direction == true) //If the direction of rotation is positive (true) increase the stepPostition
@@ -136,5 +154,16 @@ void updatePosition(StepperMotor_t *Axis)
 	{
 		Axis->Position.stepPosition -= deltaSteps;
 	}
+	if (!Axis->highPrecisionAxis)
+	{
+		Axis->Position.angularPosition = ((float)Axis->Position.stepPosition / (Axis->stepsPerArcmin*DEG))/2.0f;
+	}
+	else
+	{
+		Axis->Position.angularPosition = (float)Axis->Position.stepPosition / (Axis->stepsPerArcmin*DEG);
+	}
+
+
+
 }
 

@@ -368,25 +368,24 @@ void handleHoming()
 			if (!homing)
 			{
 				// Start homing for all axes
-				axisHomingStart(&ALT_AxisMotor, 10.0f, 5.0f);
-				//Axis_Home_Start(&AZ_Axis_motor, 200.0f, 50.0f);
-				//Axis_Home_Start(&RA_Axis_motor, 200.0f, 50.0f);
-				//Axis_Home_Start(&DEC_Axis_motor, 200.0f, 50.0f);
+				axisHomingStart(&ALT_AxisMotor, ALT_COARSE_SPEED, ALT_FINE_SPEED);
+				axisHomingStart(&RA_AxisMotor, RA_COARSE_SPEED, RA_FINE_SPEED);
+				axisHomingStart(&DEC_AxisMotor, DEC_COARSE_SPEED, DEC_FINE_SPEED);
 
 				homing = true;
 			}
 
 			// Update all axes in parallel
-			axisHomingUpdate(&ALT_AxisMotor, 10.0f, 7.5f);
-			axisHomingUpdate(&AZ_AxisMotor, 10.0f, 7.5f);
-			axisHomingUpdate(&RA_AxisMotor, 1.5f, 1.0f);
-			axisHomingUpdate(&DEC_AxisMotor, 1.5f, 1.0f);
+			axisHomingUpdate(&ALT_AxisMotor, ALT_COARSE_SPEED, ALT_FINE_SPEED);
+			axisHomingUpdate(&RA_AxisMotor, RA_COARSE_SPEED, RA_FINE_SPEED);
+			axisHomingUpdate(&DEC_AxisMotor, DEC_COARSE_SPEED, DEC_FINE_SPEED);
 
 			// Check if all done
 			if (!ALT_AxisMotor.homing && !AZ_AxisMotor.homing && !RA_AxisMotor.homing && !DEC_AxisMotor.homing)
 			{
 				homing = false;
-				stepperDisable(&ALT_AxisMotor);
+
+				//stepperDisable(&ALT_AxisMotor);
 
 				ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
 				AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
@@ -415,7 +414,7 @@ static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineS
 
     if (HAL_GPIO_ReadPin(Axis->ENDSTOP_Port, Axis->ENDSTOP_Pin) == GPIO_PIN_RESET)
     {
-        // Endstop already pressed → skip coarse, go to backoff
+        // Endstop already pressed -> skip coarse, go to backoff
         Axis->homing_state = AXIS_HOMING_BACKOFF;
         stepperMove(Axis, 5.0f*DEG, fineSpeed);
     }
@@ -423,7 +422,7 @@ static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineS
     {
         // Normal coarse move towards switch
         Axis->homing_state = AXIS_HOMING_COARSE;
-        stepperMove(Axis, -360.0f*DEG, coarseSpeed); // 180° is just "long enough"
+        stepperMove(Axis, -360.0f*DEG, coarseSpeed);
     }
 }
 
@@ -456,17 +455,17 @@ static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fine
     }
 }
 
-void endstopReached(StepperMotor_t *Axis)
+void endstopReached(StepperMotor_t *Axis, float fineSpeed)
 {
-	stepperStop(Axis);
-
 	if (!Axis->homing) return;
+
+	stepperStop(Axis);
 
 	switch (Axis->homing_state) {
 	case AXIS_HOMING_COARSE:
 		// First hit → back off
 		Axis->homing_state = AXIS_HOMING_BACKOFF;
-		stepperMove(Axis, 5.0f*DEG, 5.0f);
+		stepperMove(Axis, 5.0f*DEG, fineSpeed);
 		break;
 
 	case AXIS_HOMING_FINE:
@@ -691,6 +690,7 @@ void handleWarmingUp()
     		{
 				timeoutReset(&timeoutControlLoop);
 				uartSend(PC_UART_SRC, "ERROR: GPS Timeout\r\n");
+				ledsSet(false);
 				controlState = FAULT; // Jump to FAULT state
 				break;
 			}

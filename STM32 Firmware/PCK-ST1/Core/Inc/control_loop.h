@@ -8,6 +8,13 @@
 #ifndef INC_CONTROL_LOOP_H_
 #define INC_CONTROL_LOOP_H_
 
+#define RA_FINE_SPEED 1.0f
+#define RA_COARSE_SPEED 2.0f
+#define DEC_FINE_SPEED 7.5f
+#define DEC_COARSE_SPEED 10.0f
+#define ALT_FINE_SPEED 7.5f
+#define ALT_COARSE_SPEED 10.0f
+
 #include "stm32l4xx_hal.h"
 #include "usbd_cdc_if.h"
 #include "main.h"
@@ -88,7 +95,7 @@ void handleHoming();
 
 void handleCalibration();
 
-void endstopReached(StepperMotor_t *Axis);
+void endstopReached(StepperMotor_t *Axis, float fineSpeed);
 
 void ledsSet(bool state);
 

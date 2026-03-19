@@ -124,13 +124,15 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		stepperDisable(&ALT_AxisMotor);
 		stepperDisable(&AZ_AxisMotor);
 		stepperDisable(&RA_AxisMotor);
+		stepperDisable(&DEC_AxisMotor);
 	}
 	else if(strcmp(token, "$EN")==0)
-		{
-			stepperEnable(&ALT_AxisMotor);
-			stepperEnable(&AZ_AxisMotor);
-			stepperEnable(&RA_AxisMotor);
-		}
+	{
+		stepperEnable(&ALT_AxisMotor);
+		stepperEnable(&AZ_AxisMotor);
+		stepperEnable(&RA_AxisMotor);
+		stepperEnable(&DEC_AxisMotor);
+	}
 	else
 	{
 		uartSend(src, "ERR:UNKNOWN\r\n");

@@ -18,7 +18,7 @@ StepperMotor_t ALT_AxisMotor = {
 	.DIR_Pin = ALT_DIR_Pin,
 	.ENDSTOP_Port = ALT_LIM_GPIO_Port,
 	.ENDSTOP_Pin = ALT_LIM_Pin,
-	.EXTI_IRQn = EXTI2_IRQn,
+	.EXTI_IRQn = ALT_LIM_EXTI_IRQn,
 	.stepsPerArcmin = ALT_STEPS_PER_ARCMIN,
 	.enabled = false,
 	.busy = false,
@@ -78,9 +78,9 @@ StepperMotor_t RA_AxisMotor = {
 	.EN_Pin = RA_EN_Pin,
 	.DIR_Port = RA_DIR_GPIO_Port,
 	.DIR_Pin = RA_DIR_Pin,
-	//.ENDSTOP_Port = ,
-	//.ENDSTOP_Pin = ,
-	//.EXTI_IRQn = ,
+	.ENDSTOP_Port = RA_LIM_GPIO_Port,
+	.ENDSTOP_Pin = RA_LIM_Pin,
+	.EXTI_IRQn = RA_LIM_EXTI_IRQn,
 	.stepsPerArcmin = RA_STEPS_PER_ARCMIN,
 	.enabled = false,
 	.busy = false,
@@ -110,9 +110,9 @@ StepperMotor_t DEC_AxisMotor = {
 	.EN_Pin = DEC_EN_Pin,
 	.DIR_Port = DEC_DIR_GPIO_Port,
 	.DIR_Pin = DEC_DIR_Pin,
-	//.ENDSTOP_Port = ,
-	//.ENDSTOP_Pin = ,
-	//.EXTI_IRQn = ,
+	.ENDSTOP_Port = DEC_LIM_GPIO_Port,
+	.ENDSTOP_Pin = DEC_LIM_Pin,
+	.EXTI_IRQn = DEC_LIM_EXTI_IRQn,
 	.stepsPerArcmin = DEC_STEPS_PER_ARCMIN,
 	.enabled = false,
 	.busy = false,
@@ -223,13 +223,13 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in a
 			Axis->StepsTarget = (uint32_t)ceilf(2*angle*Axis->stepsPerArcmin); //Times two because of toggle STEP pin -> twice lower steps
 
 			//Steps per second calculation
-			Axis->TicksPerStep = (uint32_t)ceilf(STEPPER_TIMER_FREQ/(2*60*speed*Axis->stepsPerArcmin));
+			Axis->TicksPerStep = (uint32_t)ceilf(STEPPER_TIMER_FREQ/(2*speed*Axis->stepsPerArcmin*DEG));
 			Axis->TickCounter = 0;
 		}
 		else if (Axis->highPrecisionAxis)
 		{
 			uint32_t steps = (uint32_t)ceilf(angle*Axis->stepsPerArcmin);
-			uint32_t arr = (uint32_t)ceilf(STEPPER_TIMER_HI_FREQ / (60*speed*Axis->stepsPerArcmin));
+			uint32_t arr = (uint32_t)ceilf(STEPPER_TIMER_HI_FREQ / (speed*Axis->stepsPerArcmin*DEG));
 			uint32_t ccr = arr / 2;
 
 			//Set PWM (STEP) timer frequency
@@ -309,20 +309,18 @@ void stepperStop(StepperMotor_t *Axis)
 		//Stop STEP counting timer
 		HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
 
-		//Update axis position based on the StepsTarget
-		updatePosition(Axis);
 		Axis->Position.lastStepsRead = 0;
 		}
 	else if (!Axis->highPrecisionAxis)
 	{
-		//Update axis position based on the StepsTarget
-		updatePosition(Axis);
 		Axis->Position.lastStepsRead = 0;
 
 		//Reset StepsCounter and StepsTarget
 		Axis->StepsTarget = 0;
 		Axis->StepsCounter = 0;
 	}
+	//Update axis position based on the StepsTarget
+	updatePosition(Axis);
 
 	//stepperDisable(Axis);
 	Axis->busy = false;
@@ -335,6 +333,7 @@ void stepsGenerating(StepperMotor_t *Axis)
 	        {
 				Axis->busy= false;
 				//Lower the motor current
+				//TBD
 
 				//Update axis position based on the StepsTarget
 				updatePosition(Axis);
