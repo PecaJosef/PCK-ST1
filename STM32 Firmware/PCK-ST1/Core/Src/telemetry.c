@@ -35,9 +35,9 @@ void telemetryHandler()
 	}
 	telemetryLastTicks = HAL_GetTick();
 
-	float voltage = getVoltage();
+	//float voltage = getVoltage();
 
-	updatePosition(&AZ_AxisMotor);
+	updatePosition(&RA_AxisMotor);
 
 	/*
 	char dbgbuff[32];
@@ -47,6 +47,16 @@ void telemetryHandler()
 	//printf("Position: %f\r\n", AZ_AxisMotor.Position.angularPosition);
 	checkPowerInput();
 
+}
+
+void getTelemetry()
+{
+	float voltage = getVoltage();
+	float position = RA_AxisMotor.Position.angularPosition;
+
+	char dbgbuff[32];
+	sprintf(dbgbuff,"RA Position: %f\r\nVoltage: %f\r\n", position, voltage);
+	uartSend(PC_UART_SRC, dbgbuff);
 }
 
 

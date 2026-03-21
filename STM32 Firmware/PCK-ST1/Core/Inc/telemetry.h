@@ -29,5 +29,6 @@ float getVoltage(void);
 
 void updatePosition(StepperMotor_t *Axis);
 
+void getTelemetry();
 
 #endif /* INC_TELEMETRY_H_ */

@@ -15,11 +15,12 @@
 #define STEPS_PER_REV 200.0f
 #define STEPPER_TIMER_FREQ 7500
 #define STEPPER_TIMER_HI_FREQ 1000000
-#define STEPPER_TIMER_PRESCALE 64
+#define STEPPER_TIMER_PRESCALE (CORE_FREQ/STEPPER_TIMER_HI_FREQ)
 #define CORE_FREQ 64000000
+#define TRACKING_TIMER_FREQ 3200000
+#define TRACKING_PRESCALER (CORE_FREQ/TRACKING_TIMER_FREQ)
+
 #define DEG 60.0f
-
-
 
 //Define microstepping for each axis
 #define ALT_MICROSTEPPING 2
@@ -47,7 +48,7 @@
 #define AZ_POS_DIR 0
 #define ALT_POS_DIR 1
 #define DEC_POS_DIR 1
-#define RA_POS_DIR 1
+#define RA_POS_DIR 0
 
 #define RA_PWM_TIM &htim1 //Main timer - generates step signal
 #define RA_PWM_CH TIM_CHANNEL_2
@@ -142,6 +143,10 @@ void Stepper_IT_Disable();
 void stepperEnable(StepperMotor_t *Axis);
 
 void stepperDisable(StepperMotor_t *Axis);
+
+void trackingStart(StepperMotor_t *Axis);
+
+void trackingStop(StepperMotor_t *Axis);
 
 void stepperMove(StepperMotor_t *Axis, float angle, float speed);
 

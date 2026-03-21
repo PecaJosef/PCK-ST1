@@ -29,6 +29,7 @@ typedef struct {
 	bool magOK;
 	bool rpiOK;
 	bool moveEnabled;
+	bool calibForceEnable;
 
 }StatusFlags_t;
 

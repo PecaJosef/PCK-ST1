@@ -54,7 +54,14 @@
 ControlState_t controlState = LOW_POWER_IDLE;
 ControlState_t prevControlState;
 
-StatusFlags_t statusFlags;
+StatusFlags_t statusFlags = {
+		.calibForceEnable = false,
+		.gpsOK = false,
+		.homed = false,
+		.magOK = false,
+		.moveEnabled = true,
+		.rpiOK = false,
+};
 
 /*
  *	LOW POWER IDLE variables and defines
@@ -385,7 +392,7 @@ void handleHoming()
 			{
 				homing = false;
 
-				//stepperDisable(&ALT_AxisMotor);
+				stepperDisable(&ALT_AxisMotor);
 
 				ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
 				AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
@@ -492,7 +499,7 @@ void handleCalibration()
 	return;
 
 	#else
-	if (LoadCalibrationFromFlash(&magCalib))
+	if (LoadCalibrationFromFlash(&magCalib) && statusFlags.calibForceEnable == false)
 	{
 		controlState = WARMING_UP;
 		//printf("M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",magCalib.softiron[0][0],magCalib.softiron[0][1],magCalib.softiron[1][0],magCalib.softiron[1][1]);

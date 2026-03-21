@@ -11,6 +11,7 @@
 #include "stm32l4xx_hal.h"
 #include "usbd_cdc_if.h"
 #include "control_loop.h"
+#include "telemetry.h"
 
 
 // Buffers for PC and RPi commands
@@ -29,6 +30,10 @@ static void moveParsing(char **saveptr, UART_Source_t src);
 static void rpiParsing(char **saveptr, UART_Source_t src);
 
 static void polarAlignmentParsing (char **saveptr, UART_Source_t src);
+
+static void trackingParsing(char **saveptr, UART_Source_t src);
+
+static void calibParsing(char **saveptr, UART_Source_t src);
 
 void commandHandler(void)
 {
@@ -109,7 +114,6 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		rpiParsing(&saveptr, src);
 	}
 
-
 	else if(strcmp(token, "#ECHO")==0 && src == RPI_UART_SRC)
 	{
 		uartSend(PC_UART_SRC, "#RPI:ECHO\r\n"); //sends response from RPi (ECHO) to PC
@@ -118,7 +122,18 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	{
 		uartSend(PC_UART_SRC, "#RPI:RDY\r\n"); //sends response from RPi (ECHO) to PC
 	}
-
+	else if(strcmp(token, "$TRACKING")==0)
+	{
+		trackingParsing(&saveptr, src);
+	}
+	else if(strcmp(token, "$CALIB")==0)
+	{
+		calibParsing(&saveptr, src);
+	}
+	else if(strcmp(token, "$TEL")==0)
+	{
+		getTelemetry();
+	}
 	else if(strcmp(token, "$DIS")==0)
 	{
 		stepperDisable(&ALT_AxisMotor);
@@ -274,6 +289,10 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 	{
 		rpiPowerOn();
 	}
+	else if(strcmp(command, "STOP")==0)
+	{
+		rpiPowerOff();
+	}
 	else if(strcmp(command, "ALIGN")==0)
 	{
 		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
@@ -347,6 +366,55 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 		uartSend(src, "ERR:UNKNOWN\n\r");
 	}
 }
+
+
+static void trackingParsing(char **saveptr, UART_Source_t src)
+{
+	char *command;
+
+	command = strtok_r(NULL, ":", saveptr);
+
+	if(strcmp(command, "START")==0)
+	{
+		trackingStart(&RA_AxisMotor);
+		uartSend(src, "TRACKING STARTED\r\n");
+	}
+	else if (strcmp(command, "STOP")==0)
+	{
+		trackingStop(&RA_AxisMotor);
+		uartSend(src, "TRACKING STOPPED\r\n");
+	}
+	else
+	{
+		uartSend(src, "ERROR:FORMAT\r\n");
+	}
+
+}
+
+
+static void calibParsing(char **saveptr, UART_Source_t src)
+{
+	char *command;
+
+	command = strtok_r(NULL, ":", saveptr);
+
+	if(strcmp(command, "ON")==0)
+	{
+		statusFlags.calibForceEnable = true;
+		uartSend(src, "CALIBRATION ENABLED\r\n");
+	}
+	else if (strcmp(command, "OFF")==0)
+	{
+		statusFlags.calibForceEnable = false;
+		uartSend(src, "CALIBRATION DISABLED\r\n");
+	}
+	else
+	{
+		uartSend(src, "ERROR:FORMAT\r\n");
+	}
+
+}
+
 
 void uartSend(UART_Source_t src, const char *msg)
 {
