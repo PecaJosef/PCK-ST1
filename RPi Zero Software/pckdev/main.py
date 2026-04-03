@@ -12,7 +12,7 @@ def main():
         print("ERROR:Camera not connected\r\n")
 
     try:
-        uart.send("$RDY") #Sends #READY after the RPi boots up and the Python started
+        uart.send("$RDY") #Sends $RDY after the RPi boots up and the Python started
 
         while True:
             cmd = uart.read_line()

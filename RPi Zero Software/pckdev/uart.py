@@ -33,21 +33,20 @@ class UARTHandler:
         elif cmd.startswith("$SHUTDOWN"):
             cmdprocessing.rpiShutdown(self)
         elif cmd.startswith("$CAPTURE"):
-            try:
-                parts = cmd.split(":", 1)[1].rsplit(".", 1)
-
-                if len(parts) == 2:
-                    exposure = float(parts[0])
-                    img_name = parts[1]
+            parts = cmd.split(":") 
+            
+            if len(parts) == 3:
+                try:
+                    exposure = float(parts[1])
+                    img_name = parts[2]
                     
-                    cmdprocessing.imgCapture(exposure, img_name)
-                else:
-                    self.send("$ERR:MALFORMED_CAPTURE")
-                    
-            except (ValueError, IndexError):
-                self.send("$ERR:INVALID_ARGS")
+                    cmdprocessing.imgCapture(self, exposure, img_name)
+                except ValueError:
+                    self.send("$ERR:FORMAT")
             else:
-                self.send("$ERR:UNKNOWN")
+                self.send("$ERR:FORMAT")
+        else:
+            self.send("$ERR:UNKNOWN")
 
     def close(self):
         """Close the serial port."""

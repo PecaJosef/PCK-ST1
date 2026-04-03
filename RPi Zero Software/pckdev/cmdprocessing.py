@@ -52,7 +52,7 @@ def centerOfRotation(uart):
         gc.collect()
 
 def imgCapture(exposure, img_name):
-    image = captureImage(exposure, 8.0, True) #10s exposure, 8 gain, flip the image
+    image = captureImage(exposure, 8.0, True)
     cv2.imwrite(img_name, image)
     uart.send("$PA:CAPTURED")
 
