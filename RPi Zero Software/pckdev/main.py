@@ -9,10 +9,11 @@ def main():
     if camera.cameraConnected() == True:
         camera.initCamera()
     else:
-        print("ERROR:Camera not connected\r\n")
+        print("ERROR:Camera not connected")
 
     try:
         uart.send("#RPI READY")
+        time.sleep(0.25)
         uart.send("$RDY") #Sends $RDY after the RPi boots up and the Python started
 
         while True:

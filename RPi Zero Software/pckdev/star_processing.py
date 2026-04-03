@@ -463,6 +463,9 @@ def getCenterOfRotation(image_zero, image_angled):
   stars_prime = np.array(pairs_angled)
 
   center = calculateCoR(stars, stars_prime)
+  if (center is None):
+    return None
+    
   center_offset = center-(np.array([image_zero.shape[1] // 2, image_zero.shape[0] // 2]))
 
   return center_offset
