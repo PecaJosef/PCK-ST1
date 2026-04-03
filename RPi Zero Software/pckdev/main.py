@@ -12,6 +12,8 @@ def main():
         print("ERROR:Camera not connected")
 
     try:
+        uart.send("\n\n")
+        
         uart.send("#RPI READY")
         time.sleep(0.25)
         uart.send("$RDY") #Sends $RDY after the RPi boots up and the Python started
