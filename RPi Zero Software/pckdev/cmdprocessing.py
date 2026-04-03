@@ -16,7 +16,7 @@ def alignmentError(uart):
     global center_offset
     #star_image = cv2.imread("star_img/polaris4_1.jpg")
 
-    star_image = captureImage(10, 8.0, True) #10s exposure, 8 gain, flip the image
+    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, flip the image
 
     cv2.imwrite('stars.jpg', star_image)
     uart.send("$PA:CAPTURED")
@@ -32,7 +32,7 @@ def alignmentError(uart):
 def centerOfRotation(uart):
     global image_zero, image_angled, center_offset
 
-    star_image = captureImage(10, 8.0, True) #10s exposure, 8 gain, flip the image
+    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, flip the image
     uart.send("$PA:CAPTURED")
 
     if (image_zero is None):
@@ -52,7 +52,7 @@ def centerOfRotation(uart):
         gc.collect()
 
 def imgCapture(uart, exposure, img_name):
-    image = captureImage(exposure, 8.0, True)
+    image = captureImage(exposure, 8.0, False)
     cv2.imwrite(img_name, image)
     uart.send("#IMAGE CAPTURED")
 
