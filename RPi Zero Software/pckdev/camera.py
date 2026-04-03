@@ -17,6 +17,7 @@ def initCamera():
     PAcam.start()
 
 def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/False]
+    PAcam.stop()
     #Set camera exposure and gain
     PAcam.set_controls({
     "AeEnable": False,
@@ -24,6 +25,8 @@ def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/Fals
     "AnalogueGain": gain
     })
     time.sleep(2)
+
+    PAcam.start()
     
     # Capture image as RGB
     image_rgb = PAcam.capture_array()
