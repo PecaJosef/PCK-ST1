@@ -51,10 +51,10 @@ def centerOfRotation(uart):
         image_angled = None
         gc.collect()
 
-def imgCapture(exposure, img_name):
+def imgCapture(uart, exposure, img_name):
     image = captureImage(exposure, 8.0, True)
     cv2.imwrite(img_name, image)
-    uart.send("$PA:CAPTURED")
+    uart.send("#PA:CAPTURED")
 
 def rpiShutdown(uart):
     print("[SYSTEM] Shutting down Raspberry Pi...")
