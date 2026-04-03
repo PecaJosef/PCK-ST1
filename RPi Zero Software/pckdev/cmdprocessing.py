@@ -1,22 +1,60 @@
 from camera import captureImage
-from star_processing import getAlignmentError
+from star_processing import getAlignmentError, getCenterOfRotation
 import math
 import subprocess
 import time
+import gc
+import numpy as np
 
 import cv2
 
+image_zero = None
+image_angled = None
+center_offset = None
+
 def alignmentError(uart):
+    global center_offset
     #star_image = cv2.imread("star_img/polaris4_1.jpg")
 
     star_image = captureImage(10, 8.0, True) #10s exposure, 8 gain, flip the image
 
     cv2.imwrite('stars.jpg', star_image)
+    uart.send("$PA:CAPTURED")
 
-    NCPErrorX, NCPErrorY, polarisFound, ncpFound = getAlignmentError(star_image, True)
-    pae_msg = f"$PA:DEV:{int(ncpFound)}:{int(polarisFound)}:{-NCPErrorX:.5f}:{-NCPErrorY:.5f}"
+    if (center_offset is None):
+        center_offset = np.array([0, 0])
+
+    NCPErrorX, NCPErrorY, polarisFound, ncpFound, raAngle = getAlignmentError(star_image, center_offset, True)
+    pae_msg = f"$PA:DEV:{int(ncpFound)}:{int(polarisFound)}:{-NCPErrorX:.5f}:{-NCPErrorY:.5f}:{raAngle:.5f}"
     uart.send(pae_msg)
     return
+
+def centerOfRotation(uart):
+    global image_zero, image_angled, center_offset
+
+    star_image = captureImage(10, 8.0, True) #10s exposure, 8 gain, flip the image
+    uart.send("$PA:CAPTURED")
+
+    if (image_zero is None):
+        image_zero = star_image
+    else:
+        image_angled = star_image
+    
+    if(image_zero is not None and image_angled is not None):
+        center_offset = getCenterOfRotation(image_zero, image_angled)
+        if center_offset is not None:
+            uart.send("$A:COR:DONE")
+        else:
+            uart.send("$PA:COR:FAIL")
+        
+        image_zero = None
+        image_angled = None
+        gc.collect()
+
+def imgCapture(exposure, img_name):
+    image = captureImage(exposure, 8.0, True) #10s exposure, 8 gain, flip the image
+    cv2.imwrite(img_name, image)
+    uart.send("$PA:CAPTURED")
 
 def rpiShutdown(uart):
     print("[SYSTEM] Shutting down Raspberry Pi...")

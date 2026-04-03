@@ -1,6 +1,5 @@
 import serial
 import time
-#from commandprocessing import alignmentError
 import cmdprocessing
 
 class UARTHandler:
@@ -27,12 +26,28 @@ class UARTHandler:
         """Parse and respond to commands."""
         if cmd.startswith("$ECHO"):
             self.send("#ECHO")
-        elif cmd.startswith("$ALIGN"):
+        elif cmd.startswith("$PA:ALIGN"):
             cmdprocessing.alignmentError(self)
+        elif cmd.startswith("$PA:COR"):
+            cmdprocessing.centerOfRotation(self)
         elif cmd.startswith("$SHUTDOWN"):
             cmdprocessing.rpiShutdown(self)
-        else:
-            self.send("#ERR:UNKNOWN")
+        elif cmd.startswith("$CAPTURE"):
+            try:
+                parts = cmd.split(":", 1)[1].rsplit(".", 1)
+
+                if len(parts) == 2:
+                    exposure = float(parts[0])
+                    img_name = parts[1]
+                    
+                    cmdprocessing.imgCapture(exposure, img_name)
+                else:
+                    self.send("$ERR:MALFORMED_CAPTURE")
+                    
+            except (ValueError, IndexError):
+                self.send("$ERR:INVALID_ARGS")
+            else:
+                self.send("$ERR:UNKNOWN")
 
     def close(self):
         """Close the serial port."""

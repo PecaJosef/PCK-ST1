@@ -20,7 +20,7 @@ def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/Fals
     #Set camera exposure and gain
     PAcam.set_controls({
     "AeEnable": False,
-    "ExposureTime": exposure*1000000,   # in microseconds
+    "ExposureTime": int(exposure*1000000),   # in microseconds
     "AnalogueGain": gain
     })
     time.sleep(2)

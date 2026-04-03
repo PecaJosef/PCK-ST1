@@ -7,7 +7,8 @@ import math
 polaris_database_vectors = np.load("database/polaris_vectors.npy")
 ncp_database_vectors = np.load("database/ncp_vectors.npy")
 star_distances = np.load("database/star_distances.npy")
-star_RA_hours = np.load("database/star_RA_hours.npy")
+star_Polaris_RA_angle = np.load("database/star_Polaris_RA_angle.npy")
+#star_RA_hours = np.load("database/star_RA_hours.npy")
 
 defaultPixPerArcmin = 4056/(14.334*60) #Default pixels per arminute - Later load from config file
 
@@ -288,20 +289,27 @@ def trilaterateNCP(starA_coordinates, starB_coordinates, starC_coordinates, star
     NCP_coordinates = starA_coordinates + x * ex + y * ey
     return NCP_coordinates
 
+def getAngleToZeroRA(Polaris, Star, RAangle):
+  angle = np.arctan2((Star[1] - Polaris[1]), Star[0] - Polaris[0])
 
-def getNCPposition(polaris_coordinates, yildun_coordinates, ov_cephei_coordinates, ursae_minoris_2_coordinates, image_center, star_distances, stars_RA_hours):
+  angle = np.degrees(angle) - RAangle
+  if(angle < 0):
+    angle = 360 + angle
 
+  return angle
+
+def getNCPposition(polaris_coordinates, yildun_coordinates, ov_cephei_coordinates, ursae_minoris_2_coordinates, image_center, star_distances, star_Polaris_RA_angle):
     # Separation distances in arcmin (P=Polaris, Y=Yildun, C=OV Cephei, U=2 Ursae Minoris, N=NCP)
     PY_separation, PC_separation, PU_separation, PN_separation, YC_separation, YU_separation, YN_separation, CU_separation, CN_separation, UN_separation = star_distances
 
     #Bundle all detected stars, at least 2 stars and Polaris are needed
     available_stars = []
     if yildun_coordinates is not None:
-        available_stars.append(("Yildun", yildun_coordinates, PY_separation, YN_separation, stars_RA_hours[1]))
+        available_stars.append(("Yildun", yildun_coordinates, PY_separation, YN_separation, star_Polaris_RA_angle[0]))
     if ov_cephei_coordinates is not None:
-        available_stars.append(("OV Cephei", ov_cephei_coordinates, PC_separation, CN_separation, stars_RA_hours[2]))
+        available_stars.append(("OV Cephei", ov_cephei_coordinates, PC_separation, CN_separation, star_Polaris_RA_angle[1]))
     if ursae_minoris_2_coordinates is not None:
-        available_stars.append(("2 Ursae Minoris",  ursae_minoris_2_coordinates, PU_separation, UN_separation, stars_RA_hours[3]))
+        available_stars.append(("2 Ursae Minoris",  ursae_minoris_2_coordinates, PU_separation, UN_separation, star_Polaris_RA_angle[2])) #P, Y, OV, UM - 3.08127778 17.39761111  7.86916667  1.20791667
 
     if len(available_stars) < 2:
         print("Not enough stars found for trilateration")
@@ -317,7 +325,7 @@ def getNCPposition(polaris_coordinates, yildun_coordinates, ov_cephei_coordinate
     averagePixPerArcmin = np.mean(pix_per_arcmin_samples)
     print(f"Average pixels per arcmin: {averagePixPerArcmin:.2f}")
 
-    
+
     #Trilaterate using Polaris and two available stars
     starA_coordinates, starA_NCP_dist = polaris_coordinates, averagePixPerArcmin * PN_separation
     starB_coordinates, starB_NCP_dist = available_stars[0][1], averagePixPerArcmin * available_stars[0][3]
@@ -328,29 +336,26 @@ def getNCPposition(polaris_coordinates, yildun_coordinates, ov_cephei_coordinate
     NCP_coordinates = trilaterateNCP(starA_coordinates, starB_coordinates, starC_coordinates,
                                      starA_NCP_dist,    starB_NCP_dist,    starC_NCP_dist)
 
+    print("NCP error pixels: ", image_center - NCP_coordinates)
+
     NCP_error = (image_center - NCP_coordinates) / averagePixPerArcmin
     print(f"NCP error: {NCP_error[0]:.2f}, {NCP_error[1]:.2f} arcmin")
 
     #Calculate 0-hour RA angle
+    sin_sum = 0
+    cos_sum = 0
 
-    zero_RA_direction = np.zeros(2)
+    for _ , star_coordinates, _, _, RA_angle in available_stars:
+      RAangle = getAngleToZeroRA(polaris_coordinates, star_coordinates, RA_angle)
 
-    for _ , star_coordinates, _, _, RA_hour in available_stars:
-      star_vector = star_coordinates - NCP_coordinates
-      star_vector /= np.linalg.norm(star_vector)
-      angle_rad = np.radians(-RA_hour*15)
-      rotation_matrix = np.array([
-          [np.cos(angle_rad), -np.sin(angle_rad)],
-          [np.sin(angle_rad),  np.cos(angle_rad)]
-      ])
-      star_vector_rotated = rotation_matrix @ star_vector
-      zero_RA_direction += star_vector_rotated
+      sin_sum = sin_sum + np.sin(np.radians(RAangle))
+      cos_sum = cos_sum + np.cos(np.radians(RAangle))
 
-    zero_RA_direction /= np.linalg.norm(zero_RA_direction)
-    zero_RA_angle = np.degrees(np.arctan2(zero_RA_direction[1], zero_RA_direction[0]))
-    print(f"Zero RA direction: {zero_RA_angle:.2f}°")
-
-    return True, NCP_coordinates, NCP_error, zero_RA_angle
+    zeroRAangle = np.degrees(np.arctan2(sin_sum/len(available_stars), cos_sum/len(available_stars)))
+    
+    print(f"Zero RA angle: {zeroRAangle:.5f}°")
+    
+    return True, NCP_coordinates, NCP_error, zeroRAangle
 
 
 def drawNCP(image, ncp_coordinates, polaris_coordinates, yildun_coordinates, ov_cephei_coordinates, ursae_minoris_2_coordinates, zero_RA_angle):
@@ -418,12 +423,88 @@ def drawNCP(image, ncp_coordinates, polaris_coordinates, yildun_coordinates, ov_
     return output
 
 
-def getAlignmentError(image, debug=False):
+def getCenterOfRotation(image_zero, image_angled):
+  if image_zero is None or image_angled is None:
+    return None
+  
+  preprocessed_image_zero = imagePreprocessing(image_zero)
+  preprocessed_image_angled = imagePreprocessing(image_angled)
+
+  stars_zero, brightest_stars_zero = findStars(preprocessed_image_zero, number_of_brightest_stars = 10)
+  stars_angled, brightest_stars_angled = findStars(preprocessed_image_angled, number_of_brightest_stars = 10)
+
+  polarisFound_zero, Polaris_zero, Angle_zero = findPolaris(brightest_stars_zero, stars_zero, polaris_database_vectors, threshold=6.0, radius_arcmin=75, star_count=25, debug=True)
+  polarisFound_angled, Polaris_angled, Angle_angled = findPolaris(brightest_stars_angled, stars_angled, polaris_database_vectors, threshold=6.0, radius_arcmin=75, star_count=25, debug=True)
+
+  if polarisFound_zero == False or polarisFound_angled == False:
+    print("ERROR: Polaris not found!")
+    return None
+
+  Yildun_zero, OV_Cephei_zero, Ursae_Minoris_2_zero = findNCPStars(Polaris_zero, stars_zero, ncp_database_vectors, Angle_zero, radius_arcmin=250, star_count=10, length_tolerance=0.05, debug=True)
+  Yildun_angled, OV_Cephei_angled, Ursae_Minoris_2_angled = findNCPStars(Polaris_angled, stars_angled, ncp_database_vectors, Angle_angled, radius_arcmin=250, star_count=10, length_tolerance=0.05, debug=True)
+
+  pairs_zero = []
+  pairs_angled = []
+
+  stars_to_check = [
+    (Polaris_zero, Polaris_angled),
+    (Yildun_zero, Yildun_angled),
+    (OV_Cephei_zero, OV_Cephei_angled),
+    (Ursae_Minoris_2_zero, Ursae_Minoris_2_angled)
+  ]
+
+  for star_zero, star_angled in stars_to_check:
+    if star_zero is not None and star_angled is not None:
+      pairs_zero.append([star_zero[0], star_zero[1]])
+      pairs_angled.append([star_angled[0], star_angled[1]])
+
+  #numpy arrays for the calculation
+  stars = np.array(pairs_zero)
+  stars_prime = np.array(pairs_angled)
+
+  center = calculateCoR(stars, stars_prime)
+  center_offset = center-(np.array([image_zero.shape[1] // 2, image_zero.shape[0] // 2]))
+
+  return center_offset
+
+def calculateCoR(P, P_prime):
+    centroid_P = np.mean(P, axis=0)
+    centroid_P_prime = np.mean(P_prime, axis=0)
+    
+    P_centered = P - centroid_P
+    P_prime_centered = P_prime - centroid_P_prime
+
+    #singular value decomposition to find optimal Rot matrix
+    #finds the rotation that best maps P to P_prime
+    H = P_centered.T @ P_prime_centered
+    U, S, Vt = np.linalg.svd(H)
+    R = Vt.T @ U.T
+
+    if np.linalg.det(R) < 0:
+        Vt[1,:] *= -1
+        R = Vt.T @ U.T
+
+    #P' = R(P - C) + C -> (I - R)C = P' - RP
+    I = np.eye(2)
+    t = centroid_P_prime - (R @ centroid_P)
+    
+    try:
+        center = np.linalg.solve(I - R, t)
+        
+        #Print the actual rotation angle
+        actual_angle = np.degrees(np.arctan2(R[1,0], R[0,0]))
+        print(f"Detected rotation: {actual_angle:.4f} degrees")
+        
+        return center
+    except np.linalg.LinAlgError:
+        return None
+
+def getAlignmentError(image, center_offset, debug=False):
   #Check if the image was loaded successfully
   if image is None:
       print("ERROR: Image not loaded")
       #Error should be sent to PCK main board here
-      return 0,0,False,False
+      return 0,0,False,False,0
 
   preprocessed_image = imagePreprocessing(image)
   stars, brightest_stars = findStars(preprocessed_image, number_of_brightest_stars = 10)
@@ -432,22 +513,31 @@ def getAlignmentError(image, debug=False):
 
   if polarisFound == False:
     print("ERROR: Polaris not found!")
-    return 0,0,False,False
+    return 0,0,False,False,0
 
   Yildun, OV_Cephei, Ursae_Minoris_2 = findNCPStars(Polaris, stars, ncp_database_vectors, Angle, radius_arcmin=250, star_count=10, length_tolerance=0.05, debug=True)
-  
+
+  #Compute the pixel position of the center of rotation
   image_center = np.array([image.shape[1] // 2, image.shape[0] // 2])
-  
-  ncpFound, NCP_coordinates, NCP_error, RA_angle = getNCPposition(Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, image_center, star_distances, star_RA_hours)
+
+  if center_offset is None:
+    center_of_rotation = image_center
+  else:
+    center_of_rotation = center_offset + image_center
+
+  ncpFound, NCP_coordinates, NCP_error, RA_angle = getNCPposition(Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, center_of_rotation, star_distances, star_Polaris_RA_angle)
 
   if (debug and ncpFound):
     drawNCP(image, NCP_coordinates, Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, RA_angle)
 
+    print("Polaris", Polaris, "NCP", NCP_coordinates, "Yildun", Yildun, "OV Cephein", OV_Cephei,"2 Ursae Minoris", Ursae_Minoris_2)
 
+  #Both Polaris and NCP found
   if (polarisFound == True and ncpFound == True):
-    return NCP_error[0], NCP_error[1], polarisFound, ncpFound
+    return NCP_error[0], NCP_error[1], polarisFound, ncpFound, RA_angle
+  #Polaris found but finding NCP unsuccesful
   elif (polarisFound == True and ncpFound == False):
-    Polaris_error = (image_center-Polaris) / defaultPixPerArcmin
-    return Polaris_error[0],Polaris_error[1],polarisFound,ncpFound
+    Polaris_error = (center_of_rotation-Polaris) / defaultPixPerArcmin
+    return Polaris_error[0],Polaris_error[1],polarisFound,ncpFound, 0
   else:
-    return 0,0,polarisFound,ncpFound
+    return 0,0,False,False,0
