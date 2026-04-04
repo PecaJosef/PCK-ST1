@@ -31,4 +31,6 @@ void updatePosition(StepperMotor_t *Axis);
 
 void getTelemetry();
 
+void getFullTelemetry();
+
 #endif /* INC_TELEMETRY_H_ */

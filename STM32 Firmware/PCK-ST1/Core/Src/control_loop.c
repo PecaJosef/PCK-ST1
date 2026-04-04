@@ -47,25 +47,17 @@
 //#include "low_power_idle.h"
 //#include "warming_up.h"
 #include "control_loop.h"
-//#include "homing.h"
+#include "telemetry.h"
 #include "cmd_handler.h"
 #include "mag.h"
 
-ControlState_t controlState = LOW_POWER_IDLE;
-ControlState_t prevControlState;
-
-StatusFlags_t statusFlags = {
-		.calibForceEnable = false,
-		.gpsOK = false,
-		.homed = false,
-		.magOK = false,
-		.moveEnabled = true,
-		.rpiOK = false,
-};
 
 /*
  *	LOW POWER IDLE variables and defines
  */
+
+#define POWER_OFF_TIME 2500
+#define POWER_OFF_CANCLE_TIME 10000
 
 #define LED_DELAY 500
 #define HOLD_TIME 4*LED_DELAY
@@ -73,7 +65,13 @@ StatusFlags_t statusFlags = {
 #define LED_BLINK_PERIOD_SHORT 500
 #define LED_BLINK_PERIOD_LONG 1000
 
-#define GPS_FIX_TIMEOUT 90
+#define RPI_SHUTDOWN_TIME 5 //5s
+
+//Duration in which the GPS should get fix and RPi should boot up into Python software
+#define WARMING_UP_TIMEOUT 90
+#define PA_TIMEOUT 60
+#define COR_TIMEOUT 60
+
 #define GPS_CONFIG_RETRIES 5
 
 #define ROUGH_ALIGNMENT_THRESHOLD 2.0f
@@ -82,6 +80,29 @@ StatusFlags_t statusFlags = {
 
 #define CALIB_STEP 2.5f
 #define CALIB_MINMAX_SAMPLES 5
+
+#define BACKOFF_DIST 10.0f*DEG
+#define OVERSHOOT_DIST 20.0f*DEG
+#define HOMING_DIST 100.0f*DEG
+#define FINE_DIST 12.5f*DEG //Fine dist needs to be slightly larger than backoff
+
+#define COR_ANGLE 45.0f
+
+//---Power off button states---
+typedef enum {
+	PWR_OFF_BUTTON_RELEASED,
+	PWR_OFF_BUTTON_PRESSED,
+	PWR_OFF_POWERING_OFF,
+}PowerOffButtonState_t;
+
+//---Shutdown states---
+typedef enum {
+	SHUTDOWN_CHECK_BUTTON_RELEASE,
+	SHUTDOWN_WAIT_FOR_LONG_PRESS,
+	SHUTDOWN_LONG_PRESS,
+	SHUTDOWN_PROCESS,
+	SHUTDOWN_FINISHED,
+}ShutdownState_t;
 
 //---Low Power Idle internal states---
 typedef enum {
@@ -101,10 +122,22 @@ typedef enum {
 
 //---Warming up internal states---
 typedef enum {
+	TIMEOUT_START,
+	WAITING_FOR_GPS_AND_RPI,
+	WARMUP_FINISHED,
+}WarmingUpState_t;
+
+typedef enum {
 	CHECK_AND_CONFIG_GPS,
 	WAITING_FOR_GPS_ACK,
 	WAITING_FOR_GPS_FIX,
-}WarmingUpState_t;
+	GPS_FIXED,
+}gpsWarmingUpState_t;
+
+typedef enum {
+	WAITING_FOR_RPI_BOOT,
+	RPI_READY,
+}rpiWarmingUpState_t;
 
 //---Polar alignment internal states---
 typedef enum {
@@ -113,7 +146,12 @@ typedef enum {
 	ROUGH_ALIGNMENT_AZ,
 	ROUGH_ALIGNMENT_AZ_CHECK,
 	ROUGH_ALIGNMENT_ALT,
-	ROUGH_ALIGNMENT_ALT_CHECK,
+	PRECISE_INITIAL_ALIGN_CMD,
+	PRECISE_INITIAL_ALIGN_WAIT,
+	PRECISE_INITIAL_ALIGNMENT,
+	PRECISE_COR_CMD,
+	PRECISE_COR_WAIT,
+	PRECISE_COR_CHECK,
 	PRECISE_ALIGN_CMD,
 	PRECISE_ALIGN_WAIT,
 	PRECISE_ALIGNMENT,
@@ -134,23 +172,57 @@ typedef struct {
 	bool timeoutActive;
 }Timeout_t;
 
-static LowPowerIdleState_t btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
+static ShutdownState_t shutdownState = SHUTDOWN_CHECK_BUTTON_RELEASE;
+static PowerOffButtonState_t pwrOffButtonState = PWR_OFF_BUTTON_RELEASED;
+static LowPowerIdleState_t lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS;
 static HomingState_t homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
-static WarmingUpState_t WarmUpState = CHECK_AND_CONFIG_GPS;
+static WarmingUpState_t WarmUpState = TIMEOUT_START;
+static gpsWarmingUpState_t gpsWarmUpState = CHECK_AND_CONFIG_GPS;
+static rpiWarmingUpState_t rpiWarmUpState = WAITING_FOR_RPI_BOOT;
 static AlignState_t alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
 static CalibState_t calState = CAL_IDLE;
+
+errorCode_t errorCode = NONE;
 
 static uint16_t currentCalSample = 0;
 static uint16_t totalCalSamples = 360/CALIB_STEP;
 static int32_t sumX, sumY;
 static int64_t sumXX, sumYY, sumXY;
 
-static uint32_t secondPressStart = 0;
-static uint32_t lastLedTime = 0;
-static int ledStep = 0;
-
 static GPS_Data_t gpsData;
+
+ControlState_t controlState = LOW_POWER_IDLE;
+ControlState_t prevControlState;
+
+StatusFlags_t statusFlags = {
+		.calibForceEnable = false,
+		.gpsOK = false,
+		.gpsFixed = false,
+		.homed = false,
+		.calibrated = false,
+		.polarAligned = false,
+		.magOK = false,
+		.moveEnabled = true,
+		.rpiRDY = false,
+		.fault = false,
+};
+
 Timeout_t timeoutControlLoop = {
+		.timeoutActive = false,
+		.timeoutDeadline = 0,
+};
+
+Timeout_t gpsAckTimeout = {
+		.timeoutActive = false,
+		.timeoutDeadline = 0,
+};
+
+Timeout_t rpiShutdownTimeout = {
+		.timeoutActive = false,
+		.timeoutDeadline = 0,
+};
+
+Timeout_t paCommandTimeout = {
 		.timeoutActive = false,
 		.timeoutDeadline = 0,
 };
@@ -187,77 +259,157 @@ Align_t alignmentData = {
 	.ncpFound = 0,
 	.azError = 0,
 	.altError = 0,
+	.raAngle = 0,
 	.alignmentTriesCounter = 0,
+	.corFound = 0,
+	.imageCaptured = false
 };
 
 
 static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
 static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed);
 
+static void checkRPi();
+static void checkGPS();
+
 static void ledsBlink();
 static void ledsRampUp();
 static void pwrButtonBlink();
 
+static void resetStates();
 
 void timeoutStart(Timeout_t *timeout, uint32_t seconds);
 void timeoutReset(Timeout_t *timeout);
 bool timeoutReached(Timeout_t *timeout);
 
+/*
+ * MAIN CONTROL LOOP
+ */
 void controlLoop()
 {
+	static uint32_t shutdownButtonPressStart = 0;
+
+	if (controlState != LOW_POWER_IDLE && controlState != SHUTDOWN)
+	{
+		uint8_t btn = readButtonDebounced();
+
+		switch(pwrOffButtonState)
+		{
+		case PWR_OFF_BUTTON_RELEASED:
+			if (btn == PRESSED)
+			{
+				//If the power button is pressed, capture the press time and jump to next state
+				pwrOffButtonState = PWR_OFF_BUTTON_PRESSED;
+				shutdownButtonPressStart = HAL_GetTick();
+			}
+			break;
+
+		case PWR_OFF_BUTTON_PRESSED:
+			//Check if the button is still pressed, if not -> reset
+			if (btn == RELEASED)
+			{
+				pwrOffButtonState = PWR_OFF_BUTTON_RELEASED;
+				break;
+			}
+			//Check how long is the button held pressed
+			uint32_t heldTime = HAL_GetTick() - shutdownButtonPressStart;
+
+			//
+			if (heldTime >= POWER_OFF_TIME)
+			{
+				pwrOffButtonState = PWR_OFF_POWERING_OFF;
+			}
+			break;
+
+		case PWR_OFF_POWERING_OFF:
+			ledsSet(true);
+
+			if (btn == RELEASED)
+			{
+				//Save last control loop state in case of returning back
+				prevControlState = controlState;
+
+				//Reset all states to the default
+				resetStates();
+
+				//Stop all motors
+				if (AZ_AxisMotor.busy) stepperStop(&AZ_AxisMotor);
+				if (ALT_AxisMotor.busy) stepperStop(&ALT_AxisMotor);
+				if (RA_AxisMotor.busy) stepperStop(&RA_AxisMotor);
+				if (DEC_AxisMotor.busy) stepperStop(&DEC_AxisMotor);
+
+
+				WarmUpState = TIMEOUT_START;
+				gpsWarmUpState = CHECK_AND_CONFIG_GPS;
+				rpiWarmUpState = WAITING_FOR_RPI_BOOT;
+				alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
+				calState = CAL_IDLE;
+
+				pwrOffButtonState = PWR_OFF_BUTTON_RELEASED;
+				controlState = SHUTDOWN;
+			}
+			break;
+		}
+	}
+
+
 	switch (controlState)
 	{
-		case LOW_POWER_IDLE:
-			handleLowPowerIdle();
-			break;
+	case LOW_POWER_IDLE:
+		handleLowPowerIdle();
+		break;
 
-		case HOMING:
-			handleHoming();
-			break;
+	case HOMING:
+		handleHoming();
+		break;
 
-		case CALIBRATION:
-			handleCalibration();
-			break;
+	case CALIBRATION:
+		handleCalibration();
+		break;
 
-		case WARMING_UP:
-			handleWarmingUp();
-			break;
+	case WARMING_UP:
+		handleWarmingUp();
+		break;
 
-		case ALIGNMENT:
-			handleAligning();
-			break;
-		case IDLE:
-			//handleIdle();
-			break;
+	case ALIGNMENT:
+		handleAligning();
+		break;
+	case IDLE:
+		//handleIdle();
+		break;
 
-		case AXIS_MOVING:
-			handleMoving();
-			break;
+	case AXIS_MOVING:
+		handleMoving();
+		break;
 
-		case SHUTDOWN:
-			//handleShutdown();
-			break;
-		case FAULT:
-			//uartSend(PC_UART_SRC, "FAULT\r\n");
-			pwrButtonBlink();
-			break;
+	case SHUTDOWN:
+		handleShutdown();
+		break;
+	case FAULT:
+		handleFault();
+		break;
 
-		default:
-			break;
+	default:
+		controlState = FAULT;
+		break;
 	}
 }
 
 /*
  * LOW POWER IDLE STATE
  */
-void handleLowPowerIdle() {
+void handleLowPowerIdle()
+{
 	uint8_t btn = readButtonDebounced();
+	static uint32_t secondPressStart = 0;
+	//static uint32_t lastLedTime = 0;
+	static int ledStep = 0;
 
-	switch (btnSeqState) {
+	switch (lowPowerIdleButtonState) {
 		case BTN_SEQ_WAIT_FIRST_PRESS:
 			if (btn == PRESSED) // pressed
 			{
-				btnSeqState = BTN_SEQ_WAIT_FIRST_RELEASE;
+				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_RELEASE;
 				//Turn LEDs ON on button press
 				ledsSet(true);
 			}
@@ -266,7 +418,7 @@ void handleLowPowerIdle() {
 		case BTN_SEQ_WAIT_FIRST_RELEASE:
 			if (btn == RELEASED) //Released
 			{
-				btnSeqState = BTN_SEQ_WAIT_SECOND_PRESS;
+				lowPowerIdleButtonState = BTN_SEQ_WAIT_SECOND_PRESS;
 				secondPressStart = HAL_GetTick(); //Start 2s window
 			}
 			break;
@@ -275,26 +427,26 @@ void handleLowPowerIdle() {
 			if ((HAL_GetTick() - secondPressStart) > RESET_TIME)
 			{
 				// Timeout, reset sequence
-				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
+				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS;
 				ledStep = 0;
 				//Reset LEDs to ON state
 				ledsSet(false);
 			}
 			else if (btn == PRESSED) //Pressed again
 			{
-				btnSeqState = BTN_SEQ_HOLDING;
+				lowPowerIdleButtonState = BTN_SEQ_HOLDING;
 				secondPressStart = HAL_GetTick();
-				lastLedTime = secondPressStart;
+				//lastLedTime = secondPressStart;
 				ledStep = 0;
 			}
 			break;
 
 		case BTN_SEQ_HOLDING:
-			if (btn == RELEASED) // released too early → reset
+			if (btn == RELEASED) //released too early -> reset
 			{
 				ledStep = 0;
 				ledsSet(false);
-				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS;
+				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS;
 				break;
 			}
 			// Check how long held
@@ -322,7 +474,7 @@ void handleLowPowerIdle() {
 			}
 
 			if (heldTime >= HOLD_TIME) {
-				btnSeqState = BTN_SEQ_DONE;
+				lowPowerIdleButtonState = BTN_SEQ_DONE;
 			}
 			break;
 
@@ -330,7 +482,7 @@ void handleLowPowerIdle() {
 			if (btn == RELEASED)
 			{
 				controlState = HOMING;
-				btnSeqState = BTN_SEQ_WAIT_FIRST_PRESS; //Reset for next time
+				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS; //Reset for next time
 
 				uartSend(PC_UART_SRC, "HOMING\r\n");
 			}
@@ -345,74 +497,72 @@ void handleLowPowerIdle() {
 
 void handleHoming()
 {
-	static bool homing = false;
-	uint8_t btn = readButtonDebounced();
+    static bool homingActive = false;
+    uint8_t btn = readButtonDebounced();
 
-	switch(homingState)
-	{
-		case HOMING_WAITING_FOR_BUTTON_PRESS:
-			ledsBlink();
+    switch(homingState)
+    {
+        case HOMING_WAITING_FOR_BUTTON_PRESS:
+            ledsBlink();
+            if (btn == PRESSED)
+            {
+                ledsSet(false);
+                homingState = HOMING_WAITING_FOR_BUTTON_RELEASE;
+            }
+            break;
 
-			if (btn == PRESSED) // pressed
-			{
-				ledsSet(false);
-				homingState = HOMING_WAITING_FOR_BUTTON_RELEASE;
-			}
-			break;
+        case HOMING_WAITING_FOR_BUTTON_RELEASE:
+            if (btn == RELEASED)
+            {
+                //Reset all internal states before starting homing
+                ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+                AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+                RA_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+                DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+                homingState = HOMING_PROCESS;
+                homingActive = false;
+            }
+            break;
 
-		case HOMING_WAITING_FOR_BUTTON_RELEASE:
-			if (btn == RELEASED)
-			{
-				ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-				AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-				RA_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-				DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-				homingState = HOMING_PROCESS;
-			}
-			break;
+        case HOMING_PROCESS:
+            if (!homingActive)
+            {
+                //Star homing all axes
+                axisHomingStart(&ALT_AxisMotor, ALT_COARSE_SPEED, ALT_FINE_SPEED);
+                axisHomingStart(&RA_AxisMotor, RA_COARSE_SPEED, RA_FINE_SPEED);
+                axisHomingStart(&DEC_AxisMotor, DEC_COARSE_SPEED, DEC_FINE_SPEED);
+                homingActive = true;
+            }
 
-		case HOMING_PROCESS:
-			if (!homing)
-			{
-				// Start homing for all axes
-				axisHomingStart(&ALT_AxisMotor, ALT_COARSE_SPEED, ALT_FINE_SPEED);
-				axisHomingStart(&RA_AxisMotor, RA_COARSE_SPEED, RA_FINE_SPEED);
-				axisHomingStart(&DEC_AxisMotor, DEC_COARSE_SPEED, DEC_FINE_SPEED);
+            // Update logic for all axes in parallel
+            axisHomingUpdate(&ALT_AxisMotor, ALT_COARSE_SPEED, ALT_FINE_SPEED);
+            axisHomingUpdate(&RA_AxisMotor, RA_COARSE_SPEED, RA_FINE_SPEED);
+            axisHomingUpdate(&DEC_AxisMotor, DEC_COARSE_SPEED, DEC_FINE_SPEED);
 
-				homing = true;
-			}
-
-			// Update all axes in parallel
-			axisHomingUpdate(&ALT_AxisMotor, ALT_COARSE_SPEED, ALT_FINE_SPEED);
-			axisHomingUpdate(&RA_AxisMotor, RA_COARSE_SPEED, RA_FINE_SPEED);
-			axisHomingUpdate(&DEC_AxisMotor, DEC_COARSE_SPEED, DEC_FINE_SPEED);
-
-			// Check if all done
-			if (!ALT_AxisMotor.homing && !AZ_AxisMotor.homing && !RA_AxisMotor.homing && !DEC_AxisMotor.homing)
-			{
-				homing = false;
-
-				stepperDisable(&ALT_AxisMotor);
-
-				ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-				AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-				RA_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-				DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
-
-				homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
-				controlState = CALIBRATION;
-				uartSend(PC_UART_SRC, "CALIB\r\n");
-			}
-			break;
-	}
+            // Check if all axes have finished their specific state machines
+            if (!ALT_AxisMotor.homing && !RA_AxisMotor.homing && !DEC_AxisMotor.homing)
+            {
+                homingActive = false;
+                statusFlags.homed = true;
+                //Reset the homing state
+                homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
+                controlState = CALIBRATION;
+                uartSend(PC_UART_SRC, "HOMING DONE\r\n");
+            }
+            break;
+    }
 }
 
 static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
 {
-    if (!Axis) return;
+    if (!Axis)
+	{
+    	return;
+	}
+
     if (!Axis->enabled)
 	{
-    	stepperEnable(Axis);
+		stepperEnable(Axis);
 	}
 
     Axis->homing = true;
@@ -421,89 +571,178 @@ static void axisHomingStart(StepperMotor_t *Axis, float coarseSpeed, float fineS
 
     if (HAL_GPIO_ReadPin(Axis->ENDSTOP_Port, Axis->ENDSTOP_Pin) == GPIO_PIN_RESET)
     {
-        // Endstop already pressed -> skip coarse, go to backoff
+        //Already on endstop -> back off from the endstop (positive dir)
         Axis->homing_state = AXIS_HOMING_BACKOFF;
-        stepperMove(Axis, 5.0f*DEG, fineSpeed);
+        stepperMove(Axis, BACKOFF_DIST, fineSpeed);
     }
     else
     {
-        // Normal coarse move towards switch
-        Axis->homing_state = AXIS_HOMING_COARSE;
-        stepperMove(Axis, -360.0f*DEG, coarseSpeed);
+        //Normal Start
+        Axis->homing_state = AXIS_HOMING_SEARCH_COARSE; //Move 180°towards endstop (negative dir)
+        stepperMove(Axis, -HOMING_DIST, coarseSpeed);
     }
 }
 
 static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fineSpeed)
 {
-    if (!Axis->homing) return;
+    if (!Axis->homing || Axis->busy)
+	{
+		return; //Return from the update function if the axis is not homing or is busy (still moving)
+	}
 
-    if (!Axis->busy) {  // Move finished without trigger
-        switch (Axis->homing_state)
-        {
+    switch (Axis->homing_state)
+    {
+        case AXIS_HOMING_SEARCH_COARSE:
+            //This code is not executed unless the endstop is not found in the initial search
+        	//Move towards positive direction
+            stepperMove(Axis, 2*HOMING_DIST, coarseSpeed);
+            break;
+
         case AXIS_HOMING_BACKOFF:
-            // Backoff done → now fine approach
+			//Backoff done -> jump to fine search
+			__HAL_GPIO_EXTI_CLEAR_IT(Axis->ENDSTOP_Pin);
+			HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
+
+			Axis->homing_state = AXIS_HOMING_SEARCH_FINE;
+
+			if (Axis->Position.direction == Axis->Positive_dir) //The Axis->Position.direction stores last motion direction (backoff dir) -> move the opposite way
+			{
+				stepperMove(Axis, -FINE_DIST, fineSpeed);
+			}
+			else
+			{
+				stepperMove(Axis, FINE_DIST, fineSpeed);
+			}
+			break;
+
+        case AXIS_HOMING_OVERSHOOT:
+        	//Only for highPrecision axes
+            //Found edgeA and performed overshoot past the endstop
+        	//Clear the interrupt and enable it
         	__HAL_GPIO_EXTI_CLEAR_IT(Axis->ENDSTOP_Pin);
-        	HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
+			HAL_NVIC_EnableIRQ(Axis->EXTI_IRQn);
 
-            Axis->homing_state = AXIS_HOMING_FINE;
-            stepperMove(Axis, -10.0f*DEG, fineSpeed);
+            Axis->homing_state = AXIS_HOMING_REVERSE_SEARCH;
+            //Reverse of current direction
+            if (Axis->Position.direction == Axis->Positive_dir) //The Axis->Position.direction stores last motion direction -> the axis shall move the opposite way
+            {
+            	stepperMove(Axis, -OVERSHOOT_DIST, fineSpeed);
+            }
+            else
+            {
+            	stepperMove(Axis, OVERSHOOT_DIST, fineSpeed);
+            }
             break;
 
-        case AXIS_HOMING_FINE:
-            // Should have been triggered by interrupt. If not, treat as done anyway
+        case AXIS_HOMING_GO_TO_CENTER:
+            // Final movement finished
             Axis->homing_state = AXIS_HOMING_DONE;
-            Axis->homing = false;
-            Axis->Position.angularPosition = 0;
             break;
 
-        default:
+        case AXIS_HOMING_DONE:
+            Axis->homing = false;
+
+            Axis->Position.stepPosition = 0;
+			Axis->Position.lastStepsRead = 0;
+			Axis->Position.angularPosition = 0;
+
+            //If the axis is not highPrecision (ALT) disable it (the axis is not backdrivable, no need to keep it enabled)
+            if(!Axis->highPrecisionAxis)
+            {
+            	stepperDisable(Axis);
+            }
             break;
-        }
+
+        default: break;
     }
 }
 
 void endstopReached(StepperMotor_t *Axis, float fineSpeed)
 {
-	if (!Axis->homing) return;
-
-	stepperStop(Axis);
-
-	switch (Axis->homing_state) {
-	case AXIS_HOMING_COARSE:
-		// First hit → back off
-		Axis->homing_state = AXIS_HOMING_BACKOFF;
-		stepperMove(Axis, 5.0f*DEG, fineSpeed);
-		break;
-
-	case AXIS_HOMING_FINE:
-		// Final hit → success
-		Axis->homing_state = AXIS_HOMING_DONE;
-		Axis->homing = false;
-		Axis->Position.angularPosition = 0;
-		break;
-
-	default:
-		break;
+    if (!Axis->homing)
+	{
+    	return;
 	}
+
+    stepperStop(Axis); //The stepperStop functions updates the Position
+    float currentPos = Axis->Position.angularPosition;
+
+    switch(Axis->homing_state) {
+        case AXIS_HOMING_SEARCH_COARSE:
+            //Hit the endstop during coarse search -> backoff
+            Axis->homing_state = AXIS_HOMING_BACKOFF;
+            if (Axis->Position.direction == Axis->Positive_dir)
+            {
+            	stepperMove(Axis, -BACKOFF_DIST, fineSpeed);
+            }
+            else
+            {
+            	stepperMove(Axis, BACKOFF_DIST, fineSpeed);
+            }
+            break;
+
+        case AXIS_HOMING_SEARCH_FINE:
+            //Hit the endstop during fine search -> DONE for !highPrecision, save endgeA position for highPrecision
+            if (Axis->highPrecisionAxis)
+            {
+            	Axis->edgeA = currentPos;
+                //Move past the endstop to perform reverse search
+                Axis->homing_state = AXIS_HOMING_OVERSHOOT;
+                if (Axis->Position.direction == Axis->Positive_dir)
+                {
+                	stepperMove(Axis, OVERSHOOT_DIST, fineSpeed);
+                }
+                else
+                {
+                	stepperMove(Axis, -OVERSHOOT_DIST, fineSpeed);
+                }
+
+            }
+            else
+            {
+                //Homing done for !highPrecision axis
+                Axis->homing_state = AXIS_HOMING_DONE;
+            }
+            break;
+
+        case AXIS_HOMING_REVERSE_SEARCH:
+            //Hit the endstop during reverse search -> save the edgeB position -> move towards center of endstop active area
+            Axis->edgeB = currentPos;
+            Axis->homing_state = AXIS_HOMING_GO_TO_CENTER;
+            float center = (Axis->edgeA - Axis->edgeB) / 2.0f;
+            //Move to the endstop center position
+
+            stepperMove(Axis, center*DEG, fineSpeed);
+            break;
+
+        default: break;
+    }
 }
 
 /*
  * CALIBRATION STATE
  */
-//#define CALIB_DIS
 
 void handleCalibration()
 {
-	#ifdef CALIB_DIS
-	controlState = WARMING_UP;
-	return;
+	static bool magChecked = false;
 
-	#else
+	if(magChecked == false)
+	{
+		magChecked = true;
+		if (magIsAlive() == false)
+		{
+			error(MAG_ERROR);
+			return;
+		}
+	}
+
 	if (LoadCalibrationFromFlash(&magCalib) && statusFlags.calibForceEnable == false)
 	{
 		controlState = WARMING_UP;
-		//printf("M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",magCalib.softiron[0][0],magCalib.softiron[0][1],magCalib.softiron[1][0],magCalib.softiron[1][1]);
+		statusFlags.calibrated = true;
 
+		//printf("M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",magCalib.softiron[0][0],magCalib.softiron[0][1],magCalib.softiron[1][0],magCalib.softiron[1][1]);
 		return;
 	}
 
@@ -581,179 +820,207 @@ void handleCalibration()
 			magCalib = calibrationMatrix(sumX, sumY, sumXX, sumYY, sumXY, totalCalSamples);// offsetX, offsetY);
 			SaveCalibrationToFlash(&magCalib);
 
+			statusFlags.calibrated = true;
+
 			//Reset calibration state and jump to the warming up state
 			controlState = WARMING_UP;
 			uartSend(PC_UART_SRC, "WARMUP\r\n");
 			calState = CAL_IDLE; // Reset local state
 			break;
 	}
-
-	/*
-	//#define CALIB_FROM_FLASH
-
-	#ifdef CALIB_FROM_FLASH
-	  if (!LoadCalibrationFromFlash(&magCalib))
-	  {
-		magCalib = CalibrateMagnetometer(&AZ_AxisMotor, 1.0f, 7.5f);
-		SaveCalibrationToFlash(&magCalib);
-	  }
-	#else
-	  magCalib = CalibrateMagnetometer(&AZ_AxisMotor, 1.0f, 7.5f);
-	  SaveCalibrationToFlash(&magCalib);
-	#endif
-
-	controlState = WARMING_UP;
-	uartSend(PC_UART_SRC, "WARMUP\r\n");
-	return;
-	*/
-#endif
-
 }
-
-
-
 
 /*
  * WARMING UP STATE
- *
- *
- *
- *
  */
 
 void handleWarmingUp()
 {
-	static bool gpsConfigured = false;
-	static uint32_t gpsLastCheck = 0;
-	static uint16_t configRetries = 0;
-    //uint8_t btn = readButtonDebounced();
-
 	ledsRampUp();
 
-    switch (WarmUpState)
-    {
-    	case CHECK_AND_CONFIG_GPS:
-    		//Check if GPS is alive (sending data)
-			if (!gpsIsAlive()) {
-				//controlState = FAULT;
-				uartSend(PC_UART_SRC, "ERROR:GPS Fault\r\n");
-				break;
-			}
-
-			//Configure GPS once
-			if (!gpsConfigured)
-			{
-				uartSend(PC_UART_SRC, "GPS_CONF\r\n");
-				gpsConfig();
-				timeoutStart(&timeoutControlLoop, 2); // 2s ACK timeout
-				WarmUpState = WAITING_FOR_GPS_ACK;
-			}
-			else
-			{
-				timeoutStart(&timeoutControlLoop, GPS_FIX_TIMEOUT);
-				WarmUpState = WAITING_FOR_GPS_FIX;
-			}
+	switch(WarmUpState)
+	{
+		case TIMEOUT_START:
+			timeoutStart(&timeoutControlLoop, WARMING_UP_TIMEOUT);
+			WarmUpState = WAITING_FOR_GPS_AND_RPI;
 			break;
 
-    	case WAITING_FOR_GPS_ACK:
-    		GPS_Ack_t ack = gpsCheckAck();
-
-			if (ack == GPS_ACK_OK)
+		case WAITING_FOR_GPS_AND_RPI:
+			if (timeoutReached(&timeoutControlLoop))
 			{
-				uartSend(PC_UART_SRC, "GPS_ACK_OK\r\n");
-				gpsConfigured = true;
-				configRetries = 0;
-				timeoutStart(&timeoutControlLoop, GPS_FIX_TIMEOUT);
-				WarmUpState = WAITING_FOR_GPS_FIX;
-			}
-			else if (ack == GPS_ACK_NAK || timeoutReached(&timeoutControlLoop))
-			{
-			    if (ack == GPS_ACK_NAK)
-			    {
-			    	uartSend(PC_UART_SRC, "GPS_ACK_NAK\r\n");
-			    }
-			    else
-				{
-			    	uartSend(PC_UART_SRC, "GPS_ACK_TIMEOUT\r\n");
-				}
-
-			    if (++configRetries >= GPS_CONFIG_RETRIES)
-			    {
-			        uartSend(PC_UART_SRC, "ERROR:GPS Config Failed\r\n");
-			        controlState = FAULT;
-			    }
-			    else
-			    {
-			        uartSend(PC_UART_SRC, "GPS_CONF_RETRY\r\n");
-			        gpsConfig();
-			        timeoutStart(&timeoutControlLoop, 2);
-			    }
-			}
-			break;
-
-    	case WAITING_FOR_GPS_FIX:
-    		//Wait for valid GPS fix
-    		if (timeoutReached(&timeoutControlLoop))
-    		{
 				timeoutReset(&timeoutControlLoop);
-				uartSend(PC_UART_SRC, "ERROR: GPS Timeout\r\n");
+				uartSend(PC_UART_SRC, "ERROR: Warming up timeout\r\n");
 				ledsSet(false);
-				controlState = FAULT; // Jump to FAULT state
+				//Set error to WARMUP TIMEOUT
+				error(WARMUP_TIMEOUT);
 				break;
 			}
 
-			if ((HAL_GetTick()-gpsLastCheck)>1000)
+			checkGPS();
+			checkRPi();
+			if(statusFlags.rpiRDY && statusFlags.gpsFixed)
 			{
-				gpsLastCheck = HAL_GetTick();
-
-				uartSend(PC_UART_SRC, "GPS\r\n");
-
-				gpsData = getGPSData();
-
-				if (gpsData.fix == true)
-				{
-					timeoutReset(&timeoutControlLoop);
-					//Calculate altitude angle from GPS longitude
-					alignmentData.altAngle = 90.0f-gpsData.latitude;
-
-					//printf("altAngle %f \r\n", alignmentData.altAngle);
-
-					// Compute magnetic declination from GPS fix
-					float wmm_date = wmm_get_date(gpsData.year, gpsData.month, gpsData.day);
-					float declination;
-					E0000(gpsData.latitude, gpsData.longitude, wmm_date, &declination);
-					alignmentData.declination = declination;
-
-					//Reset the internal state machine
-					WarmUpState = WAITING_FOR_GPS_FIX;
-					// Move on to next state
-					controlState = ALIGNMENT;
-
-					ledsSet(false);
-
-					uartSend(PC_UART_SRC, "ALIGNMENT\r\n");
-					break;
-				}
-				else
-				{
-					break;
-				}
+				timeoutReset(&timeoutControlLoop);
+				WarmUpState = WARMUP_FINISHED;
+				gpsWarmUpState = CHECK_AND_CONFIG_GPS;
+				rpiWarmUpState = WAITING_FOR_RPI_BOOT;
 			}
+			break;
+
+		case WARMUP_FINISHED:
+			//Reset warming up state
+			WarmUpState = TIMEOUT_START;
+			// Move on to next state
+			controlState = ALIGNMENT;
+			//Reset LEDs
+			ledsSet(false);
+
+			uartSend(PC_UART_SRC, "ALIGNMENT\r\n");
+			break;
 	}
 }
 
+static void checkGPS()
+{
+	static bool gpsConfigured = false;
+	static uint32_t gpsLastCheck = 0;
+	static uint16_t configRetries = 0;
+
+	switch(gpsWarmUpState)
+    {
+	case CHECK_AND_CONFIG_GPS:
+		//Check if GPS is alive (sending any data)
+		if (!gpsIsAlive()) {
+			statusFlags.gpsOK = false;
+			uartSend(PC_UART_SRC, "ERROR:GPS Fault\r\n");
+
+			error(GPS_ERROR);
+			break;
+		}
+		else
+		{
+			statusFlags.gpsOK = true;
+		}
+
+		//Configure GPS once
+		if (!gpsConfigured)
+		{
+			uartSend(PC_UART_SRC, "GPS Configuration...\r\n");
+			gpsConfig();
+			timeoutStart(&gpsAckTimeout, 2); // 2s ACK timeout
+			gpsWarmUpState = WAITING_FOR_GPS_ACK;
+		}
+		else
+		{
+			gpsWarmUpState = WAITING_FOR_GPS_FIX;
+		}
+		break;
+
+	case WAITING_FOR_GPS_ACK:
+		GPS_Ack_t ack = gpsCheckAck();
+
+		if (ack == GPS_ACK_OK)
+		{
+			uartSend(PC_UART_SRC, "GPS Configured\r\n");
+			gpsConfigured = true;
+			configRetries = 0;
+			gpsWarmUpState = WAITING_FOR_GPS_FIX;
+		}
+		else if (ack == GPS_ACK_NAK || timeoutReached(&gpsAckTimeout))
+		{
+			if (ack == GPS_ACK_NAK)
+			{
+				uartSend(PC_UART_SRC, "GPS ACK:NAK\r\n");
+			}
+			else
+			{
+				uartSend(PC_UART_SRC, "GPS Configuration timeout\r\n");
+			}
+
+			if (++configRetries >= GPS_CONFIG_RETRIES)
+			{
+				uartSend(PC_UART_SRC, "ERROR:GPS Configuration failed!\r\n");
+				controlState = FAULT;
+			}
+			else
+			{
+				uartSend(PC_UART_SRC, "GPS Configuration retry\r\n");
+				gpsConfig();
+				timeoutStart(&gpsAckTimeout, 2);
+			}
+		}
+		break;
+
+	case WAITING_FOR_GPS_FIX:
+		//Wait for valid GPS fix
+		if ((HAL_GetTick()-gpsLastCheck)>1000)
+		{
+			gpsLastCheck = HAL_GetTick();
+			gpsData = getGPSData();
+
+			if (gpsData.fix == true)
+			{
+				uartSend(PC_UART_SRC, "GPS Fixed\r\n");
+
+				//Calculate altitude angle from GPS longitude
+				alignmentData.altAngle = 90.0f-gpsData.latitude;
+
+				//Calculate magnetic declination from GPS data
+				float wmm_date = wmm_get_date(gpsData.year, gpsData.month, gpsData.day);
+				float declination;
+				E0000(gpsData.latitude, gpsData.longitude, wmm_date, &declination);
+				alignmentData.declination = declination;
+
+				statusFlags.gpsFixed = true;
+				//Reset the internal state machine
+				gpsWarmUpState = GPS_FIXED;
+				break;
+			}
+			else
+			{
+				break;
+			}
+		}
+		break;
+
+	case GPS_FIXED:
+			//Do nothing if the GPS is already fixed and the system is still waiting for RPi to boot up
+		break;
+	}
+}
+
+static void checkRPi()
+{
+	switch(rpiWarmUpState)
+	{
+		case WAITING_FOR_RPI_BOOT:
+			if(statusFlags.rpiRDY == false)
+			{
+				break;
+			}
+			else
+			{
+				uartSend(PC_UART_SRC, "RPi is ready\r\n");
+				rpiWarmUpState = RPI_READY;
+			}
+		break;
+
+		case RPI_READY:
+			//Do nothing if the RPi is already booted and the system is still waiting for GPS to fix
+		break;
+	}
+}
 
 /*
- * ALIGNING STATE
- * Commands the RPi to start the alignment process (sends $ALIGN command)
- * Waits for the RPi response
- * Moves certain arcmin towards the NCP position
+ * --- ALIGNING STATE ---
  */
 
 void handleAligning()
 {
 	uint8_t btn = readButtonDebounced();
 	static bool roughCorrection = false;
+	static bool corFirstImageCaptured = false;
+	static bool corSecondImageCaptured = false;
 
 	switch(alignmentState)
 	{
@@ -814,55 +1081,210 @@ void handleAligning()
 	case ROUGH_ALIGNMENT_ALT:
 
 		stepperMove(&ALT_AxisMotor, alignmentData.altAngle*DEG, 5.0f);
-		alignmentState = ROUGH_ALIGNMENT_ALT_CHECK;
+		alignmentState = PRECISE_INITIAL_ALIGN_CMD;
 		break;
 
-	case ROUGH_ALIGNMENT_ALT_CHECK:
+	case PRECISE_INITIAL_ALIGN_CMD:
+		//Wait for the ALT motor to finish the move
 		if (ALT_AxisMotor.busy == true)
 		{
 			break;
 		}
-		else
-		{
-			stepperMove(&RA_AxisMotor, 60.0*DEG, 2.0);
 
-			alignmentData.alignmentTriesCounter = 0;
-			alignmentState = PRECISE_ALIGN_CMD;
-		}
+		uartSend(RPI_UART_SRC, "$PA:ALIGN\r\n");
+		timeoutStart(&paCommandTimeout, PA_TIMEOUT);
+
+		alignmentData.alignmentDataUpdated = false;
+		alignmentData.imageCaptured = false;
+		alignmentState = PRECISE_INITIAL_ALIGN_WAIT;
 		break;
 
-	case PRECISE_ALIGN_CMD:
-		if (RA_AxisMotor.busy == true)
+	case PRECISE_INITIAL_ALIGN_WAIT:
+		//Wait for the PA image to be captured
+		if (alignmentData.imageCaptured == false)
+		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				error(PA_ERROR);
+			}
+			break;
+		}
+		//Image captured - move RA 45° to capture first CoR image while the PA image gets processed
+		alignmentData.imageCaptured = false;
+		stepperMove(&RA_AxisMotor, COR_ANGLE*DEG, RA_COARSE_SPEED);
+		alignmentState = PRECISE_INITIAL_ALIGNMENT;
+		break;
+
+	case PRECISE_INITIAL_ALIGNMENT:
+		//Wait for the alignment data to be updated
+		if (alignmentData.alignmentDataUpdated == false)
+		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				error(PA_ERROR);
+			}
+			break;
+		}
+		//Image captured and alignment data updated - reset the polar alignment timeout
+		timeoutReset(&paCommandTimeout);
+
+		//Polaris not found - ERROR
+		if (alignmentData.polarisFound == false)
+		{
+			error(POLARIS_NOT_FOUND);
+			break;
+		}
+		//For the initial polar alignment if the NCP is not found, the alignment is done on Polaris, to center the image closer to NCP
+		//Alignment data updated and NCP or Polaris found
+		if(alignmentData.azError != 0.0f)
+		{
+			stepperMove(&AZ_AxisMotor, alignmentData.azError/cosf(gpsData.latitude*(M_PI/180)), 5.0f);
+		}
+		stepperMove(&ALT_AxisMotor, alignmentData.altError, 5.0f);
+
+		alignmentState = PRECISE_COR_CMD;
+		break;
+
+	case PRECISE_COR_CMD:
+		//Wait for the initial alignment to finish and for the RA axis to stop moving
+		if (AZ_AxisMotor.busy == true || ALT_AxisMotor.busy == true || RA_AxisMotor.busy == true)
 		{
 			break;
 		}
+		//Send $PA:COR command
+		uartSend(RPI_UART_SRC, "$PA:COR\r\n");
+		timeoutStart(&paCommandTimeout, COR_TIMEOUT);
 
-		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
+		alignmentState = PRECISE_COR_WAIT;
+		break;
+
+	case PRECISE_COR_WAIT:
+		//Wait for image to be captured
+		if (alignmentData.imageCaptured == false)
+		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				error(COR_ERROR);
+			}
+			break;
+		}
+		//Reset the timeout
+		timeoutReset(&paCommandTimeout);
+
+		if (corFirstImageCaptured == false)
+		{
+			corFirstImageCaptured = true;
+			alignmentData.imageCaptured = false;
+			//Captured first CoR image, move the RA axis back to 0 and send second CoR command
+			stepperMove(&RA_AxisMotor, -COR_ANGLE*DEG, RA_COARSE_SPEED);
+			alignmentState = PRECISE_COR_CMD;
+			break;
+		}
+		if (corSecondImageCaptured == false)
+		{
+			//Captured second CoR image
+			corSecondImageCaptured = true;
+			alignmentData.imageCaptured = false;
+
+			//Start timer for the CoR calculation
+			timeoutStart(&paCommandTimeout, COR_TIMEOUT);
+			//Both images for CoR captured proceed to proper polar alignment
+			alignmentState = PRECISE_COR_CHECK;
+			break;
+		}
+		break;
+
+	case PRECISE_COR_CHECK:
+		//Wait until CoR calculation is complete and the CoR is found
+		if (alignmentData.corFound == 0)
+		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				error(COR_ERROR);
+			}
+			break;
+		}
+		//Reset the timeout if the CoR command is received
+		timeoutReset(&paCommandTimeout);
+
+		//CoR FAILED - ERROR
+		if(alignmentData.corFound == -1)
+		{
+			error(COR_ERROR);
+			break;
+		}
+		//CoR DONE
+		alignmentData.alignmentTriesCounter = 0;
+		alignmentState = PRECISE_ALIGN_CMD;
+		break;
+
+	case PRECISE_ALIGN_CMD:
+		if (AZ_AxisMotor.busy || ALT_AxisMotor.busy)
+		{
+			break;
+		}
+		uartSend(RPI_UART_SRC, "$PA:ALIGN\r\n");
+		//Start the PA timeout
+		timeoutStart(&paCommandTimeout, PA_TIMEOUT);
 		alignmentData.alignmentDataUpdated = false;
 		alignmentState = PRECISE_ALIGN_WAIT;
 		break;
 
 	case PRECISE_ALIGN_WAIT:
-		if (alignmentData.alignmentDataUpdated == false)
+		//Wait for the image to be captured
+		if (alignmentData.imageCaptured == false)
 		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				error(PA_ERROR);
+			}
 			break;
 		}
-		else
-		{
-			alignmentState = PRECISE_ALIGNMENT;
-		}
+
+		//Reset the image captured flag and proceed to the alignment
+		alignmentData.imageCaptured = false;
+		alignmentState = PRECISE_ALIGNMENT;
 		break;
 
 	case PRECISE_ALIGNMENT:
-		if ((fabsf(alignmentData.azError) <= PRECISE_ALIGNMENT_THRESHOLD && fabsf(alignmentData.altAngle) <= PRECISE_ALIGNMENT_THRESHOLD) || alignmentData.alignmentTriesCounter >= ALIGNMENT_TRIES)
+		//Wait for the alignment data to be updated
+		if (alignmentData.alignmentDataUpdated == false)
+		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				error(PA_ERROR);
+			}
+			break;
+		}
+		//Reset the PA timeout
+		timeoutReset(&paCommandTimeout);
+
+		//NCP not found - ERROR
+		if (alignmentData.ncpFound == false)
+		{
+			error(NCP_NOT_FOUND);
+			break;
+		}
+
+		//Check whether the alignment error is below threshold or alignment tries reached the thershold
+		if ((fabsf(alignmentData.azError) <= PRECISE_ALIGNMENT_THRESHOLD && fabsf(alignmentData.altError) <= PRECISE_ALIGNMENT_THRESHOLD) || alignmentData.alignmentTriesCounter >= ALIGNMENT_TRIES)
 		{
 			//If the alignment error is less than PRECISE_ALIGNMENT_THRESHOLD in both axes or a ALIGNMENT_TRIES are exceeded, the system proceeds to ALIGNMENT_DONE state
-			stepperMove(&RA_AxisMotor, -60.0*DEG, 2.0);
 			alignmentData.alignmentTriesCounter = 0;
 			alignmentState = ALIGNMENT_DONE;
 			break;
 		}
-		stepperMove(&AZ_AxisMotor, alignmentData.azError/cos(gpsData.latitude*(M_PI/180)), 5.0f);
+
+		if(alignmentData.azError != 0.0f)
+		{
+			stepperMove(&AZ_AxisMotor, alignmentData.azError/cosf(gpsData.latitude*(M_PI/180)), 5.0f);
+		}
 		stepperMove(&ALT_AxisMotor, alignmentData.altError, 5.0f);
 		alignmentData.alignmentTriesCounter++;
 
@@ -876,10 +1298,17 @@ void handleAligning()
 		}
 		else
 		{
+			//Set statusFlag
+			statusFlags.polarAligned = true;
+
 			//Reset the internal state machine
 			alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
 			alignmentData.alignmentTriesCounter = 0;
 			alignmentData.alignmentDataUpdated = false;
+			alignmentData.imageCaptured = false;
+			alignmentData.corFound = false;
+			corFirstImageCaptured = false;
+			corSecondImageCaptured = false;
 
 			controlState = LOW_POWER_IDLE;
 		}
@@ -887,7 +1316,6 @@ void handleAligning()
 
 	default:
 		break;
-
 	}
 }
 
@@ -933,6 +1361,164 @@ void handleMoving()
 }
 
 
+/*
+ * SHUTDOWN STATE
+ */
+
+void handleShutdown()
+{
+	uint8_t btn = readButtonDebounced();
+	static uint32_t longPressStart = 0;
+	static uint8_t shutdownLedStep = 0;
+
+	switch (shutdownState)
+	{
+
+		case SHUTDOWN_CHECK_BUTTON_RELEASE:
+			if (btn == RELEASED) //Released
+			{
+				shutdownState = SHUTDOWN_WAIT_FOR_LONG_PRESS;
+				longPressStart = HAL_GetTick();
+			}
+			break;
+
+		case SHUTDOWN_WAIT_FOR_LONG_PRESS:
+			if ((HAL_GetTick() - longPressStart) > POWER_OFF_CANCLE_TIME)
+			{
+				//Timeout, shutdown canceled -> back to prevState
+				controlState = prevControlState;
+				//Reset shutdown state
+				shutdownState = SHUTDOWN_CHECK_BUTTON_RELEASE;
+				shutdownLedStep = 0;
+				//Reset LEDs to OFF state
+				ledsSet(false);
+			}
+			else if (btn == PRESSED) //Pressed again
+			{
+				shutdownState = SHUTDOWN_LONG_PRESS;
+				longPressStart = HAL_GetTick();
+				shutdownLedStep = 0;
+			}
+			break;
+
+		case SHUTDOWN_LONG_PRESS:
+			if (btn == RELEASED) //released too early -> reset
+			{
+				shutdownLedStep = 0;
+				ledsSet(true);
+				shutdownState = SHUTDOWN_CHECK_BUTTON_RELEASE;
+				break;
+			}
+			//Check how long is the button pressed
+			uint32_t heldTime = HAL_GetTick() - longPressStart;
+
+			//Turns off LEDs one by one
+			if ((heldTime / LED_DELAY) > shutdownLedStep && shutdownLedStep < 4)
+			{
+				shutdownLedStep++;
+				switch (shutdownLedStep)
+				{
+					case 1:
+						HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+						break;
+					case 2:
+						HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+						break;
+					case 3:
+						HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+						break;
+					case 4:
+						HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+						break;
+					default:
+						ledsSet(false);
+						break;
+				}
+			}
+
+			if (heldTime >= HOLD_TIME)
+			{
+				shutdownState = SHUTDOWN_PROCESS;
+			}
+			break;
+
+		case SHUTDOWN_PROCESS:
+			if (btn == RELEASED)
+			{
+				//Send $SHUTDOWN command to RPi
+				rpiShutdown();
+				timeoutStart(&rpiShutdownTimeout, RPI_SHUTDOWN_TIME);
+
+				//DEBUG
+				getTelemetry();
+
+				//Move all axes to zero position
+				stepperMove(&AZ_AxisMotor, -(AZ_AxisMotor.Position.angularPosition)*DEG, AZ_COARSE_SPEED);
+				stepperMove(&ALT_AxisMotor, -(ALT_AxisMotor.Position.angularPosition)*DEG, ALT_COARSE_SPEED);
+				stepperMove(&RA_AxisMotor, -(RA_AxisMotor.Position.angularPosition)*DEG, RA_COARSE_SPEED);
+				stepperMove(&DEC_AxisMotor, -(DEC_AxisMotor.Position.angularPosition)*DEG, DEC_COARSE_SPEED);
+
+				shutdownState = SHUTDOWN_FINISHED;
+			}
+			break;
+
+		case SHUTDOWN_FINISHED:
+			//Wait for all motors to home and for the RPi to shut down
+			if (AZ_AxisMotor.busy || ALT_AxisMotor.busy || RA_AxisMotor.busy || DEC_AxisMotor.busy)
+			{
+				break;
+			}
+			if(!timeoutReached(&rpiShutdownTimeout))
+			{
+				break;
+			}
+
+			//DEBUG
+			getTelemetry();
+
+			//Cut off RPi power
+			rpiPowerOff();
+			//Disable all motors
+			stepperDisable(&AZ_AxisMotor);
+			stepperDisable(&ALT_AxisMotor);
+			stepperDisable(&RA_AxisMotor);
+			stepperDisable(&DEC_AxisMotor);
+
+			uartSend(PC_UART_SRC, "Shutdown Successful!\r\n");
+			controlState = LOW_POWER_IDLE;
+			shutdownState = SHUTDOWN_CHECK_BUTTON_RELEASE;
+			break;
+	}
+}
+
+/*
+ * --- FAULT STATE ---
+ */
+
+void handleFault()
+{
+	static GPIO_PinState faultLedState = GPIO_PIN_SET;
+	static uint32_t faultLastLedTicks = 0;
+
+	pwrButtonBlink();
+
+	if((HAL_GetTick() - faultLastLedTicks) >= LED_BLINK_PERIOD_LONG)
+	{
+		//Blink the 4 LEDs to show binary error code
+		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, (errorCode & 0x01) ? faultLedState : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, (errorCode & 0x02) ? faultLedState : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, (errorCode & 0x04) ? faultLedState : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, (errorCode & 0x08) ? faultLedState : GPIO_PIN_RESET);
+
+		faultLedState = (faultLedState == GPIO_PIN_SET) ? GPIO_PIN_RESET : GPIO_PIN_SET;
+	}
+}
+
+void error(errorCode_t err)
+{
+	errorCode = err;
+	controlState = FAULT;
+}
 
 static void ledsBlink()
 {
@@ -1029,3 +1615,126 @@ bool timeoutReached(Timeout_t *timeout)
     }
     return false;
 }
+
+//---State change/jump commands handling---
+
+void homeCommand(char **saveptr, UART_Source_t src)
+{
+	ledsSet(false);
+	controlState = HOMING;
+	//Check the button just in case, if its not pressed, proceed to HOMING
+	homingState = HOMING_WAITING_FOR_BUTTON_RELEASE;
+}
+
+void calibCommand(char **saveptr, UART_Source_t src)
+{
+	if (statusFlags.homed == false)
+	{
+		uartSend(src, "ERR: Not homed!\r\n");
+		return;
+	}
+	ledsSet(false);
+	controlState = CALIBRATION;
+}
+
+void alignCommand(char **saveptr, UART_Source_t src)
+{
+	if (statusFlags.homed == false)
+	{
+		uartSend(src, "ERR: Not homed!\r\n");
+		return;
+	}
+	if (statusFlags.calibrated == false)
+	{
+		uartSend(src, "ERR: Not calibrated!\r\n");
+		return;
+	}
+	if (statusFlags.gpsFixed == false)
+	{
+		uartSend(src, "ERR: GPS not fixed!\r\n");
+		return;
+	}
+	if (statusFlags.rpiRDY == false)
+	{
+		uartSend(src, "ERR: RPi not ready!\r\n");
+		return;
+	}
+
+	ledsSet(false);
+	controlState = ALIGNMENT;
+	alignmentState = ALIGN_WAITING_FOR_BUTTON_RELEASE;
+
+}
+
+void patestCommand(char **saveptr, UART_Source_t src)
+{
+	alignmentData.altAngle = 41.0f;
+	statusFlags.gpsFixed = true;
+
+
+	if (statusFlags.homed == false)
+	{
+		uartSend(src, "ERR: Not homed!\r\n");
+		return;
+	}
+	if (statusFlags.calibrated == false)
+	{
+		uartSend(src, "ERR: Not calibrated!\r\n");
+		return;
+	}
+	if (statusFlags.gpsFixed == false)
+	{
+		uartSend(src, "ERR: GPS not fixed!\r\n");
+		return;
+	}
+	if (statusFlags.rpiRDY == false)
+	{
+		uartSend(src, "ERR: RPi not ready!\r\n");
+		return;
+	}
+
+	ledsSet(false);
+	controlState = ALIGNMENT;
+	alignmentState = ROUGH_ALIGNMENT_ALT;
+
+}
+
+static void resetStates()
+{
+	//States reset
+	lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS;
+	WarmUpState = TIMEOUT_START;
+	gpsWarmUpState = CHECK_AND_CONFIG_GPS;
+	rpiWarmUpState = WAITING_FOR_RPI_BOOT;
+	alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
+	calState = CAL_IDLE;
+
+	homingState = HOMING_WAITING_FOR_BUTTON_PRESS;
+	ALT_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+	ALT_AxisMotor.homing = false;
+	AZ_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+	AZ_AxisMotor.homing = false;
+	RA_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+	RA_AxisMotor.homing = false;
+	DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
+	DEC_AxisMotor.homing = false;
+
+	statusFlags.homed = false;
+	statusFlags.calibrated = false;
+	statusFlags.gpsFixed = false;
+	statusFlags.gpsOK = false;
+	statusFlags.magOK = false;
+	statusFlags.rpiRDY = false;
+	statusFlags.polarAligned = false;
+
+	alignmentData.alignmentDataUpdated = false;
+	alignmentData.corFound = 0;
+	alignmentData.imageCaptured = false;
+	alignmentData.ncpFound = false;
+	alignmentData.polarisFound = false;
+}
+
+
+
+
+

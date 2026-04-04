@@ -7,8 +7,9 @@
 #include "telemetry.h"
 #include "stepper.h"
 #include "cmd_handler.h"
+#include "control_loop.h"
 
-#define TELEMETRY_LED_PERIOD 250
+#define TELEMETRY_LED_PERIOD 200
 
 typedef enum {
 	POWER_INPUT_DC,
@@ -37,7 +38,10 @@ void telemetryHandler()
 
 	//float voltage = getVoltage();
 
+	updatePosition(&AZ_AxisMotor);
+	updatePosition(&ALT_AxisMotor);
 	updatePosition(&RA_AxisMotor);
+	updatePosition(&DEC_AxisMotor);
 
 	/*
 	char dbgbuff[32];
@@ -52,10 +56,33 @@ void telemetryHandler()
 void getTelemetry()
 {
 	float voltage = getVoltage();
-	float position = RA_AxisMotor.Position.angularPosition;
 
-	char dbgbuff[32];
-	sprintf(dbgbuff,"RA Position: %f\r\nVoltage: %f\r\n", position, voltage);
+	char dbgbuff[128];
+	sprintf(dbgbuff,"AZ Pos:  %.3f\r\nALT Pos: %.3f\r\nRA Pos:  %.3f\r\nDEC Pos: %.3f\r\nVoltage: %.2f\r\n", AZ_AxisMotor.Position.angularPosition, ALT_AxisMotor.Position.angularPosition, RA_AxisMotor.Position.angularPosition, DEC_AxisMotor.Position.angularPosition, voltage);
+	uartSend(PC_UART_SRC, dbgbuff);
+}
+
+void getFullTelemetry()
+{
+	float voltage = getVoltage();
+
+	char dbgbuff[128];
+	//Full telemetry in format
+	//$TEL:AZpos:ALTpos:RApos:DECpos:Voltage:Homed:Calibrated:gpsOK:gpsFixed:rpiReady:moveEnabled
+	sprintf(dbgbuff,"#TEL:%.3f:%.3f:%.3f:%.3f:%.3f:%d:%d:%d:%d:%d:%d\r\n",
+			AZ_AxisMotor.Position.angularPosition,
+			ALT_AxisMotor.Position.angularPosition,
+			RA_AxisMotor.Position.angularPosition,
+			DEC_AxisMotor.Position.angularPosition,
+			voltage,
+			statusFlags.homed,
+			statusFlags.calibrated,
+			statusFlags.gpsOK,
+			statusFlags.gpsFixed,
+			statusFlags.rpiRDY,
+			statusFlags.moveEnabled
+			);
+
 	uartSend(PC_UART_SRC, dbgbuff);
 }
 
@@ -156,7 +183,7 @@ void updatePosition(StepperMotor_t *Axis)
 		Axis->Position.lastStepsRead = currentStepCount;
 	}
 
-	if (Axis->Position.direction == true) //If the direction of rotation is positive (true) increase the stepPostition
+	if (Axis->Position.direction == Axis->Positive_dir) //If the direction of rotation is positive increase the stepPostition
 	{
 		Axis->Position.stepPosition += deltaSteps;
 	}
@@ -172,8 +199,6 @@ void updatePosition(StepperMotor_t *Axis)
 	{
 		Axis->Position.angularPosition = (float)Axis->Position.stepPosition / (Axis->stepsPerArcmin*DEG);
 	}
-
-
 
 }
 

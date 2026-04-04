@@ -6,8 +6,6 @@
  */
 
 
-
-
 #ifndef INC_CMD_HANDLER_H_
 #define INC_CMD_HANDLER_H_
 

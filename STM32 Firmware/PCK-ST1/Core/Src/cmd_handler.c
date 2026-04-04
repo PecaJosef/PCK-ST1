@@ -35,6 +35,10 @@ static void trackingParsing(char **saveptr, UART_Source_t src);
 
 static void calibParsing(char **saveptr, UART_Source_t src);
 
+static void isetParsing(char **saveptr, UART_Source_t src);
+
+static void telemetryParsing(char **saveptr, UART_Source_t src);
+
 void commandHandler(void)
 {
     if (pc_cmd_ready) {
@@ -89,14 +93,30 @@ static void executeCommand(char *cmd, UART_Source_t src)
 {
 	char *token;
 	char *saveptr;
-	//uartSend(PC_UART_SRC, "H\r\n");
+
+	//Forward info messages from RPi starting with # directly to PC/controller UART
+	if (cmd[0] == '#')
+	{
+		//Forward only info messages from RPi
+		if (src == RPI_UART_SRC)
+		{
+
+			uartSend(PC_UART_SRC, "RPI:");
+			uartSend(PC_UART_SRC, cmd);
+			uartSend(PC_UART_SRC, "\r\n");
+		}
+		return;
+	}
 
 	token = strtok_r(cmd, ":", &saveptr);
-	if (!token) return;
+	if (!token)
+	{
+		return;
+	}
 
 	if (strcmp(token, "$ECHO")==0)
 	{
-		uartSend(src, "ECHO\r\n");
+		uartSend(src, "#ECHO\r\n");
 	}
 	else if(strcmp(token, "$MOVE")==0)
 	{
@@ -113,15 +133,6 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		//RPI commands processing and forwarding
 		rpiParsing(&saveptr, src);
 	}
-
-	else if(strcmp(token, "#ECHO")==0 && src == RPI_UART_SRC)
-	{
-		uartSend(PC_UART_SRC, "#RPI:ECHO\r\n"); //sends response from RPi (ECHO) to PC
-	}
-	else if(strcmp(token, "#RDY")==0 && src == RPI_UART_SRC)
-	{
-		uartSend(PC_UART_SRC, "#RPI:RDY\r\n"); //sends response from RPi (ECHO) to PC
-	}
 	else if(strcmp(token, "$TRACKING")==0)
 	{
 		trackingParsing(&saveptr, src);
@@ -130,9 +141,36 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	{
 		calibParsing(&saveptr, src);
 	}
+	else if(strcmp(token, "$RDY")==0 && src == RPI_UART_SRC)
+	{
+		//Set status flag rpiRDY
+		statusFlags.rpiRDY = true;
+		//sends response from RPi to PC
+		uartSend(PC_UART_SRC, "#RPI:RDY\r\n");
+	}
 	else if(strcmp(token, "$TEL")==0)
 	{
-		getTelemetry();
+		telemetryParsing(&saveptr, src);
+	}
+	else if(strcmp(token, "$HOME")==0)
+	{
+		homeCommand(&saveptr, src);
+	}
+	else if(strcmp(token, "$CALIBRATE")==0)
+	{
+		calibCommand(&saveptr, src);
+	}
+	else if(strcmp(token, "$ALIGN")==0)
+	{
+		alignCommand(&saveptr, src);
+	}
+	else if(strcmp(token, "$PATEST")==0)
+	{
+		patestCommand(&saveptr, src);
+	}
+	else if(strcmp(token, "$ISET")==0)
+	{
+		isetParsing(&saveptr, src);
 	}
 	else if(strcmp(token, "$DIS")==0)
 	{
@@ -148,25 +186,18 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		stepperEnable(&RA_AxisMotor);
 		stepperEnable(&DEC_AxisMotor);
 	}
+	else if(strcmp(token, "$ERR")==0)
+	{
+		uartSend(PC_UART_SRC, "RPI:ERR\r\n");
+	}
 	else
 	{
-		uartSend(src, "ERR:UNKNOWN\r\n");
-		uartSend(PC_UART_SRC, "ERR:UNKNOWN\r\n");
-
-		//For debugging only - comment out for normal use
-		//#define CMD_DEBUG
-
-		#ifdef CMD_DEBUG
-		for(uint8_t i=0;i<10;i++)
+		if (src != PC_UART_SRC)
 		{
-			printf("%d -> %d\r\n",i,*(token+i));
-			HAL_Delay(100);
-			if(*(token+i)=='\0')
-			{
-				break;
-			}
+			uartSend(PC_UART_SRC, "RPI:ERR:UNKNOWN\r\n");
+			return;
 		}
-		#endif
+		uartSend(src, "ERR:UNKNOWN\r\n");
 	}
 
 }
@@ -174,6 +205,13 @@ static void executeCommand(char *cmd, UART_Source_t src)
 
 static void moveParsing(char **saveptr, UART_Source_t src)
 {
+	//If some control state disables move, return early
+	if(statusFlags.moveEnabled == false)
+	{
+		uartSend(src, "ERR: MOVEMENT DISABLED!\r\n");
+		return;
+	}
+
 	char *command;
 	char *saveptr_cmd;
 
@@ -285,11 +323,11 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 	{
 		rpiShutdown();
 	}
-	else if(strcmp(command, "START")==0)
+	else if(strcmp(command, "ON")==0)
 	{
 		rpiPowerOn();
 	}
-	else if(strcmp(command, "STOP")==0)
+	else if(strcmp(command, "OFF")==0)
 	{
 		rpiPowerOff();
 	}
@@ -297,6 +335,31 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 	{
 		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
 		uartSend(PC_UART_SRC, "#ALIGN CMD Sent\r\n");
+	}
+	else if(strcmp(command, "CAPTURE")==0)
+	{
+		char *exposure = strtok_r(NULL, ":", saveptr);
+		char *filename = strtok_r(NULL, ":", saveptr);
+
+		if (exposure == NULL || filename == NULL)
+		{
+			uartSend(src, "ERR:FORMAT\r\n");
+			return;
+		}
+
+		char buffer[64];
+
+		int len = snprintf(buffer, sizeof(buffer), "$CAPTURE:%s:%s\r\n", exposure, filename);
+
+		if (len > 0 && len < (int)sizeof(buffer))
+		{
+			uartSend(RPI_UART_SRC, buffer);
+			uartSend(PC_UART_SRC, "#CAPTURE CMD Sent\r\n");
+		}
+		else
+		{
+			uartSend(src, "ERR:DATA SIZE\r\n");
+		}
 	}
 	else
 	{
@@ -319,6 +382,7 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 		char *polarisFound_c = strtok_r(NULL, ":", saveptr);
 		char *azError_c = strtok_r(NULL, ":", saveptr);
 		char *altError_c = strtok_r(NULL, ":", saveptr);
+		char *raAngle_c = strtok_r(NULL, ":", saveptr);
 
 		//Return if part of the command is missing
 		if (polarisFound_c == NULL || ncpFound_c == NULL || azError_c == NULL || altError_c == NULL)
@@ -347,19 +411,53 @@ void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 			return;
 		}
 		//Convert the error values to floats
-		alignmentData.altError = atof(altError_c);
-		alignmentData.azError = atof(azError_c);
+		if (altError_c != NULL)
+		{
+			alignmentData.altError = atof(altError_c);
+		}
+		else
+		{
+			uartSend(src, "ERR:FORMAT\n\r");
+			return;
+		}
+		if (azError_c != NULL)
+		{
+			alignmentData.azError = atof(azError_c);
+		}
+		else
+		{
+			uartSend(src, "ERR:FORMAT\n\r");
+			return;
+		}
+		if (raAngle_c != NULL)
+		{
+			alignmentData.raAngle = atof(raAngle_c);
+		}
+		else
+		{
+			uartSend(src, "ERR:FORMAT\n\r");
+			return;
+		}
+
 		alignmentData.alignmentDataUpdated = true;
 		return;
 	}
-
-	else if(strcmp(command, "START")==0)
+	else if(strcmp(command, "CAPTURED")==0)
 	{
-		//Start Polar Alignment process manually
+		alignmentData.imageCaptured = true;
 	}
-	else if(strcmp(command, "ABORT")==0)
+	else if(strcmp(command, "COR")==0)
 	{
+		char *cor_cmd = strtok_r(NULL, ":", saveptr);
 
+		if(strcmp(cor_cmd, "DONE")==0)
+		{
+			alignmentData.corFound = 1;
+		}
+		else if(strcmp(cor_cmd, "FAIL")==0)
+		{
+			alignmentData.corFound = -1;
+		}
 	}
 	else
 	{
@@ -413,6 +511,41 @@ static void calibParsing(char **saveptr, UART_Source_t src)
 		uartSend(src, "ERROR:FORMAT\r\n");
 	}
 
+}
+
+static void telemetryParsing(char **saveptr, UART_Source_t src)
+{
+	char *telemetryCmd;
+	telemetryCmd = strtok_r(NULL, ":",saveptr);
+
+	if(telemetryCmd == NULL)
+	{
+		getTelemetry();
+	}
+	else if(strcmp(telemetryCmd, "FULL")==0)
+	{
+		getFullTelemetry();
+	}
+	else
+	{
+		uartSend(src, "ERR:FORMAT\r\n");
+	}
+
+
+}
+
+static void isetParsing(char **saveptr, UART_Source_t src)
+{
+	char *val;
+	val = strtok_r(NULL, ":",saveptr);
+
+	if(val == NULL)
+	{
+		uartSend(src, "ERR:FORMAT\r\n");
+		return;
+	}
+	float percentage = atof(val);
+	setCurrent(percentage);
 }
 
 

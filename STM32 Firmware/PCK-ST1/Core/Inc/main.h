@@ -128,8 +128,6 @@ void Error_Handler(void);
 #define CAM_FOCUS_GPIO_Port GPIOB
 #define RPI_PWR_EN_Pin GPIO_PIN_8
 #define RPI_PWR_EN_GPIO_Port GPIOB
-#define IREG_Pin GPIO_PIN_9
-#define IREG_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

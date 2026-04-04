@@ -118,9 +118,6 @@ MagCalib_t calibrationMatrix(int32_t sumX, int32_t sumY, int64_t sumXX, int64_t 
 	return calib;
 }
 
-
-
-
 float getCalibratedHeading(MagCalib_t *calib, float declination)
 {
     MagRawData_t data;
@@ -182,7 +179,8 @@ bool LoadCalibrationFromFlash(MagCalib_t *calib)
     StoredCalib_t *flashData = (StoredCalib_t*)CALIB_FLASH_ADDR;
 
     //Check the magic number
-    if(flashData->magic != 0xDEADBEEF) {
+    if(flashData->magic != 0xDEADBEEF)
+    {
         return false;
     }
 
@@ -191,115 +189,3 @@ bool LoadCalibrationFromFlash(MagCalib_t *calib)
     return true;
 }
 
-
-
-
-
-
-/*
-
-
-static void eigen2x2(float a, float b, float c, float *l1, float *l2,float *vx1, float *vy1, float *vx2, float *vy2)
-{
-    // Symmetric matrix [[a, b],[b, c]]
-    float tr = a + c;
-    float det = a*c - b*b;
-    float disc = tr*tr*0.25f - det;
-    if (disc < 0) disc = 0;
-    float s = sqrtf(disc);
-
-    *l1 = tr*0.5f + s;
-    *l2 = tr*0.5f - s;
-
-    // Eigenvectors; handle near-zero b specially
-    if (fabsf(b) > 1e-9f) {
-        *vx1 = *l1 - c; *vy1 = b;
-        *vx2 = *l2 - c; *vy2 = b;
-    } else {
-        // matrix is (almost) diagonal
-        *vx1 = 1.0f; *vy1 = 0.0f;
-        *vx2 = 0.0f; *vy2 = 1.0f;
-    }
-    // Normalize
-    float n1 = sqrtf((*vx1)*(*vx1) + (*vy1)*(*vy1)); if (n1 > 0) { *vx1 /= n1; *vy1 /= n1; }
-    float n2 = sqrtf((*vx2)*(*vx2) + (*vy2)*(*vy2)); if (n2 > 0) { *vx2 /= n2; *vy2 /= n2; }
-}
-
-MagCalib_t CalibrateMagnetometer(StepperMotor_t *AZ_motor, float step_deg, float speed)
-{
-    const uint16_t N = (uint16_t)(360.0f / step_deg);
-    // Accumulators
-    float sx=0, sy=0;
-    float sxx=0, sxy=0, syy=0;
-
-    MagRawData_t d;
-
-    // 1) First pass: compute mean (hard-iron)
-    for (int i=0;i<N;i++) {
-        stepperMove(AZ_motor, step_deg*DEG, speed);
-        while (AZ_motor->busy);
-
-        if (magReadRaw(&d) != HAL_OK)
-        {
-        i--;
-        continue;
-        }
-
-        sx += (float)d.x;
-        sy += (float)d.y;
-    }
-    float mx = sx / N;
-    float my = sy / N;
-
-    // 2) Second pass: covariance of centered data
-    // (Run the sweep again to avoid storing samples; if you prefer one sweep, store into a small buffer.)
-    // If re-sweeping isn’t practical, store (x,y) into arrays on first pass, then compute cov below.
-    // Here we re-sweep for simplicity:
-    // Return to start angle if needed (optional)
-    for (int i=0;i<N;i++) {
-        stepperMove(AZ_motor, -step_deg*DEG, speed);
-        while (AZ_motor->busy);
-        //HAL_Delay(200);
-
-        if (magReadRaw(&d) != HAL_OK) { i--; continue; }
-
-        float cx = (float)d.x - mx;
-        float cy = (float)d.y - my;
-
-        sxx += cx*cx;
-        sxy += cx*cy;
-        syy += cy*cy;
-    }
-    sxx /= N; sxy /= N; syy /= N;
-
-    // 3) Eigendecompose covariance -> eigenvalues λ1, λ2 and unit eigenvectors v1, v2
-    float l1, l2, vx1, vy1, vx2, vy2;
-    eigen2x2(sxx, sxy, syy, &l1, &l2, &vx1, &vy1, &vx2, &vy2);
-
-    // Guard against degenerate/negative values (add tiny floor)
-    const float eps = 1e-6f;
-    if (l1 < eps) l1 = eps;
-    if (l2 < eps) l2 = eps;
-
-    // 4) Whitening matrix M = V * diag(1/sqrt(l)) * V^T
-    float s1 = 1.0f / sqrtf(l1);
-    float s2 = 1.0f / sqrtf(l2);
-
-    // V = [v1 v2], with v1=(vx1,vy1), v2=(vx2,vy2)
-    // M = s1*v1*v1^T + s2*v2*v2^T
-    float M00 = s1*vx1*vx1 + s2*vx2*vx2;
-    float M01 = s1*vx1*vy1 + s2*vx2*vy2;
-    float M10 = s1*vy1*vx1 + s2*vy2*vx2;
-    float M11 = s1*vy1*vy1 + s2*vy2*vy2;
-
-    MagCalib_t calib;
-    calib.x_offset = mx;
-    calib.y_offset = my;
-    calib.softiron[0][0] = M00;
-    calib.softiron[0][1] = M01;
-    calib.softiron[1][0] = M10;
-    calib.softiron[1][1] = M11;
-
-    return calib;
-}
-*/

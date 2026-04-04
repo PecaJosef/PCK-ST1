@@ -66,7 +66,6 @@ I2C_HandleTypeDef hi2c3;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim8;
 TIM_HandleTypeDef htim17;
@@ -91,7 +90,6 @@ static void MX_UART5_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM17_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM4_Init(void);
 static void MX_TIM5_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_TIM1_Init(void);
@@ -146,7 +144,6 @@ int main(void)
   MX_TIM17_Init();
   MX_USB_DEVICE_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_TIM5_Init();
   MX_TIM8_Init();
   MX_TIM1_Init();
@@ -154,66 +151,11 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
-
-  //Stepper_IT_Enable();
-
-  //Stepper_Enable(&EL_Axis_motor);
-  //Stepper_Enable(&EL_Axis_motor);
-  //Stepper_Enable(&AZ_Axis_motor);
-  //Stepper_Enable(&RA_Axis_motor);
-
-
-
-  //Mag_Init(&hi2c3);
-  //MagCalib_t magCalib;
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-/*
-  GPS_Data_t GPS_Data;
-  GPS_Init_DMA();
-  HAL_Delay(5000);
-  GPS_Config();
 
-  float Heading = GetCalibratedHeading(&calib, 5.42f);
-  printf("Heading: %.02f\r\n", Heading);
-  if (Heading<=180.0)
-  {
-	  Stepper_Move(&AZ_Axis_motor, Heading, 5.0f, 0);
-  }
-  else
-  {
-	  Stepper_Move(&AZ_Axis_motor, 360.0f-Heading, 5.0f, 1);
-  }
-  while(AZ_Axis_motor.busy)
-  {
-  }
-  Heading = GetCalibratedHeading(&calib, 5.42f);
-  printf("Heading: %.02f\r\n", Heading);
-  if (Heading<=180.0)
-    {
-  	  Stepper_Move(&AZ_Axis_motor, Heading, 5.0f, 0);
-    }
-    else
-    {
-  	  Stepper_Move(&AZ_Axis_motor, 360.0f-Heading, 5.0f, 1);
-    }
-    while(AZ_Axis_motor.busy)
-    {
-    }
-*/
-
-  /*
-  for (uint16_t ang = 0; ang <=360; ang=ang+10)
-  {
-	  float Heading = GetCalibratedHeading(&calib, 5.42f);
-	  printf("Angle: %u   Heading: %.02f   Error: %.02f\r\n",360-ang, Heading, (360-ang)-Heading);
-	  Stepper_Move(&AZ_Axis_motor, 10.0f, 7.5f, 0);
-	  while(AZ_Axis_motor.busy){}
-  }
-*/
   stepperInit();
   Stepper_nSleep(GPIO_PIN_SET);
   Mag_Init(&hi2c3);
@@ -236,30 +178,7 @@ int main(void)
 	controlLoop();
 	commandHandler();
 	telemetryHandler();
-	  /*
-	GPS_Data = Get_GPS_Data();
-	HAL_Delay(500);
 
-	printf("Lat: %.6f, Lon: %.6f, Alt: %.2f m, Sats: %d, HDOP: %.2f, Fix: %d, Date: %02u-%02u-%02u\r\n",
-		 GPS_Data.latitude,
-		 GPS_Data.longitude,
-		 GPS_Data.altitude,
-		 GPS_Data.satellites,
-		 GPS_Data.hdop,
-		 GPS_Data.fix,
-		 GPS_Data.day,
-		 GPS_Data.month,
-		 GPS_Data.year);
-
-	HAL_Delay(500);
-	printf("Heading: %0.2f\r\n",GetCalibratedHeading(&calib, 5.42f));
-	wmm_init();
-	float wmm_date = wmm_get_date(GPS_Data.year, GPS_Data.month, GPS_Data.day);
-	float declination;
-	E0000(GPS_Data.latitude, GPS_Data.longitude, wmm_date, &declination);
-	printf("Magnetic declination: %0.2f\r\n",declination);
-	HAL_Delay(2500);
-*/
   }
 
   /* USER CODE END 3 */
@@ -635,51 +554,6 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief TIM4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 6399;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 5000;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM4_Init 2 */
-
-  /* USER CODE END TIM4_Init 2 */
-
-}
-
-/**
   * @brief TIM5 Initialization Function
   * @param None
   * @retval None
@@ -817,23 +691,53 @@ static void MX_TIM17_Init(void)
 
   /* USER CODE END TIM17_Init 0 */
 
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
   /* USER CODE BEGIN TIM17_Init 1 */
 
   /* USER CODE END TIM17_Init 1 */
   htim17.Instance = TIM17;
-  htim17.Init.Prescaler = 0;
+  htim17.Init.Prescaler = 63;
   htim17.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim17.Init.Period = 65535;
+  htim17.Init.Period = 1000;
   htim17.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim17.Init.RepetitionCounter = 0;
-  htim17.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim17.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim17) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim17) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 1000;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim17, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim17, &sBreakDeadTimeConfig) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM17_Init 2 */
 
   /* USER CODE END TIM17_Init 2 */
+  HAL_TIM_MspPostInit(&htim17);
 
 }
 
@@ -994,9 +898,6 @@ static void MX_GPIO_Init(void)
                           |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
                           |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(IREG_GPIO_Port, IREG_Pin, GPIO_PIN_SET);
-
   /*Configure GPIO pins : PWR_BTN_LED_Pin DEC_EN_Pin DEC_DIR_Pin LED2_Pin
                            LED1_Pin */
   GPIO_InitStruct.Pin = PWR_BTN_LED_Pin|DEC_EN_Pin|DEC_DIR_Pin|LED2_Pin
@@ -1041,10 +942,10 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : STEP_SLEEP_n_Pin ALT_EN_Pin ALT_DIR_Pin ALT_STEP_Pin
                            RA_EN_Pin RA_DIR_Pin LED_USB_Pin LED_DC_Pin
-                           CAM_SHUTTER_Pin CAM_FOCUS_Pin RPI_PWR_EN_Pin IREG_Pin */
+                           CAM_SHUTTER_Pin CAM_FOCUS_Pin RPI_PWR_EN_Pin */
   GPIO_InitStruct.Pin = STEP_SLEEP_n_Pin|ALT_EN_Pin|ALT_DIR_Pin|ALT_STEP_Pin
                           |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
-                          |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin|IREG_Pin;
+                          |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

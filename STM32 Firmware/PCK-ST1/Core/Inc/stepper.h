@@ -45,10 +45,10 @@
 #define RA_STEPS_PER_ARCMIN ((STEPS_PER_REV*RA_MICROSTEPPING*RA_GEAR_RATIO)/ARCMIN_FULL_ROT)
 
 //Positive direction is opposite to Homing direction -> while homing the stepper moves in negative direction towards endstop
-#define AZ_POS_DIR 0
-#define ALT_POS_DIR 1
-#define DEC_POS_DIR 1
-#define RA_POS_DIR 0
+#define AZ_POS_DIR 1
+#define ALT_POS_DIR 0
+#define DEC_POS_DIR 0
+#define RA_POS_DIR 1
 
 #define RA_PWM_TIM &htim1 //Main timer - generates step signal
 #define RA_PWM_CH TIM_CHANNEL_2
@@ -63,6 +63,11 @@
 #define STEPPER_TIMER TIM3 //Timer for ALT/AZ axes - generates periodic interrupts if enabled -> to drive the axes
 #define STEPPER_TIMER_PTR &htim3
 
+#define IREG_TIMER TIM17
+#define IREG_TIMER_PTR &htim17
+#define IREG_TIM_CHANNEL TIM_CHANNEL_1
+#define IREG_ARR 1000
+
 #define SECONDS_IN_DAY 86164
 #define TRACKING_FREQ ((STEPS_PER_REV*RA_GEAR_RATIO*RA_MICROSTEPPING)/SECONDS_IN_DAY)
 
@@ -71,13 +76,25 @@ typedef enum {
     PWM_OUT_N
 } PWM_OutputType_t;
 
-
+/*
 typedef enum {
     AXIS_HOMING_IDLE,
     AXIS_HOMING_COARSE,
     AXIS_HOMING_BACKOFF,
     AXIS_HOMING_FINE,
     AXIS_HOMING_DONE
+} AxisHomingState_t;
+*/
+
+typedef enum {
+    AXIS_HOMING_IDLE,
+    AXIS_HOMING_SEARCH_COARSE, //Fast search
+    AXIS_HOMING_BACKOFF,       //Clear the sensor
+    AXIS_HOMING_SEARCH_FINE,   //Slow approach for Edge A
+    AXIS_HOMING_OVERSHOOT,     //Move past Edge A
+    AXIS_HOMING_REVERSE_SEARCH, //Slow approach for Edge B from other side
+    AXIS_HOMING_GO_TO_CENTER,  //Move to (edgeA+edgeB)/2
+    AXIS_HOMING_DONE,
 } AxisHomingState_t;
 
 typedef struct {
@@ -117,6 +134,8 @@ typedef struct {
 	uint32_t PWM_Channel; //PWM (STEP) signal channel
 	TIM_HandleTypeDef *Step_Counter_Timer; //Timer for counting steps
 	PWM_OutputType_t PWM_Type; //PWM Channel polarity
+	float edgeA; //Position variable for precise homing in the middle of endstop active zone
+	float edgeB; // -//-
 
 }StepperMotor_t;
 
@@ -131,6 +150,7 @@ extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim5;
 extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim17;
 
 void stepperInit();
 
@@ -157,5 +177,7 @@ void Stepper_nSleep(bool n_sleep);
 void stepsGenerating(StepperMotor_t *Axis);
 
 void stepperStop(StepperMotor_t *Axis);
+
+void setCurrent(float percentage);
 
 #endif /* INC_STEPPER_H_ */
