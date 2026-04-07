@@ -528,15 +528,16 @@ def getAlignmentError(image, center_offset, debug=False):
   else:
     center_of_rotation = center_offset + image_center
 
-  ncpFound, NCP_coordinates, NCP_error, RA_angle = getNCPposition(Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, center_of_rotation, star_distances, star_Polaris_RA_angle)
+  ncpFound, NCP_coordinates, NCP_error, zero_RA_angle = getNCPposition(Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, center_of_rotation, star_distances, star_Polaris_RA_angle)
 
   if (debug and ncpFound):
-    drawNCP(image, NCP_coordinates, Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, RA_angle)
+    drawNCP(image, NCP_coordinates, Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, zero_RA_angle)
 
     print("Polaris", Polaris, "NCP", NCP_coordinates, "Yildun", Yildun, "OV Cephein", OV_Cephei,"2 Ursae Minoris", Ursae_Minoris_2)
 
   #Both Polaris and NCP found
   if (polarisFound == True and ncpFound == True):
+    RA_angle = (270.0 - zero_RA_angle) % 360.0
     return NCP_error[0], NCP_error[1], polarisFound, ncpFound, RA_angle
   #Polaris found but finding NCP unsuccesful
   elif (polarisFound == True and ncpFound == False):
