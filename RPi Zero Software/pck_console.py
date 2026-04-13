@@ -38,8 +38,7 @@ SIMPLE_COMMANDS = [
     ("HOME", "$HOME", TH_SUCCESS),
     ("CALIBRATION", "$CALIBRATE", TH_SUCCESS),
     ("ALIGNMENT", "$ALIGN", TH_SUCCESS),
-    ("ALIGNMENT TEST", "$PATEST", TH_WARNING),
-    ("PARK", "$PARK", TH_WARNING),
+    ("PARK", "$MOVE:PARK", TH_WARNING),
     ("ECHO", "$ECHO", TH_ACCENT2),
     ("RPI ECHO", "$RPI:ECHO", TH_ACCENT2),
     ("RPI SHUTDOWN", "$RPI:SHUTDOWN", TH_WARNING),
@@ -48,7 +47,7 @@ SIMPLE_COMMANDS = [
 # ── Toggle commands ──────────────────────────────────────────
 #   Each entry: ("Base Label", "Command ON", "Command OFF")
 TOGGLE_COMMANDS = [
-    ("RPI POWER", "$RPI:ON", "$RPI:OFF"),
+    ("RPI POWER", "$RPI:START", "$RPI:STOP"),
     ("MOTORS", "$EN", "$DIS"),
     ("TRACKING", "$TRACKING:START", "$TRACKING:STOP"),
     ("CALIBRATION", "$CALIB:ON", "$CALIB:OFF"),
@@ -60,38 +59,58 @@ MOVE_COMMANDS = [
     ("AZ",  "$MOVE:AZ:{angle}:{speed}"),
     ("ALT", "$MOVE:ALT:{angle}:{speed}"),
     ("RA",  "$MOVE:RA:{angle}:{speed}"),
-    ("DEC",  "$MOVE:DEC:{angle}:{speed}"),
+    ("DEC", "$MOVE:DEC:{angle}:{speed}"),
 ]
 
 # ── Telemetry ────────────────────────────────────────────────
 TELEMETRY_COMMAND = "$TEL:FULL"
 
+# Updated to match: $TEL:AZpos:ALTpos:RApos:DECpos:Voltage:RAcoordinates:DECcoordinates...
 TELEMETRY_FIELDS = [
     "AZ",
     "ALT",
     "RA",
     "DEC",
     "VOLTAGE",
+    "RA COORD",
+    "DEC COORD",
 ]
 
+# Displayed as text cards (Row 1: AZ, ALT, RA, DEC | Row 2: VOLTAGE, RA COORD, DEC COORD)
 DISPLAY_ORDER = [
     "AZ",
     "ALT",
-    "VOLTAGE",
     "RA",
     "DEC",
+    "VOLTAGE",
+    "RA COORD",
+    "DEC COORD",
 ]
 
+# Displayed as graphs (excluding coordinates)
+PLOT_ORDER = [
+    "AZ",
+    "ALT",
+    "RA",
+    "DEC",
+    "VOLTAGE",
+]
+
+# Updated to match: ...Homed:Calibrated:gpsOK:gpsFixed:rpiReady:polarAligned:tracking:moveEnabled:fault
 FLAG_FIELDS = [
     "HOMED",
     "CALIBRATED",
     "GPS OK",
     "GPS FIXED",
     "RPI READY",
+    "POLAR ALIGNED",
+    "TRACKING",
     "MOVE ENABLED",
+    "FAULT",
 ]
 
-ERROR_FLAGS = {"ERROR", "LIMIT_AZ", "LIMIT_ALT"}
+# Adding FAULT so it renders as a red LED
+ERROR_FLAGS = {"ERROR", "LIMIT_AZ", "LIMIT_ALT", "FAULT"}
 
 TELEMETRY_RATES = {
     "0.1 Hz": 0.1,
@@ -281,7 +300,7 @@ class App(tk.Tk):
 
         tk.Label(right, text="TELEMETRY", font=("Segoe UI", 7, "bold"),
                  bg=TH["panel"], fg=TH["dim"]).grid(row=0, column=0, columnspan=5,
-                                                     sticky="w", pady=(6, 0))
+                                                    sticky="w", pady=(6, 0))
         self._tel_rate_var = tk.StringVar(value="1 Hz")
         col = 0
         for label in TELEMETRY_RATES:
@@ -641,10 +660,13 @@ class App(tk.Tk):
         cards.pack(fill=tk.X, pady=(0, 5))
 
         self._val_labels = {}
+        # Render the text cards based on DISPLAY_ORDER
         for i, f in enumerate(DISPLAY_ORDER):
+            r = i // 4
+            c = i % 4
             card = tk.Frame(cards, bg=TH["panel"], padx=8, pady=5)
-            card.grid(row=0, column=i, padx=3, sticky="ew")
-            cards.columnconfigure(i, weight=1)
+            card.grid(row=r, column=c, padx=3, pady=3, sticky="ew")
+            cards.columnconfigure(c, weight=1)
             tk.Label(card, text=f, font=("Segoe UI", 7, "bold"),
                      bg=TH["panel"], fg=TH["dim"]).pack(anchor="w")
             lbl = tk.Label(card, textvariable=self._tel_var[f],
@@ -655,7 +677,8 @@ class App(tk.Tk):
         plot_frame = tk.Frame(parent, bg=TH["bg"])
         plot_frame.pack(fill=tk.BOTH, expand=True)
 
-        n = len(DISPLAY_ORDER)
+        # Build plots based on PLOT_ORDER only
+        n = len(PLOT_ORDER)
         ncols = min(3, n)
         nrows = (n + ncols - 1) // ncols
 
@@ -666,7 +689,7 @@ class App(tk.Tk):
                                   hspace=0.55, wspace=0.35)
         self._axes = {}
         self._lines = {}
-        for idx, f in enumerate(DISPLAY_ORDER):
+        for idx, f in enumerate(PLOT_ORDER):
             ax = self._fig.add_subplot(nrows, ncols, idx + 1)
             ax.set_facecolor(TH["plot_bg"])
             ax.set_title(f, color=TH["text"], fontsize=8, pad=3,
@@ -765,6 +788,52 @@ class App(tk.Tk):
     def _divider(self, parent):
         tk.Frame(parent, bg=TH["border"], height=1).pack(fill=tk.X, padx=10,
                                                           pady=(0, 6))
+
+    # ── Coordinate Formatting ──────────────────────────────
+    def _format_ra(self, val_str):
+            # If it's already formatted with colons from the device
+            if ":" in val_str:
+                p = val_str.split(":")
+                if len(p) >= 3:
+                    try:
+                        return f"{int(p[0]):02d}h {int(p[1]):02d}m {int(float(p[2])):02d}s"
+                    except ValueError:
+                        pass
+            # If it's a raw decimal number (assumed degrees)
+            try:
+                val = float(val_str)
+                
+                # Convert degrees to hours
+                val_hours = val / 15.0 
+                
+                h = int(val_hours)
+                m_dec = abs(val_hours - h) * 60.0
+                m = int(m_dec)
+                s = (m_dec - m) * 60.0
+                
+                return f"{h:02d}h {m:02d}m {int(s):02d}s"
+            except ValueError:
+                return val_str
+
+    def _format_dec(self, val_str):
+        if ":" in val_str:
+            p = val_str.split(":")
+            if len(p) >= 3:
+                try:
+                    return f"{int(p[0]):02d}° {abs(int(p[1])):02d}'{abs(int(float(p[2]))):02d}\""
+                except ValueError:
+                    pass
+        try:
+            val = float(val_str)
+            sign = "-" if val < 0 else "+"
+            val = abs(val)
+            d = int(val)
+            m_dec = (val - d) * 60.0
+            m = int(m_dec)
+            s = (m_dec - m) * 60.0
+            return f"{sign}{d:02d}° {m:02d}'{int(s):02d}\""
+        except ValueError:
+            return val_str
 
     # ── Connection ─────────────────────────────────────────
     def _refresh_ports(self):
@@ -871,12 +940,20 @@ class App(tk.Tk):
 
             for i, f in enumerate(TELEMETRY_FIELDS):
                 if i < len(parts):
-                    try:
-                        val = float(parts[i])
-                        self._tel_buf[f].append(val)
-                        self._tel_var[f].set(f"{val:.3f}")
-                    except ValueError:
-                        pass
+                    raw_str = parts[i].strip()
+                    
+                    if f == "RA COORD":
+                        self._tel_var[f].set(self._format_ra(raw_str))
+                    elif f == "DEC COORD":
+                        self._tel_var[f].set(self._format_dec(raw_str))
+                    else:
+                        try:
+                            val = float(raw_str)
+                            self._tel_buf[f].append(val)
+                            self._tel_var[f].set(f"{val:.3f}")
+                        except ValueError:
+                            # Safely handle pure string data
+                            self._tel_var[f].set(raw_str)
 
             off = len(TELEMETRY_FIELDS)
             for j, flag in enumerate(FLAG_FIELDS):
@@ -896,7 +973,8 @@ class App(tk.Tk):
     # ── Plot update ────────────────────────────────────────
     def _update_plots(self):
         t_list = list(self._t_buf)
-        for f in DISPLAY_ORDER:
+        # Update plots based on PLOT_ORDER
+        for f in PLOT_ORDER:
             vals = list(self._tel_buf[f])
             if len(vals) < 2:
                 continue
@@ -931,7 +1009,6 @@ class App(tk.Tk):
         self._console.configure(state=tk.NORMAL)
         self._console.delete("1.0", tk.END)
         self._console.configure(state=tk.DISABLED)
-
 
 # ════════════════════════════════════════════════════════════
 
