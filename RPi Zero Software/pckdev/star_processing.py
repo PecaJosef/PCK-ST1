@@ -537,7 +537,7 @@ def getAlignmentError(image, center_offset, debug=False):
 
   #Both Polaris and NCP found
   if (polarisFound == True and ncpFound == True):
-    RA_angle = (270.0 - zero_RA_angle) % 360.0
+    RA_angle = (360.0 - zero_RA_angle) % 360.0
     return NCP_error[0], NCP_error[1], polarisFound, ncpFound, RA_angle
   #Polaris found but finding NCP unsuccesful
   elif (polarisFound == True and ncpFound == False):
