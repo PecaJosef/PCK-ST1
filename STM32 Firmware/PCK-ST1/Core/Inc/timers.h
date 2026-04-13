@@ -13,6 +13,7 @@
 #include "main.h"
 #include "stm32l4xx_hal.h"
 #include "usbd_cdc_if.h"
+#include "camera.h"
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 

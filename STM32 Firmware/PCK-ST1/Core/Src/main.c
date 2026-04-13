@@ -38,6 +38,8 @@
 #include "cmd_handler.h"
 #include "uart_it.h"
 #include "telemetry.h"
+#include "astro.h"
+#include "camera.h"
 
 
 /* USER CODE END Includes */
@@ -68,6 +70,7 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim8;
+TIM_HandleTypeDef htim16;
 TIM_HandleTypeDef htim17;
 
 UART_HandleTypeDef huart4;
@@ -95,6 +98,7 @@ static void MX_TIM8_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -149,6 +153,7 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_ADC1_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -164,6 +169,7 @@ int main(void)
   GPS_Init_DMA();
   wmm_init();
   adcVoltageInit();
+  cameraInit();
 
   ledsSet(0); //Turns LEDS off by default
   pwrButtonSet(1); //Turns Power button LED ON by default
@@ -178,6 +184,7 @@ int main(void)
 	controlLoop();
 	commandHandler();
 	telemetryHandler();
+	cameraHandler();
 
   }
 
@@ -680,6 +687,67 @@ static void MX_TIM8_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 63999;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 4;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_OC_ConfigChannel(&htim16, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim16, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+
+}
+
+/**
   * @brief TIM17 Initialization Function
   * @param None
   * @retval None
@@ -896,7 +964,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, STEP_SLEEP_n_Pin|ALT_EN_Pin|ALT_DIR_Pin|ALT_STEP_Pin
                           |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
-                          |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin, GPIO_PIN_RESET);
+                          |CAM_FOCUS_Pin|CAM_SHUTTER_Pin|RPI_PWR_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PWR_BTN_LED_Pin DEC_EN_Pin DEC_DIR_Pin LED2_Pin
                            LED1_Pin */
@@ -942,10 +1010,10 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : STEP_SLEEP_n_Pin ALT_EN_Pin ALT_DIR_Pin ALT_STEP_Pin
                            RA_EN_Pin RA_DIR_Pin LED_USB_Pin LED_DC_Pin
-                           CAM_SHUTTER_Pin CAM_FOCUS_Pin RPI_PWR_EN_Pin */
+                           CAM_FOCUS_Pin CAM_SHUTTER_Pin RPI_PWR_EN_Pin */
   GPIO_InitStruct.Pin = STEP_SLEEP_n_Pin|ALT_EN_Pin|ALT_DIR_Pin|ALT_STEP_Pin
                           |RA_EN_Pin|RA_DIR_Pin|LED_USB_Pin|LED_DC_Pin
-                          |CAM_SHUTTER_Pin|CAM_FOCUS_Pin|RPI_PWR_EN_Pin;
+                          |CAM_FOCUS_Pin|CAM_SHUTTER_Pin|RPI_PWR_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

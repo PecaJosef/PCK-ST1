@@ -122,10 +122,10 @@ void Error_Handler(void);
 #define LED_USB_GPIO_Port GPIOB
 #define LED_DC_Pin GPIO_PIN_5
 #define LED_DC_GPIO_Port GPIOB
-#define CAM_SHUTTER_Pin GPIO_PIN_6
-#define CAM_SHUTTER_GPIO_Port GPIOB
-#define CAM_FOCUS_Pin GPIO_PIN_7
+#define CAM_FOCUS_Pin GPIO_PIN_6
 #define CAM_FOCUS_GPIO_Port GPIOB
+#define CAM_SHUTTER_Pin GPIO_PIN_7
+#define CAM_SHUTTER_GPIO_Port GPIOB
 #define RPI_PWR_EN_Pin GPIO_PIN_8
 #define RPI_PWR_EN_GPIO_Port GPIOB
 

@@ -35,6 +35,7 @@ typedef struct {
 	bool rpiRDY;
 	bool moveEnabled;
 	bool calibForceEnable;
+	bool tracking;
 	bool polarAligned;
 	bool fault;
 
@@ -47,8 +48,9 @@ typedef enum {
 	CALIBRATION, //Calibrates the magnetometer or loads calibration data
 	ALIGNMENT, //Pointing to NCP, communication with RPi - taking photo
 	IDLE, //Not moving, waiting for action (commands), can be powered off while in idle
-	AXIS_MOVING, //Moving with any axis - GOTO
-	GUIDING, //Moving RA axis to counter Earth's rotation
+	AXIS_MOVING, //Moving with any axis
+	GOTO, //GOTO movement
+	TRACKING, //Moving RA axis to counter Earth's rotation
 	FAULT, //Error state - waiting for reset
 	SHUTDOWN, //Shutting down state - takes care of safe shut down of RPi and the whole system
 }ControlState_t;
@@ -93,7 +95,6 @@ typedef struct{
 	bool moveRequested;
 }MoveRequest_t;
 
-
 extern ControlState_t controlState;
 extern ControlState_t prevControlState;
 
@@ -110,6 +111,8 @@ extern StatusFlags_t statusFlags;
 
 void controlLoop();
 
+void handleGoto();
+
 void handleMoving();
 
 void handleAligning();
@@ -123,6 +126,8 @@ void handleHoming();
 void handleCalibration();
 
 void handleShutdown();
+
+void handleIdle();
 
 void handleFault();
 

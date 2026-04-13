@@ -10,6 +10,7 @@
 #include "telemetry.h"
 
 StepperMotor_t ALT_AxisMotor = {
+	.AxisID = ALT,
 	.STEP_Port = ALT_STEP_GPIO_Port,
 	.STEP_Pin = ALT_STEP_Pin,
 	.EN_Port = ALT_EN_GPIO_Port,
@@ -41,6 +42,7 @@ StepperMotor_t ALT_AxisMotor = {
 };
 
 StepperMotor_t AZ_AxisMotor = {
+	.AxisID = AZ,
 	.STEP_Port = AZ_STEP_GPIO_Port,
 	.STEP_Pin = AZ_STEP_Pin,
 	.EN_Port = AZ_EN_GPIO_Port,
@@ -72,6 +74,7 @@ StepperMotor_t AZ_AxisMotor = {
 };
 
 StepperMotor_t RA_AxisMotor = {
+	.AxisID = RA,
 	.STEP_Port = RA_STEP_GPIO_Port,
 	.STEP_Pin = RA_STEP_Pin,
 	.EN_Port = RA_EN_GPIO_Port,
@@ -106,6 +109,7 @@ StepperMotor_t RA_AxisMotor = {
 };
 
 StepperMotor_t DEC_AxisMotor = {
+	.AxisID = DEC,
 	.STEP_Port = DEC_STEP_GPIO_Port,
 	.STEP_Pin = DEC_STEP_Pin,
 	.EN_Port = DEC_EN_GPIO_Port,
@@ -199,72 +203,11 @@ void stepperDisable(StepperMotor_t *Axis)
 	Axis->enabled = false;
 }
 
-void trackingStart(StepperMotor_t *Axis)
-{
-	if(!Axis->enabled)
-	{
-		stepperEnable(Axis);
-	}
-
-	uint32_t ccr = (TRACKING_TIMER_FREQ/TRACKING_FREQ) / 2;
-	HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, Axis->Positive_dir);
-	Axis->Position.direction = Axis->Positive_dir;
-
-	__HAL_TIM_SET_PRESCALER(Axis->PWM_Timer, TRACKING_PRESCALER-1); //RA axis base timer frequency 3.2MHz
-	__HAL_TIM_SET_AUTORELOAD(Axis->PWM_Timer, (TRACKING_TIMER_FREQ/TRACKING_FREQ)-1); //ARR based on tracking frequency
-	__HAL_TIM_SET_COMPARE(Axis->PWM_Timer, Axis->PWM_Channel, ccr); //PWM duty cycle ~50%
-	__HAL_TIM_SET_AUTORELOAD(Axis->Step_Counter_Timer, 0xFFFFFFFF - 1); //Max steps ceiling - runs indefinitely
-	__HAL_TIM_SET_COUNTER(Axis->Step_Counter_Timer, 0); //Reset counter
-	__HAL_TIM_CLEAR_IT(Axis->Step_Counter_Timer, TIM_IT_UPDATE);
-
-	//Start Step counting timer (slave counter) and PWM timer (step pulse generator)
-	HAL_TIM_Base_Start_IT(Axis->Step_Counter_Timer);
-
-	if (Axis->PWM_Type == PWM_OUT_P)
-	{
-		HAL_TIM_PWM_Start(Axis->PWM_Timer, Axis->PWM_Channel);
-	}
-	else if (Axis->PWM_Type == PWM_OUT_N)
-	{
-		HAL_TIMEx_PWMN_Start(Axis->PWM_Timer, Axis->PWM_Channel);
-	}
-	//Set flags
-	Axis->enabled = true;
-	Axis->busy = true;
-
-}
-
-void trackingStop(StepperMotor_t *Axis)
-{
-		//Update the axis position
-		updatePosition(Axis);
-
-		//Stop PWM timer
-		if (Axis->PWM_Type == PWM_OUT_P)
-		{
-			HAL_TIM_PWM_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
-		}
-		else if (Axis->PWM_Type == PWM_OUT_N)
-		{
-			HAL_TIMEx_PWMN_Stop(Axis->PWM_Timer, Axis->PWM_Channel);
-		}
-		//Stop STEP counting timer
-		HAL_TIM_Base_Stop_IT(Axis->Step_Counter_Timer);
-
-		Axis->Position.lastStepsRead = 0;
-		__HAL_TIM_SET_COUNTER(Axis->Step_Counter_Timer, 0);
-
-		Axis->busy = false;
-
-		__HAL_TIM_SET_PRESCALER(RA_PWM_TIM, (CORE_FREQ/STEPPER_TIMER_HI_FREQ)-1); //Reset RA timer to initial values
-
-}
-
 
 void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in arcmin, speed is in deg/s!
 {
-	if (!Axis || speed <= 0.0f || angle == 0.0f)
-	        return;
+	if (!Axis || speed <= 0.0f || fabsf(angle) < 0.0001f) return;
+
 	else
 	{
 		if(!Axis->enabled)
@@ -301,6 +244,9 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in a
 			uint32_t arr = (uint32_t)ceilf(STEPPER_TIMER_HI_FREQ / (speed*Axis->stepsPerArcmin*DEG));
 			uint32_t ccr = arr / 2;
 
+			//Return to prevent "infinite" rotation (if steps = 0, the autoreload register would underflow to 2^32 - 1)
+			if(steps <= 1 || arr <= 0) return;
+
 			//Set PWM (STEP) timer frequency
 			__HAL_TIM_SET_AUTORELOAD(Axis->PWM_Timer, arr-1);
 			__HAL_TIM_SET_COMPARE(Axis->PWM_Timer, Axis->PWM_Channel, ccr);
@@ -333,10 +279,7 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in a
 
 void stepperStop(StepperMotor_t *Axis)
 {
-	if (!Axis || !Axis->busy)
-	{
-		return;
-	}
+	if (!Axis || !Axis->busy) return;
 
 	//Update position
 	if (Axis->highPrecisionAxis && __HAL_TIM_GET_COUNTER(Axis->Step_Counter_Timer) == 0)

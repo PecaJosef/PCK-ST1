@@ -50,6 +50,7 @@
 #include "telemetry.h"
 #include "cmd_handler.h"
 #include "mag.h"
+#include "astro.h"
 
 
 /*
@@ -83,7 +84,7 @@
 
 #define BACKOFF_DIST 10.0f*DEG
 #define OVERSHOOT_DIST 20.0f*DEG
-#define HOMING_DIST 100.0f*DEG
+#define HOMING_DIST 135.0f*DEG
 #define FINE_DIST 12.5f*DEG //Fine dist needs to be slightly larger than backoff
 
 #define COR_ANGLE 45.0f
@@ -200,7 +201,7 @@ StatusFlags_t statusFlags = {
 		.gpsFixed = false,
 		.homed = false,
 		.calibrated = false,
-		.polarAligned = false,
+		.polarAligned = true, //DEBUG
 		.magOK = false,
 		.moveEnabled = true,
 		.rpiRDY = false,
@@ -250,6 +251,7 @@ MoveRequest_t RA_MoveRequest = {
 		.speed = 0,
 		.moveRequested = false,
 };
+
 
 Align_t alignmentData = {
 	.altAngle = 0,
@@ -322,6 +324,7 @@ void controlLoop()
 			break;
 
 		case PWR_OFF_POWERING_OFF:
+			pwrButtonSet(true);
 			ledsSet(true);
 
 			if (btn == RELEASED)
@@ -375,11 +378,15 @@ void controlLoop()
 		handleAligning();
 		break;
 	case IDLE:
-		//handleIdle();
+		handleIdle();
 		break;
 
 	case AXIS_MOVING:
 		handleMoving();
+		break;
+
+	case GOTO:
+		handleGoto();
 		break;
 
 	case SHUTDOWN:
@@ -412,6 +419,7 @@ void handleLowPowerIdle()
 				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_RELEASE;
 				//Turn LEDs ON on button press
 				ledsSet(true);
+				pwrButtonSet(true);
 			}
 			break;
 
@@ -1310,7 +1318,7 @@ void handleAligning()
 			corFirstImageCaptured = false;
 			corSecondImageCaptured = false;
 
-			controlState = LOW_POWER_IDLE;
+			controlState = IDLE;
 		}
 		break;
 
@@ -1333,6 +1341,8 @@ void handleMoving()
 	{
 		if(!AZ_MoveRequest.moveRequested && !ALT_MoveRequest.moveRequested && !RA_MoveRequest.moveRequested && !DEC_MoveRequest.moveRequested)
 		{
+			//Disable the RA DEC position tracking
+			coordinatesRaDec.trackingPosition = false;
 			controlState = prevControlState;
 			return;
 		}
@@ -1358,6 +1368,49 @@ void handleMoving()
 		stepperMove(&DEC_AxisMotor, DEC_MoveRequest.angle, DEC_MoveRequest.speed);
 		DEC_MoveRequest.moveRequested = false;
 	}
+}
+
+
+/*
+ * --- GOTO MOVEMENT STATE
+ */
+
+void handleGoto()
+{
+	//If both RA and DEC axes are not moving and there is no goto requested the control loop shall return to the previous state
+	if(RA_AxisMotor.busy == false && DEC_AxisMotor.busy == false)
+	{
+		if(gotoRequest.gotoRequested == false)
+		{
+			coordinatesRaDec.trackingPosition = false;
+			controlState = prevControlState;
+			return;
+		}
+	}
+
+	if(gotoRequest.gotoRequested == true && RA_AxisMotor.busy == false && DEC_AxisMotor.busy == false)
+	{
+		gotoRaDec(gotoRequest.raAngle, gotoRequest.decAngle);
+		gotoRequest.gotoRequested = false;
+		coordinatesRaDec.trackingPosition = true;
+	}
+
+}
+
+
+/*
+ * --- IDLE STATE ---
+ */
+void handleIdle()
+{
+	uint8_t btn = readButtonDebounced();
+	ledsBlink();
+
+	if (btn == RELEASED)
+	{
+		return;
+	}
+
 }
 
 
@@ -1449,9 +1502,6 @@ void handleShutdown()
 				rpiShutdown();
 				timeoutStart(&rpiShutdownTimeout, RPI_SHUTDOWN_TIME);
 
-				//DEBUG
-				getTelemetry();
-
 				//Move all axes to zero position
 				stepperMove(&AZ_AxisMotor, -(AZ_AxisMotor.Position.angularPosition)*DEG, AZ_COARSE_SPEED);
 				stepperMove(&ALT_AxisMotor, -(ALT_AxisMotor.Position.angularPosition)*DEG, ALT_COARSE_SPEED);
@@ -1473,8 +1523,8 @@ void handleShutdown()
 				break;
 			}
 
-			//DEBUG
-			getTelemetry();
+			pwrButtonSet(false);
+			ledsSet(false);
 
 			//Cut off RPi power
 			rpiPowerOff();
@@ -1504,6 +1554,7 @@ void handleFault()
 
 	if((HAL_GetTick() - faultLastLedTicks) >= LED_BLINK_PERIOD_LONG)
 	{
+		faultLastLedTicks = HAL_GetTick();
 		//Blink the 4 LEDs to show binary error code
 		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, (errorCode & 0x01) ? faultLedState : GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, (errorCode & 0x02) ? faultLedState : GPIO_PIN_RESET);
@@ -1697,6 +1748,12 @@ void patestCommand(char **saveptr, UART_Source_t src)
 	controlState = ALIGNMENT;
 	alignmentState = ROUGH_ALIGNMENT_ALT;
 
+}
+
+void idleCommand(char **saveptr, UART_Source_t src)
+{
+	ledsSet(false);
+	controlState = IDLE;
 }
 
 static void resetStates()

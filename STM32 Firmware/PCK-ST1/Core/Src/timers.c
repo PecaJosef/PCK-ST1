@@ -23,5 +23,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	  //Stepper timer RA
 	  stepperStop(&RA_AxisMotor);
   }
+  else if(htim->Instance == CAMERA_TIM)
+  {
+	  cameraInterruptHandler();
+  }
 
 }

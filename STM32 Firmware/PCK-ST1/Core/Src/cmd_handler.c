@@ -12,6 +12,8 @@
 #include "usbd_cdc_if.h"
 #include "control_loop.h"
 #include "telemetry.h"
+#include "astro.h"
+#include "camera.h"
 
 
 // Buffers for PC and RPi commands
@@ -27,7 +29,11 @@ static void executeCommand(char *cmd, UART_Source_t src);
 
 static void moveParsing(char **saveptr, UART_Source_t src);
 
+static void gotoParsing(char **saveptr, UART_Source_t src);
+
 static void rpiParsing(char **saveptr, UART_Source_t src);
+
+static void exposureParsing(char **saveptr, UART_Source_t src);
 
 static void polarAlignmentParsing (char **saveptr, UART_Source_t src);
 
@@ -89,6 +95,18 @@ void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte)
     }
 }
 
+void uartSend(UART_Source_t src, const char *msg)
+{
+    if (src == PC_UART_SRC)
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+    else if (src == RPI_UART_SRC)
+        HAL_UART_Transmit(&huart5, (uint8_t*)msg, strlen(msg), 100);
+    else
+	{
+		return;
+	}
+}
+
 static void executeCommand(char *cmd, UART_Source_t src)
 {
 	char *token;
@@ -122,6 +140,16 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	{
 		//Move commands parsing
 		moveParsing(&saveptr, src);
+	}
+	else if(strcmp(token, "$GOTO")==0)
+	{
+		//GOTO command parsing
+		gotoParsing(&saveptr, src);
+	}
+	else if(strcmp(token, "$IMG")==0)
+	{
+		//Parsing the capture command
+		exposureParsing(&saveptr, src);
 	}
 	else if(strcmp(token, "$PA")==0)
 	{
@@ -163,6 +191,10 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	else if(strcmp(token, "$ALIGN")==0)
 	{
 		alignCommand(&saveptr, src);
+	}
+	else if(strcmp(token, "$IDLE")==0)
+	{
+		//idleCommand(&saveptr, src);
 	}
 	else if(strcmp(token, "$PATEST")==0)
 	{
@@ -223,6 +255,38 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 		return;
 	}
 
+	if(strcmp(command, "PARK")==0)
+	{
+		/*
+		AZ_MoveRequest.angle = -AZ_AxisMotor.Position.angularPosition*DEG;
+		AZ_MoveRequest.speed = AZ_COARSE_SPEED;
+		AZ_MoveRequest.moveRequested = true;
+
+		ALT_MoveRequest.angle = -ALT_AxisMotor.Position.angularPosition*DEG;
+		ALT_MoveRequest.speed = ALT_COARSE_SPEED;
+		ALT_MoveRequest.moveRequested = true;
+		*/
+		DEC_MoveRequest.angle = -DEC_AxisMotor.Position.angularPosition*DEG;
+		DEC_MoveRequest.speed = DEC_COARSE_SPEED;
+		DEC_MoveRequest.moveRequested = true;
+
+		RA_MoveRequest.angle = -RA_AxisMotor.Position.angularPosition*DEG;
+		RA_MoveRequest.speed = RA_COARSE_SPEED;
+		RA_MoveRequest.moveRequested = true;
+
+		//RA DEC coordinates must be updated during during parking - enable position tracking
+		coordinatesRaDec.trackingPosition = true;
+
+		//Changes state to MOVE and prevState to current state
+		if(controlState != AXIS_MOVING)
+		{
+			prevControlState = controlState; //Keep the previous control state intact if there are multiple $MOVE commands while in AXIS_MOVING state
+			controlState = AXIS_MOVING;
+		}
+
+		return;
+	}
+
 	while(command != NULL)
 	{
 
@@ -242,8 +306,6 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			{
 				AZ_MoveRequest.angle = atof(angle)*DEG;
 				AZ_MoveRequest.speed = atof(speed);
-				//CMD_Send(UART_SRC_PC, "AZ\r\n");
-				//printf("Move AZ angle:%.5f speed:%.5f\r\n",AZ_MoveRequest.angle, AZ_MoveRequest.speed);
 				AZ_MoveRequest.moveRequested = true;
 			}
 			else
@@ -257,8 +319,6 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 			{
 				ALT_MoveRequest.angle = atof(angle)*DEG;
 				ALT_MoveRequest.speed = atof(speed);
-				//CMD_Send(UART_SRC_PC, "ALT\r\n");
-				//printf("Move ALT angle:%.5f speed:%.5f\r\n",ALT_MoveRequest.angle, ALT_MoveRequest.speed);
 				ALT_MoveRequest.moveRequested = true;
 			}
 			else
@@ -300,7 +360,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 		}
 		command  = strtok_r(NULL, "$",saveptr);
 	}
-		//Changes state to MOVE and prevState to current state
+	//Changes state to MOVE and prevState to current state
 	if(controlState != AXIS_MOVING)
 	{
 		prevControlState = controlState; //Keep the previous control state intact if there are multiple $MOVE commands while in AXIS_MOVING state
@@ -308,35 +368,95 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 	}
 }
 
+// GOTO Command Parsing
+
+static void gotoParsing(char **saveptr, UART_Source_t src)
+{
+	//If some control state disables move, return early
+	if(statusFlags.moveEnabled == false)
+	{
+		uartSend(src, "ERR: MOVEMENT DISABLED!\r\n");
+		return;
+	}
+	//Return if the PCK-ST1 is not polar aligned
+	if(statusFlags.polarAligned == false)
+	{
+		uartSend(src, "ERR:NOT ALIGNED\r\n");
+		return;
+	}
+
+	//The command has the following format
+	//$GOTO:hh:mm:ss:dd:mm:ss
+
+	char *raHours_c = strtok_r(NULL, ":", saveptr);
+	char *raMinutes_c = strtok_r(NULL, ":", saveptr);
+	char *raSeconds_c = strtok_r(NULL, ":", saveptr);
+	char *decDegrees_c = strtok_r(NULL, ":", saveptr);
+	char *decArcmin_c = strtok_r(NULL, ":", saveptr);
+	char *decArcsec_c = strtok_r(NULL, ":", saveptr);
+
+	if (raHours_c == NULL || raMinutes_c == NULL || raSeconds_c == NULL || decDegrees_c == NULL || decArcmin_c == NULL || decArcsec_c == NULL)
+	{
+		uartSend(src, "ERR:FORMAT\r\n");
+		return;
+	}
+
+	int16_t raHours = atoi(raHours_c);
+	int16_t raMinutes = atoi(raMinutes_c);
+	int16_t raSeconds = atoi(raSeconds_c);
+
+	int16_t decDegrees = atoi(decDegrees_c);
+	int16_t decArcmin = atoi(decArcmin_c);
+	int16_t decArcsec = atoi(decArcsec_c);
+
+	if(raHours >= 24 || raHours < 0 || decDegrees > 90 || decDegrees < -90)
+	{
+		uartSend(src, "ERR:INVALID DATA\r\n");
+		return;
+	}
+
+	gotoRequest.raAngle = raHours*15.0f + raMinutes*15.0f/60.0f + raSeconds*15.0f/3600.0f;
+	gotoRequest.decAngle = decDegrees + decArcmin/60.0f + decArcsec/3600.0f;
+
+	gotoRequest.gotoRequested = true;
+
+	if (controlState != GOTO)
+	{
+		prevControlState = controlState;
+		controlState = GOTO;
+	}
+
+}
+
 
 static void rpiParsing(char **saveptr, UART_Source_t src)
 {
-	char *command;
+	char *rpiCommand;
 
-	command = strtok_r(NULL,":",saveptr); //Gets the RPI command type
-	if(strcmp(command, "ECHO")==0)
+	rpiCommand = strtok_r(NULL,":",saveptr); //Gets the RPI command type
+	if(strcmp(rpiCommand, "ECHO")==0)
 	{
 		uartSend(RPI_UART_SRC, "$ECHO\r\n");
 		uartSend(PC_UART_SRC, "Sent ECHO to RPi\r\n");
 	}
-	else if(strcmp(command, "SHUTDOWN")==0)
+	else if(strcmp(rpiCommand, "SHUTDOWN")==0)
 	{
 		rpiShutdown();
 	}
-	else if(strcmp(command, "ON")==0)
+	else if(strcmp(rpiCommand, "ON")==0)
 	{
 		rpiPowerOn();
 	}
-	else if(strcmp(command, "OFF")==0)
+	else if(strcmp(rpiCommand, "OFF")==0)
 	{
 		rpiPowerOff();
 	}
-	else if(strcmp(command, "ALIGN")==0)
+	else if(strcmp(rpiCommand, "ALIGN")==0)
 	{
 		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
 		uartSend(PC_UART_SRC, "#ALIGN CMD Sent\r\n");
 	}
-	else if(strcmp(command, "CAPTURE")==0)
+	else if(strcmp(rpiCommand, "CAPTURE")==0)
 	{
 		char *exposure = strtok_r(NULL, ":", saveptr);
 		char *filename = strtok_r(NULL, ":", saveptr);
@@ -368,7 +488,35 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 
 }
 
-void polarAlignmentParsing (char **saveptr, UART_Source_t src)
+//Image command parsing
+
+static void exposureParsing(char **saveptr, UART_Source_t src)
+{
+	char *imgExposure_c;
+	char *imgCount_c;
+
+	imgExposure_c = strtok_r(NULL, ":", saveptr);
+	imgCount_c = strtok_r(NULL, ":", saveptr);
+
+	if(imgExposure_c == NULL || imgCount_c == NULL)
+	{
+		uartSend(src, "ERR:FORMAT\r\n");
+		return;
+	}
+
+	float imgExposure = atof(imgExposure_c);
+	uint16_t imgCount = atoi(imgCount_c);
+
+	if(imgExposure <= 0 || imgCount <= 0)
+	{
+		uartSend(src, "ERR:FORMAT\r\n");
+		return;
+	}
+	//Capture images based on the exposure value and the number of images
+	captureImage(imgExposure, imgCount);
+}
+
+static void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 {
 	char *command;
 
@@ -530,8 +678,6 @@ static void telemetryParsing(char **saveptr, UART_Source_t src)
 	{
 		uartSend(src, "ERR:FORMAT\r\n");
 	}
-
-
 }
 
 static void isetParsing(char **saveptr, UART_Source_t src)
@@ -548,18 +694,6 @@ static void isetParsing(char **saveptr, UART_Source_t src)
 	setCurrent(percentage);
 }
 
-
-void uartSend(UART_Source_t src, const char *msg)
-{
-    if (src == PC_UART_SRC)
-        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-    else if (src == RPI_UART_SRC)
-        HAL_UART_Transmit(&huart5, (uint8_t*)msg, strlen(msg), 100);
-    else
-	{
-		return;
-	}
-}
 
 void rpiShutdown()
 {

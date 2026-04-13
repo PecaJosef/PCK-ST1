@@ -8,6 +8,7 @@
 #include "stepper.h"
 #include "cmd_handler.h"
 #include "control_loop.h"
+#include "astro.h"
 
 #define TELEMETRY_LED_PERIOD 200
 
@@ -36,19 +37,11 @@ void telemetryHandler()
 	}
 	telemetryLastTicks = HAL_GetTick();
 
-	//float voltage = getVoltage();
-
 	updatePosition(&AZ_AxisMotor);
 	updatePosition(&ALT_AxisMotor);
 	updatePosition(&RA_AxisMotor);
 	updatePosition(&DEC_AxisMotor);
 
-	/*
-	char dbgbuff[32];
-	sprintf(dbgbuff,"Position: %f\r\n", AZ_AxisMotor.Position.angularPosition);
-	uartSend(PC_UART_SRC, dbgbuff);
-	*/
-	//printf("Position: %f\r\n", AZ_AxisMotor.Position.angularPosition);
 	checkPowerInput();
 
 }
@@ -68,19 +61,24 @@ void getFullTelemetry()
 
 	char dbgbuff[128];
 	//Full telemetry in format
-	//$TEL:AZpos:ALTpos:RApos:DECpos:Voltage:Homed:Calibrated:gpsOK:gpsFixed:rpiReady:moveEnabled
-	sprintf(dbgbuff,"#TEL:%.3f:%.3f:%.3f:%.3f:%.3f:%d:%d:%d:%d:%d:%d\r\n",
+	//$TEL:AZpos:ALTpos:RApos:DECpos:Voltage:RAcoordinates:DECcoordinates:Homed:Calibrated:gpsOK:gpsFixed:rpiReady:polarAligned:tracking:moveEnabled:fault
+	sprintf(dbgbuff,"#TEL:%.3f:%.3f:%.3f:%.3f:%.3f:%.5f:%.5f:%d:%d:%d:%d:%d:%d:%d:%d:%d\r\n",
 			AZ_AxisMotor.Position.angularPosition,
 			ALT_AxisMotor.Position.angularPosition,
 			RA_AxisMotor.Position.angularPosition,
 			DEC_AxisMotor.Position.angularPosition,
 			voltage,
+			coordinatesRaDec.raCoordinatesAngle,
+			coordinatesRaDec.decCoordinatesAngle,
 			statusFlags.homed,
 			statusFlags.calibrated,
 			statusFlags.gpsOK,
 			statusFlags.gpsFixed,
 			statusFlags.rpiRDY,
-			statusFlags.moveEnabled
+			statusFlags.polarAligned,
+			statusFlags.tracking,
+			statusFlags.moveEnabled,
+			statusFlags.fault
 			);
 
 	uartSend(PC_UART_SRC, dbgbuff);
@@ -164,7 +162,7 @@ static void checkPowerInput()
 
 }
 
-//Updates the step position of selected axis
+//Updates the step position of selected axis and RA DEC coordinates if the PCK-ST1 is polar aligned
 void updatePosition(StepperMotor_t *Axis)
 {
 	int32_t deltaSteps = 0;
@@ -183,21 +181,28 @@ void updatePosition(StepperMotor_t *Axis)
 		Axis->Position.lastStepsRead = currentStepCount;
 	}
 
-	if (Axis->Position.direction == Axis->Positive_dir) //If the direction of rotation is positive increase the stepPostition
+	if (Axis->Position.direction != Axis->Positive_dir) //If the direction of rotation is in the negative direction make the deltaSteps negative
 	{
-		Axis->Position.stepPosition += deltaSteps;
+		deltaSteps = -deltaSteps;
 	}
-	else
-	{
-		Axis->Position.stepPosition -= deltaSteps;
-	}
+
+	Axis->Position.stepPosition += deltaSteps;
+
+	//The low precision axes do double the steps for the same angle as the high precision axes
 	if (!Axis->highPrecisionAxis)
 	{
+		//Anglular position divided by 2
 		Axis->Position.angularPosition = ((float)Axis->Position.stepPosition / (Axis->stepsPerArcmin*DEG))/2.0f;
 	}
 	else
 	{
 		Axis->Position.angularPosition = (float)Axis->Position.stepPosition / (Axis->stepsPerArcmin*DEG);
+	}
+
+	//Update the RA and DEC celestial coordinates
+	if (Axis->AxisID == RA || Axis->AxisID == DEC)
+	{
+		updateRaDec(Axis, deltaSteps);
 	}
 
 }

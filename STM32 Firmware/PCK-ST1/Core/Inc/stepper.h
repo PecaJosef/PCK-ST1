@@ -17,8 +17,6 @@
 #define STEPPER_TIMER_HI_FREQ 1000000
 #define STEPPER_TIMER_PRESCALE (CORE_FREQ/STEPPER_TIMER_HI_FREQ)
 #define CORE_FREQ 64000000
-#define TRACKING_TIMER_FREQ 3200000
-#define TRACKING_PRESCALER (CORE_FREQ/TRACKING_TIMER_FREQ)
 
 #define DEG 60.0f
 
@@ -47,8 +45,8 @@
 //Positive direction is opposite to Homing direction -> while homing the stepper moves in negative direction towards endstop
 #define AZ_POS_DIR 1
 #define ALT_POS_DIR 0
-#define DEC_POS_DIR 0
-#define RA_POS_DIR 1
+#define DEC_POS_DIR 1
+#define RA_POS_DIR 0
 
 #define RA_PWM_TIM &htim1 //Main timer - generates step signal
 #define RA_PWM_CH TIM_CHANNEL_2
@@ -68,8 +66,6 @@
 #define IREG_TIM_CHANNEL TIM_CHANNEL_1
 #define IREG_ARR 1000
 
-#define SECONDS_IN_DAY 86164
-#define TRACKING_FREQ ((STEPS_PER_REV*RA_GEAR_RATIO*RA_MICROSTEPPING)/SECONDS_IN_DAY)
 
 typedef enum {
     PWM_OUT_P,
@@ -104,7 +100,15 @@ typedef struct {
 	float angularPosition;
 } axisPosition_t;
 
+typedef enum {
+	AZ,
+	ALT,
+	RA,
+	DEC,
+} AxisID_t;
+
 typedef struct {
+	AxisID_t AxisID;
 	GPIO_TypeDef *STEP_Port;
 	uint16_t STEP_Pin;
 	GPIO_TypeDef *EN_Port;
@@ -163,10 +167,6 @@ void Stepper_IT_Disable();
 void stepperEnable(StepperMotor_t *Axis);
 
 void stepperDisable(StepperMotor_t *Axis);
-
-void trackingStart(StepperMotor_t *Axis);
-
-void trackingStop(StepperMotor_t *Axis);
 
 void stepperMove(StepperMotor_t *Axis, float angle, float speed);
 
