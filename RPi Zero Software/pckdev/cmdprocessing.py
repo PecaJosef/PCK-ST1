@@ -58,6 +58,7 @@ def imgCapture(uart, exposure, img_name):
 
 def rpiShutdown(uart):
     print("[SYSTEM] Shutting down Raspberry Pi...")
-    uart.send("#SHUTDOWN:OK")
+    uart.send("#Powering off OK")
+    uart.send("$PWROFF")
     time.sleep(0.25)
     subprocess.run(["sudo", "shutdown", "-h", "now"],check=False)
