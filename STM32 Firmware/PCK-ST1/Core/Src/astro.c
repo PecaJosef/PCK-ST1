@@ -28,8 +28,6 @@ void trackingStart(StepperMotor_t *Axis)
 		stepperEnable(Axis);
 	}
 
-	statusFlags.tracking = true;
-
 	uint32_t ccr = (TRACKING_TIMER_FREQ/TRACKING_FREQ) / 2;
 	HAL_GPIO_WritePin(Axis->DIR_Port, Axis->DIR_Pin, TRACKING_DIR);
 	Axis->Position.direction = TRACKING_DIR;
@@ -55,6 +53,9 @@ void trackingStart(StepperMotor_t *Axis)
 	//Set flags
 	Axis->enabled = true;
 	Axis->busy = true;
+
+	statusFlags.tracking = true;
+	statusFlags.moveEnabled = false;
 
 }
 
@@ -82,7 +83,12 @@ void trackingStop(StepperMotor_t *Axis)
 
 	__HAL_TIM_SET_PRESCALER(RA_PWM_TIM, (CORE_FREQ/STEPPER_TIMER_HI_FREQ)-1); //Reset RA timer to initial values
 
+
+	//Set flags
+	Axis->busy = false;
+
 	statusFlags.tracking = false;
+	statusFlags.moveEnabled = true;
 
 }
 

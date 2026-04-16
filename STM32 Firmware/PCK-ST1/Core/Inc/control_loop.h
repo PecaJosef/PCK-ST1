@@ -129,6 +129,8 @@ void handleShutdown();
 
 void handleIdle();
 
+void handleTracking();
+
 void handleFault();
 
 void error(errorCode_t err);

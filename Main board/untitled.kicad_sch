@@ -8414,7 +8414,7 @@
 				)
 			)
 		)
-		(property "Value" "2k2"
+		(property "Value" "0R"
 			(at 45.72 155.194 90)
 			(effects
 				(font
@@ -8994,7 +8994,7 @@
 				)
 			)
 		)
-		(property "Value" "2k2"
+		(property "Value" "1k"
 			(at 76.2 167.894 90)
 			(effects
 				(font
@@ -12438,7 +12438,7 @@
 				)
 			)
 		)
-		(property "Value" "2k2"
+		(property "Value" "1k"
 			(at 76.2 155.194 90)
 			(effects
 				(font
@@ -13835,7 +13835,7 @@
 				)
 			)
 		)
-		(property "Value" "2k2"
+		(property "Value" "0R"
 			(at 45.72 167.894 90)
 			(effects
 				(font

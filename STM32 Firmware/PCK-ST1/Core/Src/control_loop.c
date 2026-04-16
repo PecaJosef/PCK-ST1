@@ -13,28 +13,42 @@
  *
  * HOMING
  * 		- homes all axis
- * 		- after homing is performed software jumps to WARMING_UP state
+ * 		- after homing is performed, control loop checks the calibration
+ *
+ *CALIBRATION
+ *		- checks if there are calibration data in the memory
+ *		- if not, it starts calibrating the magnetometer by rotating around the AZ axis
+ *		- after loading the calib data or calibrating check GPS and RPI in thw WARM_UP state
  *
  * WARMING_UP
  * 		- checks if GPS and magnetometer are operational (if not -> ERROR state)
  * 			- if magnetometer is calibrated PCK-ST1 waits for RPi to bootup (or times out ~(TBD)s -> ERROR state)
  * 			- if magnetometer calibration data are not present in flash calibration is initiated
- * 		- if RPi boots up correctly and sends OK message LEDs signal to press button for NCP aligning -> ALIGNING
+ * 		- if RPi boots up correctly and sends RDY message LEDs signal to press button for NCP aligning -> ALIGNING
  *
  * ALIGNING
  * 		- drives AZ and ALT axis based on GPS and magnetometer data
  * 		- sends "take star picture" to RPi
- * 			- if only Polaris found - point to the Polaris (RPi waits for another "take star picture" command)
- * 			- if NCP found - point to NCP estimated position (repeat taking picture for better accuracy)
+ * 		- checks initial polar alignment
+ * 			- if only Polaris found - point to the Polaris (sends "get center of rotation" command)
+ * 			- if NCP found - point to NCP estimated position (sends "get center of rotation" command)
  * 			- if no stars are found -> ERROR state
+ * 		- rotates the RA axis to take second CoR image
+ * 		- after getting the CoR, proceed to polar alignment
+ * 		- check the PA error up to 3 times and perform corrections
+ * 			- sends "get PA error" command
+ * 			- moves AZ ALT axes based on the error
+ * 			- if the error is <= Threshold -> ALIGNMENT Done
+ * 			- if the error is > Threshold - repeat
  *		- reduces ALT and AZ motor current after successful aligning
  *		- jumps into IDLE state
  *
  * IDLE
  * 		- waits for commands from PC/Controller or RPi (?BTE app)
+ * 		- by pressing the button starts/ends the tracking
  *
  * SHUTDOWN
- * 		- the SHUTDOWN state is initiate after a button is held for 5s (TBD)
+ * 		- the SHUTDOWN state is initiate after a button is held for a certain time
  * 		- All LEDs light up (LED1-4), the the button is released and user should confirm the shutdown by press-holding the button again - LEDs turn off in seqence (similar to power on)
  * 		- if not confirmed, PCK-ST1 return to its previous state (after 10s - TBD)
  * 		- after a shutdown is initiated the main board stays "alive", to safely turn off RPi
@@ -65,6 +79,7 @@
 #define RESET_TIME 1000
 #define LED_BLINK_PERIOD_SHORT 500
 #define LED_BLINK_PERIOD_LONG 1000
+#define TRACKING_RAMP_UP_PERIOD 1000
 
 #define RPI_SHUTDOWN_TIME 5 //5s
 
@@ -128,6 +143,7 @@ typedef enum {
 	WARMUP_FINISHED,
 }WarmingUpState_t;
 
+//---Warming up GPS states---
 typedef enum {
 	CHECK_AND_CONFIG_GPS,
 	WAITING_FOR_GPS_ACK,
@@ -135,6 +151,7 @@ typedef enum {
 	GPS_FIXED,
 }gpsWarmingUpState_t;
 
+//---Warming up RPi states---
 typedef enum {
 	WAITING_FOR_RPI_BOOT,
 	RPI_READY,
@@ -159,6 +176,7 @@ typedef enum {
 	ALIGNMENT_DONE,
 }AlignState_t;
 
+//---Calibration internal states---
 typedef enum {
     CAL_IDLE,
     CAL_ROTATION_CHECK,   // Moving to -180
@@ -167,6 +185,19 @@ typedef enum {
     CAL_COMPUTE       // Calculating final matrix
 } CalibState_t;
 
+//---Idle internal states---
+typedef enum {
+	IDLE_BTN_RELEASED,
+	IDLE_BTN_PRESSED,
+	IDLE_TRACKING_START,
+}IdleState_t;
+
+//--Tracking internal states---
+typedef enum {
+	TRACKING_BTN_RELEASED,
+	TRACKING_BTN_PRESSED,
+	TRACKING_STOP,
+}TrackingState_t;
 
 typedef struct {
 	uint32_t timeoutDeadline;
@@ -182,6 +213,8 @@ static gpsWarmingUpState_t gpsWarmUpState = CHECK_AND_CONFIG_GPS;
 static rpiWarmingUpState_t rpiWarmUpState = WAITING_FOR_RPI_BOOT;
 static AlignState_t alignmentState = ALIGN_WAITING_FOR_BUTTON_PRESS;
 static CalibState_t calState = CAL_IDLE;
+static IdleState_t idleState = IDLE_BTN_RELEASED;
+static TrackingState_t trackingState = TRACKING_BTN_RELEASED;
 
 errorCode_t errorCode = NONE;
 
@@ -201,7 +234,7 @@ StatusFlags_t statusFlags = {
 		.gpsFixed = false,
 		.homed = false,
 		.calibrated = false,
-		.polarAligned = true, //DEBUG
+		.polarAligned = false,
 		.magOK = false,
 		.moveEnabled = true,
 		.rpiRDY = false,
@@ -274,9 +307,9 @@ static void axisHomingUpdate(StepperMotor_t *Axis, float coarseSpeed, float fine
 static void checkRPi();
 static void checkGPS();
 
-static void ledsBlink();
-static void ledsRampUp();
-static void pwrButtonBlink();
+static void ledsBlink(uint32_t blinkPeriod);
+static void ledsRampUp(uint32_t ledPeriod);
+static void pwrButtonBlink(uint32_t ledPeriod);
 
 static void resetStates();
 
@@ -396,6 +429,10 @@ void controlLoop()
 		handleFault();
 		break;
 
+	case TRACKING:
+		handleTracking();
+		break;
+
 	default:
 		controlState = FAULT;
 		break;
@@ -511,7 +548,7 @@ void handleHoming()
     switch(homingState)
     {
         case HOMING_WAITING_FOR_BUTTON_PRESS:
-            ledsBlink();
+            ledsBlink(LED_BLINK_PERIOD_SHORT);
             if (btn == PRESSED)
             {
                 ledsSet(false);
@@ -844,7 +881,7 @@ void handleCalibration()
 
 void handleWarmingUp()
 {
-	ledsRampUp();
+	ledsRampUp(LED_BLINK_PERIOD_SHORT);
 
 	switch(WarmUpState)
 	{
@@ -1034,7 +1071,7 @@ void handleAligning()
 	{
 	case ALIGN_WAITING_FOR_BUTTON_PRESS:
 		//Turns the LEDs on and off at around 2Hz - signaling the alignment is ready to begin
-		ledsBlink();
+		ledsBlink(LED_BLINK_PERIOD_SHORT);
 
 		if (btn == PRESSED) // pressed
 		{
@@ -1327,6 +1364,47 @@ void handleAligning()
 	}
 }
 
+
+/*
+ * --- IDLE STATE ---
+ */
+void handleIdle()
+{
+	uint8_t btn = readButtonDebounced();
+
+	switch(idleState)
+	{
+	case IDLE_BTN_RELEASED:
+		ledsBlink(LED_BLINK_PERIOD_SHORT);
+		//If the button is pressed, jump to next state to wait for it to be released
+		if (btn == PRESSED)
+		{
+			ledsSet(false);
+			idleState = IDLE_BTN_PRESSED;
+		}
+		break;
+
+	case IDLE_BTN_PRESSED:
+		//If the button is released go to next state to switch the tracking ON
+		if (btn == RELEASED)
+		{
+			idleState = IDLE_TRACKING_START;
+		}
+		break;
+
+	case IDLE_TRACKING_START:
+		trackingStart(&RA_AxisMotor);
+
+		break;
+	}
+}
+
+void handleTracking()
+{
+	ledsRampUp(TRACKING_RAMP_UP_PERIOD);
+
+}
+
 /*
  * MOVING STATE
  *
@@ -1393,22 +1471,6 @@ void handleGoto()
 		gotoRaDec(gotoRequest.raAngle, gotoRequest.decAngle);
 		gotoRequest.gotoRequested = false;
 		coordinatesRaDec.trackingPosition = true;
-	}
-
-}
-
-
-/*
- * --- IDLE STATE ---
- */
-void handleIdle()
-{
-	uint8_t btn = readButtonDebounced();
-	ledsBlink();
-
-	if (btn == RELEASED)
-	{
-		return;
 	}
 
 }
@@ -1550,7 +1612,7 @@ void handleFault()
 	static GPIO_PinState faultLedState = GPIO_PIN_SET;
 	static uint32_t faultLastLedTicks = 0;
 
-	pwrButtonBlink();
+	pwrButtonBlink(LED_BLINK_PERIOD_SHORT);
 
 	if((HAL_GetTick() - faultLastLedTicks) >= LED_BLINK_PERIOD_LONG)
 	{
@@ -1571,11 +1633,11 @@ void error(errorCode_t err)
 	controlState = FAULT;
 }
 
-static void ledsBlink()
+static void ledsBlink(uint32_t blinkPeriod)
 {
 	static uint32_t ledLastTicks = 0;
 
-	if ((HAL_GetTick() - ledLastTicks) >= LED_BLINK_PERIOD_SHORT)
+	if ((HAL_GetTick() - ledLastTicks) >= blinkPeriod)
 	{
 		ledLastTicks = HAL_GetTick();
 
@@ -1586,12 +1648,12 @@ static void ledsBlink()
 	}
 }
 
-static void ledsRampUp()
+static void ledsRampUp(uint32_t ledPeriod)
 {
 	static uint8_t  currentLED   = 0;
 	static uint32_t lastSwitchTicks = 0;
 
-	if (HAL_GetTick() - lastSwitchTicks < LED_BLINK_PERIOD_SHORT)
+	if (HAL_GetTick() - lastSwitchTicks < ledPeriod)
 	{
 		return;
 	}
@@ -1621,11 +1683,11 @@ static void ledsRampUp()
 }
 
 
-static void pwrButtonBlink()
+static void pwrButtonBlink(uint32_t ledPeriod)
 {
 	static uint32_t ledLastTicks = 0;
 
-		if ((HAL_GetTick() - ledLastTicks) >= LED_BLINK_PERIOD_SHORT)
+		if ((HAL_GetTick() - ledLastTicks) >= ledPeriod)
 		{
 			ledLastTicks = HAL_GetTick();
 
