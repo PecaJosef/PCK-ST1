@@ -4,7 +4,7 @@ import math
 #import matplotlib.pyplot as plt
 
 #Load database arrays
-polaris_database_vectors = np.load("/home/pck/PCK-ST1/RPi Zero Software/pckdev/database/polaris_vectors.npy")
+polaris_database_vectors = np.load("/home/pck/PCK-ST1/RPi\ Zero\ Software/pckdev/database/polaris_vectors.npy")
 ncp_database_vectors = np.load("/home/pck/PCK-ST1/RPi Zero Software/pckdev/database/ncp_vectors.npy")
 star_distances = np.load("/home/pck/PCK-ST1/RPi Zero Software/pckdev/database/star_distances.npy")
 star_Polaris_RA_angle = np.load("/home/pck/PCK-ST1/RPi Zero Software/pckdev/database/star_Polaris_RA_angle.npy")
