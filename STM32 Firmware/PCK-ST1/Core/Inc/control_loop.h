@@ -147,6 +147,7 @@ void homeCommand(UART_Source_t src);
 void calibCommand(UART_Source_t src);
 void alignCommand(UART_Source_t src);
 void trackingCommand(UART_Source_t src, bool trackingStart);
+void idleCommand(UART_Source_t src);
 
 void patestCommand(UART_Source_t src);
 

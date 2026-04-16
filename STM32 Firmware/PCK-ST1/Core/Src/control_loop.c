@@ -102,7 +102,7 @@
 #define HOMING_DIST 135.0f*DEG
 #define FINE_DIST 12.5f*DEG //Fine dist needs to be slightly larger than backoff
 
-#define COR_ANGLE 45.0f
+#define COR_ANGLE 60.0f
 
 //---Power off button states---
 typedef enum {
@@ -771,14 +771,25 @@ void endstopReached(StepperMotor_t *Axis, float fineSpeed)
 void handleCalibration()
 {
 	static bool magChecked = false;
+	static uint8_t magCheckTries = 0;
 
 	if(magChecked == false)
 	{
-		magChecked = true;
 		if (magIsAlive() == false)
 		{
-			error(MAG_ERROR);
+			if (magCheckTries >= 3)
+			{
+				error(MAG_ERROR);
+				magCheckTries = 0;
+			}
+			magCheckTries++;
 			return;
+		}
+		else
+		{
+			uartSend(PC_UART_SRC, "MAG OK\r\n");
+			magChecked = true;
+			magCheckTries = 0;
 		}
 	}
 
@@ -886,6 +897,9 @@ void handleWarmingUp()
 	switch(WarmUpState)
 	{
 		case TIMEOUT_START:
+			//Start booting the RPi
+			rpiPowerOn();
+			//Start the warm up timeout
 			timeoutStart(&timeoutControlLoop, WARMING_UP_TIMEOUT);
 			WarmUpState = WAITING_FOR_GPS_AND_RPI;
 			break;
@@ -1355,6 +1369,8 @@ void handleAligning()
 			corFirstImageCaptured = false;
 			corSecondImageCaptured = false;
 
+			stepperDisable(&ALT_AxisMotor);
+
 			controlState = IDLE;
 		}
 		break;
@@ -1643,14 +1659,14 @@ void handleFault()
 
 	pwrButtonBlink(LED_BLINK_PERIOD_SHORT);
 
-	if((HAL_GetTick() - faultLastLedTicks) >= LED_BLINK_PERIOD_LONG)
+	if((HAL_GetTick() - faultLastLedTicks) >= LED_BLINK_PERIOD_SHORT)
 	{
 		faultLastLedTicks = HAL_GetTick();
 		//Blink the 4 LEDs to show binary error code
-		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, (errorCode & 0x01) ? faultLedState : GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, (errorCode & 0x02) ? faultLedState : GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, (errorCode & 0x04) ? faultLedState : GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, (errorCode & 0x08) ? faultLedState : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, (errorCode & 0x08) ? faultLedState : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, (errorCode & 0x04) ? faultLedState : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, (errorCode & 0x02) ? faultLedState : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, (errorCode & 0x01) ? faultLedState : GPIO_PIN_RESET);
 
 		faultLedState = (faultLedState == GPIO_PIN_SET) ? GPIO_PIN_RESET : GPIO_PIN_SET;
 	}

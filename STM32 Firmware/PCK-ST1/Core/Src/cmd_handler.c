@@ -174,7 +174,14 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		//Set status flag rpiRDY
 		statusFlags.rpiRDY = true;
 		//sends response from RPi to PC
-		uartSend(PC_UART_SRC, "#RPI:RDY\r\n");
+		uartSend(PC_UART_SRC, "RPi has started\r\n");
+	}
+	else if (strcmp(token, "$PWROFF")==0 && src == RPI_UART_SRC)
+	{
+		//The powering off command from RPi -> reset the rpiRDY flag
+		statusFlags.rpiRDY = false;
+		//sends response from RPi to PC
+		uartSend(PC_UART_SRC, "RPI Powered off\r\n");
 	}
 	else if(strcmp(token, "$TEL")==0)
 	{
@@ -194,7 +201,7 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	}
 	else if(strcmp(token, "$IDLE")==0)
 	{
-		//idleCommand(&saveptr, src);
+		idleCommand(src);
 	}
 	else if(strcmp(token, "$PATEST")==0)
 	{
@@ -449,12 +456,17 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 	}
 	else if(strcmp(rpiCommand, "OFF")==0)
 	{
+		if(statusFlags.rpiRDY == true)
+		{
+			uartSend(src, "RPI STILL RUNNING\r\n");
+			return;
+		}
 		rpiPowerOff();
 	}
 	else if(strcmp(rpiCommand, "ALIGN")==0)
 	{
-		uartSend(RPI_UART_SRC, "$ALIGN\r\n");
-		uartSend(PC_UART_SRC, "#ALIGN CMD Sent\r\n");
+		uartSend(RPI_UART_SRC, "$PA:ALIGN\r\n");
+		uartSend(PC_UART_SRC, "ALIGN command sent\r\n");
 	}
 	else if(strcmp(rpiCommand, "CAPTURE")==0)
 	{
@@ -588,11 +600,21 @@ static void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 		}
 
 		alignmentData.alignmentDataUpdated = true;
+
+		//Send the output over UART to PC/controller
+		char paDataBuffer[128];
+		sprintf(paDataBuffer,	"NCP found:	%d\r\nPoalris found:	%d\r\nAZ error:	%.5f\r\nALT error:	%.5f\r\nRA angle: %.2f\r\n",
+								alignmentData.ncpFound, alignmentData.polarisFound, alignmentData.azError, alignmentData.altError, alignmentData.raAngle);
+
+		uartSend(PC_UART_SRC, paDataBuffer);
+
+
 		return;
 	}
 	else if(strcmp(command, "CAPTURED")==0)
 	{
 		alignmentData.imageCaptured = true;
+		uartSend(PC_UART_SRC, "CAPTURED\r\n");
 	}
 	else if(strcmp(command, "COR")==0)
 	{
