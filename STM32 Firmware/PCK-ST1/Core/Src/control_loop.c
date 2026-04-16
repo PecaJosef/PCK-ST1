@@ -1379,7 +1379,6 @@ void handleIdle()
 		//If the button is pressed, jump to next state to wait for it to be released
 		if (btn == PRESSED)
 		{
-			ledsSet(false);
 			idleState = IDLE_BTN_PRESSED;
 		}
 		break;
@@ -1393,16 +1392,46 @@ void handleIdle()
 		break;
 
 	case IDLE_TRACKING_START:
+		ledsSet(false);
 		trackingStart(&RA_AxisMotor);
-
+		//Switch control state to TRACKING
+		controlState = TRACKING;
+		//Reset internal state
+		idleState = IDLE_BTN_RELEASED;
 		break;
 	}
 }
 
 void handleTracking()
 {
+	uint8_t btn = readButtonDebounced();
 	ledsRampUp(TRACKING_RAMP_UP_PERIOD);
 
+	switch (trackingState)
+	{
+	case TRACKING_BTN_RELEASED:
+		if (btn == PRESSED)
+		{
+			trackingState = TRACKING_BTN_PRESSED;
+		}
+		break;
+
+	case TRACKING_BTN_PRESSED:
+		if (btn == RELEASED)
+		{
+			trackingState = TRACKING_STOP;
+		}
+		break;
+
+	case TRACKING_STOP:
+		ledsSet(false);
+		trackingStop(&RA_AxisMotor);
+		//Switch control state to IDLE
+		controlState = IDLE;
+		//Reset internal state
+		trackingState = TRACKING_BTN_RELEASED;
+		break;
+	}
 }
 
 /*
@@ -1731,7 +1760,7 @@ bool timeoutReached(Timeout_t *timeout)
 
 //---State change/jump commands handling---
 
-void homeCommand(char **saveptr, UART_Source_t src)
+void homeCommand(UART_Source_t src)
 {
 	ledsSet(false);
 	controlState = HOMING;
@@ -1739,7 +1768,7 @@ void homeCommand(char **saveptr, UART_Source_t src)
 	homingState = HOMING_WAITING_FOR_BUTTON_RELEASE;
 }
 
-void calibCommand(char **saveptr, UART_Source_t src)
+void calibCommand(UART_Source_t src)
 {
 	if (statusFlags.homed == false)
 	{
@@ -1750,7 +1779,7 @@ void calibCommand(char **saveptr, UART_Source_t src)
 	controlState = CALIBRATION;
 }
 
-void alignCommand(char **saveptr, UART_Source_t src)
+void alignCommand(UART_Source_t src)
 {
 	if (statusFlags.homed == false)
 	{
@@ -1779,7 +1808,7 @@ void alignCommand(char **saveptr, UART_Source_t src)
 
 }
 
-void patestCommand(char **saveptr, UART_Source_t src)
+void patestCommand(UART_Source_t src)
 {
 	alignmentData.altAngle = 41.0f;
 	statusFlags.gpsFixed = true;
@@ -1812,10 +1841,38 @@ void patestCommand(char **saveptr, UART_Source_t src)
 
 }
 
-void idleCommand(char **saveptr, UART_Source_t src)
+void trackingCommand(UART_Source_t src, bool trackingStart)
+{
+	if (trackingStart == true)
+	{
+		if(controlState != IDLE)
+		{
+			uartSend(src, "ERR:NOT IN IDLE\r\n");
+			return;
+		}
+		//Switch idle state to IDLE TRACKING START -> handles tracking start
+		idleState = IDLE_TRACKING_START;
+		uartSend(src, "TRACKING ON\r\n");
+	}
+	else
+	{
+		if(controlState != TRACKING)
+		{
+			uartSend(src, "ERR:NOT TRACKING\r\n");
+			return;
+		}
+		//Switch tracking state to TRACKING STOP -> handles tracking stop
+		trackingState = TRACKING_STOP;
+		uartSend(src, "TRACKING OFF\r\n");
+	}
+
+}
+
+void idleCommand(UART_Source_t src)
 {
 	ledsSet(false);
 	controlState = IDLE;
+	idleState = IDLE_BTN_RELEASED;
 }
 
 static void resetStates()

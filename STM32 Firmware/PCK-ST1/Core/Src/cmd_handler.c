@@ -115,7 +115,7 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	//Forward info messages from RPi starting with # directly to PC/controller UART
 	if (cmd[0] == '#')
 	{
-		//Forward only info messages from RPi
+		//Forward only the info messages from RPi
 		if (src == RPI_UART_SRC)
 		{
 
@@ -182,15 +182,15 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	}
 	else if(strcmp(token, "$HOME")==0)
 	{
-		homeCommand(&saveptr, src);
+		homeCommand(src);
 	}
 	else if(strcmp(token, "$CALIBRATE")==0)
 	{
-		calibCommand(&saveptr, src);
+		calibCommand(src);
 	}
 	else if(strcmp(token, "$ALIGN")==0)
 	{
-		alignCommand(&saveptr, src);
+		alignCommand(src);
 	}
 	else if(strcmp(token, "$IDLE")==0)
 	{
@@ -198,7 +198,7 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	}
 	else if(strcmp(token, "$PATEST")==0)
 	{
-		patestCommand(&saveptr, src);
+		patestCommand(src);
 	}
 	else if(strcmp(token, "$ISET")==0)
 	{
@@ -622,13 +622,11 @@ static void trackingParsing(char **saveptr, UART_Source_t src)
 
 	if(strcmp(command, "START")==0)
 	{
-		trackingStart(&RA_AxisMotor);
-		uartSend(src, "TRACKING STARTED\r\n");
+		trackingCommand(src, true);
 	}
 	else if (strcmp(command, "STOP")==0)
 	{
-		trackingStop(&RA_AxisMotor);
-		uartSend(src, "TRACKING STOPPED\r\n");
+		trackingCommand(src, false);
 	}
 	else
 	{

@@ -143,10 +143,11 @@ void pwrButtonSet(bool state);
 
 //---Command handling---
 
-void homeCommand(char **saveptr, UART_Source_t src);
-void calibCommand(char **saveptr, UART_Source_t src);
-void alignCommand(char **saveptr, UART_Source_t src);
+void homeCommand(UART_Source_t src);
+void calibCommand(UART_Source_t src);
+void alignCommand(UART_Source_t src);
+void trackingCommand(UART_Source_t src, bool trackingStart);
 
-void patestCommand(char **saveptr, UART_Source_t src);
+void patestCommand(UART_Source_t src);
 
 #endif /* INC_CONTROL_LOOP_H_ */
