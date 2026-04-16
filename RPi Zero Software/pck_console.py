@@ -39,6 +39,7 @@ SIMPLE_COMMANDS = [
     ("CALIBRATION", "$CALIBRATE", TH_SUCCESS),
     ("ALIGNMENT", "$ALIGN", TH_SUCCESS),
     ("PARK", "$MOVE:PARK", TH_WARNING),
+    ("IDLE", "$IDLE", TH_WARNING),
     ("ECHO", "$ECHO", TH_ACCENT2),
     ("RPI ECHO", "$RPI:ECHO", TH_ACCENT2),
     ("RPI SHUTDOWN", "$RPI:SHUTDOWN", TH_WARNING),
@@ -47,7 +48,7 @@ SIMPLE_COMMANDS = [
 # ── Toggle commands ──────────────────────────────────────────
 #   Each entry: ("Base Label", "Command ON", "Command OFF")
 TOGGLE_COMMANDS = [
-    ("RPI POWER", "$RPI:START", "$RPI:STOP"),
+    ("RPI POWER", "$RPI:ON", "$RPI:OFF"),
     ("MOTORS", "$EN", "$DIS"),
     ("TRACKING", "$TRACKING:START", "$TRACKING:STOP"),
     ("CALIBRATION", "$CALIB:ON", "$CALIB:OFF"),
