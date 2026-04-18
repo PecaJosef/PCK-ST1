@@ -1369,6 +1369,11 @@ void handleAligning()
 			corFirstImageCaptured = false;
 			corSecondImageCaptured = false;
 
+			//Update the RA DEC coordinates
+			//The RA gets updated according to the raAngle from alignment data
+			//The DEC is set to 90.0f as default
+			setRaDec(alignmentData.raAngle, 90.0f);
+
 			stepperDisable(&ALT_AxisMotor);
 
 			controlState = IDLE;

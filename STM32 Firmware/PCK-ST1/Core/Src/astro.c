@@ -96,7 +96,7 @@ void trackingStop(StepperMotor_t *Axis)
 //Coordinates are then converted to hours for the RA
 void setRaDec(float raAngle, float decAngle)
 {
-	coordinatesRaDec.raCoordinatesHours = raAngle / DEG_TO_HOURS; //Convert RA from degrees to hours
+	coordinatesRaDec.raCoordinatesHours = raAngle / 15.0f; //Convert RA from degrees to hours
 	coordinatesRaDec.raCoordinatesAngle = raAngle;
 	coordinatesRaDec.decCoordinatesAngle = decAngle;
 }
