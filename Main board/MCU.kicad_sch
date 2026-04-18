@@ -8258,7 +8258,7 @@
 			(uuid "1080e09d-e2e4-490e-aed5-a7b02a45ed31")
 		)
 		(instances
-			(project ""
+			(project "PCK-ST1"
 				(path "/93ea6483-7023-4ddf-83c3-712f87222f6c/1547b2e8-7dda-4232-a857-ff3fde8a6516"
 					(reference "Q1")
 					(unit 1)
@@ -10876,7 +10876,7 @@
 			(uuid "6cfd41ab-4804-4c2d-a60f-3cd01fd7e133")
 		)
 		(instances
-			(project ""
+			(project "PCK-ST1"
 				(path "/93ea6483-7023-4ddf-83c3-712f87222f6c/1547b2e8-7dda-4232-a857-ff3fde8a6516"
 					(reference "U2")
 					(unit 1)
@@ -12074,7 +12074,7 @@
 			(uuid "e916e12f-68d2-4655-8490-7850e909dbb6")
 		)
 		(instances
-			(project ""
+			(project "PCK-ST1"
 				(path "/93ea6483-7023-4ddf-83c3-712f87222f6c/1547b2e8-7dda-4232-a857-ff3fde8a6516"
 					(reference "J14")
 					(unit 1)
@@ -12217,7 +12217,7 @@
 			(uuid "c9e40241-6d13-4455-9ddd-e52999c8c661")
 		)
 		(instances
-			(project ""
+			(project "PCK-ST1"
 				(path "/93ea6483-7023-4ddf-83c3-712f87222f6c/1547b2e8-7dda-4232-a857-ff3fde8a6516"
 					(reference "SW1")
 					(unit 1)
@@ -12868,7 +12868,7 @@
 			(uuid "73931743-af15-43ac-85d4-12a13a8502c8")
 		)
 		(instances
-			(project ""
+			(project "PCK-ST1"
 				(path "/93ea6483-7023-4ddf-83c3-712f87222f6c/1547b2e8-7dda-4232-a857-ff3fde8a6516"
 					(reference "D4")
 					(unit 1)
@@ -14042,7 +14042,7 @@
 			(uuid "1049b1cf-ea89-4163-a461-db07b06ded43")
 		)
 		(instances
-			(project ""
+			(project "PCK-ST1"
 				(path "/93ea6483-7023-4ddf-83c3-712f87222f6c/1547b2e8-7dda-4232-a857-ff3fde8a6516"
 					(reference "Y1")
 					(unit 1)
