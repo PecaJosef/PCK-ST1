@@ -618,7 +618,7 @@ class App(tk.Tk):
         num_e.grid(row=1, column=1, padx=(6, 6))
 
         go_btn = tk.Button(row, text="SEND",
-                           command=lambda: self._send(f'$IMAGE:{exp_v.get()}:{num_v.get()}'),
+                           command=lambda: self._send(f'$IMG:{exp_v.get()}:{num_v.get()}'),
                            bg=TH["accent"], fg="#0a0a14",
                            font=("Segoe UI", 8, "bold"), bd=0, padx=6, pady=2,
                            cursor="hand2",

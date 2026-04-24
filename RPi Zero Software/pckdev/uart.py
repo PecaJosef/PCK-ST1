@@ -47,6 +47,7 @@ class UARTHandler:
                 self.send("$ERR:FORMAT")
         else:
             self.send("$ERR:UNKNOWN")
+            self.send("#Command error")
 
     def close(self):
         """Close the serial port."""

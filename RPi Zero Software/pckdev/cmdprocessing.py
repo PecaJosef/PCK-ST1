@@ -44,8 +44,12 @@ def centerOfRotation(uart):
         center_offset = getCenterOfRotation(image_zero, image_angled)
         if center_offset is not None:
             uart.send("$PA:COR:DONE")
+            time.sleep(0.25)
+            uart.send("#CoR calculated")
         else:
             uart.send("$PA:COR:FAIL")
+            time.sleep(0.25)
+            uart.send("#CoR failed!")
         
         image_zero = None
         image_angled = None
