@@ -37,8 +37,10 @@ def centerOfRotation(uart):
 
     if (image_zero is None):
         image_zero = star_image
+        cv2.imwrite('cor1.jpg', image_zero)
     else:
         image_angled = star_image
+        cv2.imwrite('cor2.jpg', image_angled)
     
     if(image_zero is not None and image_angled is not None):
         center_offset = getCenterOfRotation(image_zero, image_angled)
