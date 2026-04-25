@@ -19,9 +19,8 @@
 #define QMC5883_REG_ID      0x0D
 
 
-//#define CALIB_FLASH_ADDR 0x0807F800 // last page for 512KB version (2 KB)
-#define CALIB_FLASH_ADDR 0x0808F800 // last page for 1MB version (2 KB)
-#define CALIB_FLASH_PAGE 254
+#define CALIB_FLASH_ADDR 0x0808F800
+#define CALIB_FLASH_PAGE 31
 
 
 typedef struct {
@@ -31,7 +30,7 @@ typedef struct {
 } MagRawData_t;
 
 
-typedef struct __attribute__((packed)){
+typedef struct {
     float x_offset;
     float y_offset;
     float softiron[2][2]; // 2x2 correction matrix
@@ -39,9 +38,9 @@ typedef struct __attribute__((packed)){
 
 typedef struct {
     uint32_t magic;
-    MagCalib_t calib;
     uint32_t padding; // pad to 8-byte multiple
-} StoredCalib_t;
+    MagCalib_t calib;
+} __attribute__((aligned(8))) StoredCalib_t;
 
 
 

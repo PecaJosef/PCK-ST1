@@ -85,8 +85,8 @@
 
 //Duration in which the GPS should get fix and RPi should boot up into Python software
 #define WARMING_UP_TIMEOUT 90
-#define PA_TIMEOUT 60
-#define COR_TIMEOUT 60
+#define PA_TIMEOUT 120
+#define COR_TIMEOUT 120
 
 #define GPS_CONFIG_RETRIES 5
 
@@ -526,6 +526,9 @@ void handleLowPowerIdle()
 		case BTN_SEQ_DONE:
 			if (btn == RELEASED)
 			{
+				//Start booting the RPi right after exiting Low Power IDLE state
+				rpiPowerOn();
+
 				controlState = HOMING;
 				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS; //Reset for next time
 
@@ -798,7 +801,9 @@ void handleCalibration()
 		controlState = WARMING_UP;
 		statusFlags.calibrated = true;
 
-		//printf("M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",magCalib.softiron[0][0],magCalib.softiron[0][1],magCalib.softiron[1][0],magCalib.softiron[1][1]);
+		char dbgbuff[128];
+		sprintf(dbgbuff, "M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",magCalib.softiron[0][0],magCalib.softiron[0][1],magCalib.softiron[1][0],magCalib.softiron[1][1]);
+		uartSend(PC_UART_SRC, dbgbuff);
 		return;
 	}
 
@@ -878,6 +883,11 @@ void handleCalibration()
 
 			statusFlags.calibrated = true;
 
+			//DEBUG
+			char dbgbuff[128];
+			sprintf(dbgbuff, "M00: %.9f, M01: %.9f, M10: %.9f, M11: %.9f\r\n",magCalib.softiron[0][0],magCalib.softiron[0][1],magCalib.softiron[1][0],magCalib.softiron[1][1]);
+			uartSend(PC_UART_SRC, dbgbuff);
+
 			//Reset calibration state and jump to the warming up state
 			controlState = WARMING_UP;
 			uartSend(PC_UART_SRC, "WARMUP\r\n");
@@ -897,8 +907,6 @@ void handleWarmingUp()
 	switch(WarmUpState)
 	{
 		case TIMEOUT_START:
-			//Start booting the RPi
-			rpiPowerOn();
 			//Start the warm up timeout
 			timeoutStart(&timeoutControlLoop, WARMING_UP_TIMEOUT);
 			WarmUpState = WAITING_FOR_GPS_AND_RPI;
@@ -1169,7 +1177,7 @@ void handleAligning()
 			}
 			break;
 		}
-		//Image captured - move RA 45° to capture first CoR image while the PA image gets processed
+		//Image captured - move RA to capture first CoR image while the PA image gets processed
 		alignmentData.imageCaptured = false;
 		stepperMove(&RA_AxisMotor, COR_ANGLE*DEG, RA_COARSE_SPEED);
 		alignmentState = PRECISE_INITIAL_ALIGNMENT;
@@ -1203,6 +1211,9 @@ void handleAligning()
 		}
 		stepperMove(&ALT_AxisMotor, alignmentData.altError, 5.0f);
 
+		corFirstImageCaptured = false;
+		corSecondImageCaptured = false;
+
 		alignmentState = PRECISE_COR_CMD;
 		break;
 
@@ -1215,6 +1226,8 @@ void handleAligning()
 		//Send $PA:COR command
 		uartSend(RPI_UART_SRC, "$PA:COR\r\n");
 		timeoutStart(&paCommandTimeout, COR_TIMEOUT);
+
+		uartSend(PC_UART_SRC, "$PA:COR sent\r\n");
 
 		alignmentState = PRECISE_COR_WAIT;
 		break;
@@ -1681,6 +1694,17 @@ void error(errorCode_t err)
 {
 	errorCode = err;
 	controlState = FAULT;
+
+	//Stop the motors
+	stepperStop(&AZ_AxisMotor);
+	stepperStop(&ALT_AxisMotor);
+	stepperStop(&RA_AxisMotor);
+	stepperStop(&DEC_AxisMotor);
+
+	stepperDisable(&AZ_AxisMotor);
+	stepperDisable(&ALT_AxisMotor);
+	stepperDisable(&RA_AxisMotor);
+	stepperDisable(&DEC_AxisMotor);
 }
 
 static void ledsBlink(uint32_t blinkPeriod)
@@ -1923,6 +1947,8 @@ static void resetStates()
 	statusFlags.magOK = false;
 	statusFlags.rpiRDY = false;
 	statusFlags.polarAligned = false;
+
+	statusFlags.moveEnabled = true;
 
 	alignmentData.alignmentDataUpdated = false;
 	alignmentData.corFound = 0;

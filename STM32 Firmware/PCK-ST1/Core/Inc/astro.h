@@ -58,4 +58,6 @@ void updateRaDec(StepperMotor_t *Axis, int32_t deltaSteps);
 
 void gotoRaDec(float RAcoord, float DECcoord);
 
+void setRaDec(float raAngle, float decAngle);
+
 #endif /* INC_ASTRO_H_ */

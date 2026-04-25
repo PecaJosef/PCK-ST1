@@ -143,7 +143,11 @@ float getCalibratedHeading(MagCalib_t *calib, float declination)
 
 void SaveCalibrationToFlash(MagCalib_t *calib)
 {
-    HAL_FLASH_Unlock();
+	__attribute__((aligned(8))) StoredCalib_t data = {0};
+	data.magic = 0xDEADBEEF;
+	data.calib = *calib;
+
+	HAL_FLASH_Unlock();
 
     // Erase the page
     FLASH_EraseInitTypeDef eraseInit = {0};
@@ -158,21 +162,20 @@ void SaveCalibrationToFlash(MagCalib_t *calib)
         HAL_FLASH_Lock();
         return; // erase failed
     }
-    // Prepare struct
-    StoredCalib_t data = {0xDEADBEEF, *calib, 0};
 
-    // Program as 64-bit doublewords
     uint64_t *p = (uint64_t*)&data;
-    for (size_t i = 0; i < sizeof(data) / 8; i++)
-    {
-        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIB_FLASH_ADDR + i*8, p[i]) != HAL_OK)
-        {
-            break; // stop on error
-        }
-    }
-    HAL_FLASH_Lock();
+	// Calculate iterations based on the fixed struct size
+	for (size_t i = 0; i < sizeof(StoredCalib_t) / 8; i++)
+	{
+		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIB_FLASH_ADDR + i*8, p[i]) != HAL_OK)
+		{
+			break;
+		}
+	}
+	HAL_FLASH_Lock();
 }
 
+/*
 bool LoadCalibrationFromFlash(MagCalib_t *calib)
 {
     //Cast the Flash address directly
@@ -188,4 +191,17 @@ bool LoadCalibrationFromFlash(MagCalib_t *calib)
 
     return true;
 }
+*/
+
+bool LoadCalibrationFromFlash(MagCalib_t *calib)
+{
+    volatile StoredCalib_t *flashData = (volatile StoredCalib_t*)CALIB_FLASH_ADDR;
+
+    if(flashData->magic != 0xDEADBEEF) return false;
+
+    //memcpy to avoid alignment issues during the read
+    memcpy(calib, (void*)&flashData->calib, sizeof(MagCalib_t));
+    return true;
+}
+
 
