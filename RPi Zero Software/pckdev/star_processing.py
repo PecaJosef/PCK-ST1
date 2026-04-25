@@ -146,7 +146,7 @@ def starCorrelation(star_vectors, database_vectors, threshold, angle_step, debug
 
   return stars_matched, z_score, max_matched_angle
 
-def findPolaris(star_candidates, stars, database_vectors, threshold, radius_arcmin, star_count, debug = False): #Radius is in arcmin default 75arcmin (355px)
+def findPolaris(star_candidates, stars, database_vectors, threshold, radius_arcmin, star_count, debug = False): #Radius is in arcmin default 107.5arcmin (~506px)
   for star in star_candidates:
       radius_stars = getStarsInRadius(star, stars, radius_arcmin * defaultPixPerArcmin)
 
@@ -433,8 +433,8 @@ def getCenterOfRotation(image_zero, image_angled):
   stars_zero, brightest_stars_zero = findStars(preprocessed_image_zero, number_of_brightest_stars = 10)
   stars_angled, brightest_stars_angled = findStars(preprocessed_image_angled, number_of_brightest_stars = 10)
 
-  polarisFound_zero, Polaris_zero, Angle_zero = findPolaris(brightest_stars_zero, stars_zero, polaris_database_vectors, threshold=6.0, radius_arcmin=75, star_count=25, debug=True)
-  polarisFound_angled, Polaris_angled, Angle_angled = findPolaris(brightest_stars_angled, stars_angled, polaris_database_vectors, threshold=6.0, radius_arcmin=75, star_count=25, debug=True)
+  polarisFound_zero, Polaris_zero, Angle_zero = findPolaris(brightest_stars_zero, stars_zero, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
+  polarisFound_angled, Polaris_angled, Angle_angled = findPolaris(brightest_stars_angled, stars_angled, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
 
   if polarisFound_zero == False or polarisFound_angled == False:
     print("ERROR: Polaris not found!")
@@ -512,7 +512,7 @@ def getAlignmentError(image, center_offset, debug=False):
   preprocessed_image = imagePreprocessing(image)
   stars, brightest_stars = findStars(preprocessed_image, number_of_brightest_stars = 10)
 
-  polarisFound, Polaris, Angle = findPolaris(brightest_stars, stars, polaris_database_vectors, threshold=6.0, radius_arcmin=75, star_count=25, debug=True)
+  polarisFound, Polaris, Angle = findPolaris(brightest_stars, stars, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
 
   if polarisFound == False:
     print("ERROR: Polaris not found!")
