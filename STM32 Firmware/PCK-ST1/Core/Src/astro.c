@@ -145,6 +145,12 @@ void updateRaDec(StepperMotor_t *Axis, int32_t deltaSteps)
 				coordinatesRaDec.raCoordinatesAngle -= 180.0f;
 			}
 			wasFlipped = isFlipped;
+
+			// Wrap around 360°
+			if(coordinatesRaDec.raCoordinatesAngle > 360.0f) coordinatesRaDec.raCoordinatesAngle -= 360.0f;
+			if(coordinatesRaDec.raCoordinatesAngle < 0.0f) coordinatesRaDec.raCoordinatesAngle += 360.0f;
+
+			coordinatesRaDec.raCoordinatesHours = coordinatesRaDec.raCoordinatesAngle / 15.0f;
 		}
 
 		if (Axis->AxisID == RA)

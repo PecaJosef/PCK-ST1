@@ -526,9 +526,6 @@ void handleLowPowerIdle()
 		case BTN_SEQ_DONE:
 			if (btn == RELEASED)
 			{
-				//Start booting the RPi right after exiting Low Power IDLE state
-				rpiPowerOn();
-
 				controlState = HOMING;
 				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS; //Reset for next time
 
@@ -556,6 +553,7 @@ void handleHoming()
             {
                 ledsSet(false);
                 homingState = HOMING_WAITING_FOR_BUTTON_RELEASE;
+
             }
             break;
 
@@ -569,6 +567,9 @@ void handleHoming()
                 DEC_AxisMotor.homing_state = AXIS_HOMING_IDLE;
                 homingState = HOMING_PROCESS;
                 homingActive = false;
+
+                //Start booting the RPi right after the HOMING is started
+				rpiPowerOn();
             }
             break;
 
