@@ -48,6 +48,9 @@ def centerOfRotation(uart):
             uart.send("$PA:COR:DONE")
             time.sleep(0.25)
             uart.send("#CoR calculated")
+            time.sleep(0.25)
+            cor_msg = f"#COR:{center_offset[0]:.2f}:{center_offset[0]:.2f}"
+            uart.send(cor_msg)
         else:
             uart.send("$PA:COR:FAIL")
             time.sleep(0.25)
