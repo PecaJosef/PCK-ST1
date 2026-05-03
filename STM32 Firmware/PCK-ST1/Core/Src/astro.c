@@ -121,6 +121,9 @@ void updateRaDec(StepperMotor_t *Axis, int32_t deltaSteps)
 		{
 			//Update the RA position with the sidereal rate if the tracking is off
 			coordinatesRaDec.raCoordinatesAngle += (float)(deltaTimeTicks/1000.0f)/SECONDS_PER_DEGREE;
+			// Wrap around 360°
+			if(coordinatesRaDec.raCoordinatesAngle > 360.0f) coordinatesRaDec.raCoordinatesAngle -= 360.0f;
+			if(coordinatesRaDec.raCoordinatesAngle < 0.0f) coordinatesRaDec.raCoordinatesAngle += 360.0f;
 			coordinatesRaDec.raCoordinatesHours = coordinatesRaDec.raCoordinatesAngle / DEG_TO_HOURS;
 		}
 	}
@@ -139,9 +142,12 @@ void updateRaDec(StepperMotor_t *Axis, int32_t deltaSteps)
 
 		if (isFlipped != wasFlipped)
 		{
-			if (isFlipped) {
+			if (isFlipped)
+			{
 				coordinatesRaDec.raCoordinatesAngle += 180.0f;
-			} else {
+			}
+			else
+			{
 				coordinatesRaDec.raCoordinatesAngle -= 180.0f;
 			}
 			wasFlipped = isFlipped;
@@ -182,13 +188,13 @@ void updateRaDec(StepperMotor_t *Axis, int32_t deltaSteps)
 }
 
 
-
 void gotoRaDec(float targetRA, float targetDec)
 {
     if (statusFlags.polarAligned == false)
     {
         return;
     }
+    coordinatesRaDec.trackingPosition = true;
 
     float deltaRA = targetRA - coordinatesRaDec.raCoordinatesAngle;
 
@@ -198,7 +204,7 @@ void gotoRaDec(float targetRA, float targetDec)
 
     float targetMechRA = RA_AxisMotor.Position.angularPosition + deltaRA;
 
-    //90degree offset (DEC mechanical position 0 is DEC celestial 90°)
+    //90degree offset (at DEC mechanical position 0 DEC celestial is 90°)
     float targetMechDec = 90.0f - targetDec;
 
     float finalMechRA;

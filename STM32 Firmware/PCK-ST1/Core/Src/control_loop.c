@@ -1948,6 +1948,7 @@ static void resetStates()
 	statusFlags.magOK = false;
 	statusFlags.rpiRDY = false;
 	statusFlags.polarAligned = false;
+	statusFlags.tracking = false;
 
 	statusFlags.moveEnabled = true;
 
