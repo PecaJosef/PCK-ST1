@@ -42,17 +42,17 @@ typedef struct {
 }StatusFlags_t;
 
 typedef enum {
-	LOW_POWER_IDLE, //Waiting for button press to power up, initial state
-	WARMING_UP, //Powering up RPi, waiting for "OK" from RPi, waiting for GPS fix, calculating magnetic declination
-	HOMING, //Axis homing
-	CALIBRATION, //Calibrates the magnetometer or loads calibration data
-	ALIGNMENT, //Pointing to NCP, communication with RPi - taking photo
-	IDLE, //Not moving, waiting for action (commands), can be powered off while in idle
-	AXIS_MOVING, //Moving with any axis
-	GOTO, //GOTO movement
-	TRACKING, //Moving RA axis to counter Earth's rotation
-	FAULT, //Error state - waiting for reset
-	SHUTDOWN, //Shutting down state - takes care of safe shut down of RPi and the whole system
+	LOW_POWER_IDLE, 	//Waiting for button press to power up, initial state
+	WARMING_UP, 		//Powering up RPi, waiting for "OK" from RPi, waiting for GPS fix, calculating magnetic declination
+	HOMING, 			//Axis homing
+	CALIBRATION, 		//Calibrates the magnetometer or loads calibration data
+	ALIGNMENT, 			//Pointing to NCP, communication with RPi - taking photo
+	IDLE, 				//Not moving, waiting for action (commands), can be powered off while in idle
+	AXIS_MOVING, 		//Moving with any axis
+	GOTO, 				//GOTO movement
+	TRACKING, 			//Moving RA axis to counter Earth's rotation
+	FAULT, 				//Error state - waiting for reset
+	SHUTDOWN, 			//Shutting down state - takes care of safe shut down of RPi and the whole system
 }ControlState_t;
 
 typedef enum {

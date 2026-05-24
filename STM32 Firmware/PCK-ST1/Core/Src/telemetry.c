@@ -96,9 +96,10 @@ float getVoltage(void)
     uint16_t vref_raw = adc_buffer[0];
     uint16_t adc_raw = adc_buffer[1];
 
+    //Get real vref voltage value
     float vref_real = 3.0f * ((float)*VREFINT_CAL_ADDR / (float)vref_raw);
-
 	float adcVoltage = (adc_raw * vref_real) / ADC_MAX;
+
     float inputVoltage = adcVoltage * ((DIVIDER_R_UP + DIVIDER_R_DOWN) / DIVIDER_R_DOWN);
     return inputVoltage;
 }
@@ -110,7 +111,7 @@ static void checkPowerInput()
 
 	if (HAL_GPIO_ReadPin(PWR_STATE_GPIO_Port, PWR_STATE_Pin))
 	{
-		if(getVoltage() < 9.0f)
+		if(getVoltage() < LOW_VOLTAGE)
 		{
 			pwrInput = POWER_INPUT_USB_LOW;
 		}

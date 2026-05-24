@@ -29,8 +29,8 @@ typedef struct {
 } GPS_Data_t;
 
 
-// UBX-ACK-ACK:  B5 62 05 01 02 00 06 8A 98 44
-// UBX-ACK-NAK:  B5 62 05 00 02 00 06 8A 97 43
+//UBX-ACK-ACK:  B5 62 05 01 02 00 06 8A 98 44
+//UBX-ACK-NAK:  B5 62 05 00 02 00 06 8A 97 43
 typedef enum {
     GPS_ACK_PENDING,
     GPS_ACK_OK,

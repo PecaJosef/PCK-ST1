@@ -26,9 +26,6 @@
 #define DEC_MICROSTEPPING 32
 #define RA_MICROSTEPPING 32
 
-//#define DEC_MICROSTEPPING 128
-//#define RA_MICROSTEPPING 128
-
 //Define Gear ratios for each axis
 #define ALT_GEAR_RATIO 90.0f
 #define AZ_GEAR_RATIO 48.57954f //(5 + 2/11) * (150/16)
@@ -85,7 +82,7 @@ typedef enum {
 typedef enum {
     AXIS_HOMING_IDLE,
     AXIS_HOMING_SEARCH_COARSE, //Fast search
-    AXIS_HOMING_BACKOFF,       //Clear the sensor
+    AXIS_HOMING_BACKOFF,       //Move back from the end-stop
     AXIS_HOMING_SEARCH_FINE,   //Slow approach for Edge A
     AXIS_HOMING_OVERSHOOT,     //Move past Edge A
     AXIS_HOMING_REVERSE_SEARCH, //Slow approach for Edge B from other side
@@ -127,20 +124,19 @@ typedef struct {
 	AxisHomingState_t homing_state;
 	axisPosition_t Position;
 
-	//Low precision stepper motors
+	//Low-precision speed axis
 	uint32_t StepsCounter; //Number of steps already made in single move
 	uint32_t StepsTarget; //Number of steps to make
 	uint32_t TicksPerStep; //Number of interrupt ticks between each step
 	uint32_t TickCounter;	//Interrupt ticks counter
 
-	//High precision stepper motors
+	//High-precision speed axis
 	TIM_HandleTypeDef *PWM_Timer; //PWM (STEP) signal timer
 	uint32_t PWM_Channel; //PWM (STEP) signal channel
 	TIM_HandleTypeDef *Step_Counter_Timer; //Timer for counting steps
 	PWM_OutputType_t PWM_Type; //PWM Channel polarity
-	float edgeA; //Position variable for precise homing in the middle of endstop active zone
+	float edgeA; //Position variable for precise homing in the middle of end-stop active zone
 	float edgeB; // -//-
-
 }StepperMotor_t;
 
 

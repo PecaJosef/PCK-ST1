@@ -17,7 +17,7 @@ Camera_t camera = {
 void cameraInit()
 {
 	//Camera timer initiation
-	__HAL_TIM_SET_PRESCALER(CAM_TIM_PTR, CAMERA_PRESCALE-1); //10kHz timer freq
+	__HAL_TIM_SET_PRESCALER(CAM_TIM_PTR, CAMERA_PRESCALE-1);
 	__HAL_TIM_SET_AUTORELOAD(CAM_TIM_PTR, (uint32_t)(CAM_ARR-1));
 }
 

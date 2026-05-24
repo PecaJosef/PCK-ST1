@@ -244,7 +244,7 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in a
 			uint32_t arr = (uint32_t)ceilf(STEPPER_TIMER_HI_FREQ / (speed*Axis->stepsPerArcmin*DEG));
 			uint32_t ccr = arr / 2;
 
-			//Return to prevent "infinite" rotation (if steps = 0, the autoreload register would underflow to 2^32 - 1)
+			//Return to prevent "infinite" rotation (if steps <= 0, the autoreload register would underflow to 2^32 - 1)
 			if(steps <= 1 || arr <= 0) return;
 
 			//Set PWM (STEP) timer frequency
@@ -256,7 +256,7 @@ void stepperMove(StepperMotor_t *Axis, float angle, float speed) //angle is in a
 			__HAL_TIM_SET_COUNTER(Axis->Step_Counter_Timer, 0);
 			__HAL_TIM_CLEAR_IT(Axis->Step_Counter_Timer, TIM_IT_UPDATE);
 
-			// Start Step counting timer (slave counter) and PWM timer (step pulse generator)
+			//Start Step counting timer (slave counter) and PWM timer (step pulse generator)
 			HAL_TIM_Base_Start_IT(Axis->Step_Counter_Timer);
 
 			if (Axis->PWM_Type == PWM_OUT_P)
@@ -328,8 +328,6 @@ void stepsGenerating(StepperMotor_t *Axis)
 	if (Axis->StepsCounter >= Axis->StepsTarget)
 	{
 		Axis->busy= false;
-		//Lower the motor current
-		//TBD
 
 		//Update axis position based on the StepsTarget
 		updatePosition(Axis);

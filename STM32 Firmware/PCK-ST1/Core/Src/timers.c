@@ -25,6 +25,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
   else if(htim->Instance == CAMERA_TIM)
   {
+	  //Camera control timer - 5ms interrupts
 	  cameraInterruptHandler();
   }
 

@@ -17,6 +17,8 @@
 #define DIVIDER_R_DOWN 22000.0f
 #define ADC_MAX 4095.0f
 
+#define LOW_VOLTAGE 8.5f
+
 #define TELEMETRY_PERIOD 250
 
 extern ADC_HandleTypeDef hadc1;

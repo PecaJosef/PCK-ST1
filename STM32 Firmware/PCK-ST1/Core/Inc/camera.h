@@ -31,7 +31,7 @@ typedef enum {
     CAM_IDLE,
     CAM_SHUTTER_OPEN,
     CAM_WAIT_DELAY,
-    CAM_BUSY
+    CAM_BUSY,
 } CameraState_t;
 
 typedef struct {

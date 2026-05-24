@@ -72,14 +72,18 @@ void CMD_UART_StoreByte(UART_Source_t src, uint8_t byte)
 
     if (src == PC_UART_SRC)
     {
-    	buf = pc_buffer; idx = &pc_index; ready = &pc_cmd_ready;
+    	buf = pc_buffer;
+    	idx = &pc_index;
+    	ready = &pc_cmd_ready;
     }
     else
     {
-    	buf = rpi_buffer; idx = &rpi_index; ready = &rpi_cmd_ready;
+    	buf = rpi_buffer;
+    	idx = &rpi_index;
+    	ready = &rpi_cmd_ready;
     }
 
-    if (*ready) return; // previous command not yet processed
+    if (*ready) return; //previous command not processed yet
 
     buf[*idx] = byte;
 
@@ -126,6 +130,12 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		return;
 	}
 
+	if (cmd[0] != '$')
+	{
+		uartSend(src, "ERR:FORMAT\r\n");
+		return;
+	}
+
 	token = strtok_r(cmd, ":", &saveptr);
 	if (!token)
 	{
@@ -148,7 +158,7 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	}
 	else if(strcmp(token, "$IMG")==0)
 	{
-		//Parsing the capture command
+		//Parsing the image capture command
 		exposureParsing(&saveptr, src);
 	}
 	else if(strcmp(token, "$PA")==0)
@@ -241,7 +251,6 @@ static void executeCommand(char *cmd, UART_Source_t src)
 
 }
 
-
 static void moveParsing(char **saveptr, UART_Source_t src)
 {
 	//If some control state disables move, return early
@@ -264,15 +273,7 @@ static void moveParsing(char **saveptr, UART_Source_t src)
 
 	if(strcmp(command, "PARK")==0)
 	{
-		/*
-		AZ_MoveRequest.angle = -AZ_AxisMotor.Position.angularPosition*DEG;
-		AZ_MoveRequest.speed = AZ_COARSE_SPEED;
-		AZ_MoveRequest.moveRequested = true;
-
-		ALT_MoveRequest.angle = -ALT_AxisMotor.Position.angularPosition*DEG;
-		ALT_MoveRequest.speed = ALT_COARSE_SPEED;
-		ALT_MoveRequest.moveRequested = true;
-		*/
+		//Move the RA and DEX axes to their reference position using move requests
 		DEC_MoveRequest.angle = -DEC_AxisMotor.Position.angularPosition*DEG;
 		DEC_MoveRequest.speed = DEC_COARSE_SPEED;
 		DEC_MoveRequest.moveRequested = true;
@@ -654,7 +655,6 @@ static void trackingParsing(char **saveptr, UART_Source_t src)
 	{
 		uartSend(src, "ERROR:FORMAT\r\n");
 	}
-
 }
 
 

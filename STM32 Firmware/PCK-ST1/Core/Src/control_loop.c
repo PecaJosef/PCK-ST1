@@ -8,10 +8,12 @@
  * Control states should be as follows during regular run
  * LOW_POWER_IDLE
 * 		- waits for power button power up sequence (short press, long press)
- * 		- after powering sequence LEDs start to blink
- * 		- another button press initiates homing -> HOMING state, powers up RPi - button press is part of the homing state
+* 		- after powering sequence transition to home state
+ *
  *
  * HOMING
+ * 		- LEDs start to blink
+ * 		- button press initiates homing -> HOMING state, powers up RPi
  * 		- homes all axis
  * 		- after homing is performed, control loop checks the calibration
  *
@@ -22,29 +24,29 @@
  *
  * WARMING_UP
  * 		- checks if GPS and magnetometer are operational (if not -> ERROR state)
- * 			- if magnetometer is calibrated PCK-ST1 waits for RPi to bootup (or times out ~(TBD)s -> ERROR state)
- * 			- if magnetometer calibration data are not present in flash calibration is initiated
- * 		- if RPi boots up correctly and sends RDY message LEDs signal to press button for NCP aligning -> ALIGNING
+ * 		- PCK-ST1 waits for RPi to bootup (or times out ~60s -> ERROR state)
+ * 		- if RPi boots up correctly and sends RDY message start the aligning process
  *
  * ALIGNING
+ * 		- LEDs signaling to press button for NCP aligning
  * 		- drives AZ and ALT axis based on GPS and magnetometer data
  * 		- sends "take star picture" to RPi
  * 		- checks initial polar alignment
  * 			- if only Polaris found - point to the Polaris (sends "get center of rotation" command)
  * 			- if NCP found - point to NCP estimated position (sends "get center of rotation" command)
- * 			- if no stars are found -> ERROR state
- * 		- rotates the RA axis to take second CoR image
+ * 			- if no main stars are found -> ERROR state
+ * 		- rotates the RA axis to take second CoR image (sends "get center of rotation" command)
  * 		- after getting the CoR, proceed to polar alignment
  * 		- check the PA error up to 3 times and perform corrections
  * 			- sends "get PA error" command
  * 			- moves AZ ALT axes based on the error
  * 			- if the error is <= Threshold -> ALIGNMENT Done
  * 			- if the error is > Threshold - repeat
- *		- reduces ALT and AZ motor current after successful aligning
+ *		- TBD - reduces ALT and AZ motor current after successful aligning
  *		- jumps into IDLE state
  *
  * IDLE
- * 		- waits for commands from PC/Controller or RPi (?BTE app)
+ * 		- waits for commands from PC/Controller
  * 		- by pressing the button starts/ends the tracking
  *
  * SHUTDOWN
@@ -53,7 +55,18 @@
  * 		- if not confirmed, PCK-ST1 return to its previous state (after 10s - TBD)
  * 		- after a shutdown is initiated the main board stays "alive", to safely turn off RPi
  *
+ * GOTO
+ * 		- can be called during the IDLE state
+ * 		- points the camera at desired celestial object (using RA and DEC axis)
  *
+ * MOVE AXIS
+ * 		- independent axis movement
+ * 		- does not track the celestial coordinates - used for goto target adjustment or any other required motion
+ *
+ *
+ * FAULT
+ * 		- fault state resets all system flags and locks the device
+ * 		- requires shutdown to proceed
  *
  */
 
@@ -65,7 +78,6 @@
 #include "cmd_handler.h"
 #include "mag.h"
 #include "astro.h"
-
 
 /*
  *	LOW POWER IDLE variables and defines
@@ -100,7 +112,7 @@
 #define BACKOFF_DIST 10.0f*DEG
 #define OVERSHOOT_DIST 20.0f*DEG
 #define HOMING_DIST 135.0f*DEG
-#define FINE_DIST 12.5f*DEG //Fine dist needs to be slightly larger than backoff
+#define FINE_DIST 12.5f*DEG //Fine dist needs to be slightly larger than backoff to ensure hitting the end-stop
 
 #define COR_ANGLE 60.0f
 
@@ -179,10 +191,10 @@ typedef enum {
 //---Calibration internal states---
 typedef enum {
     CAL_IDLE,
-    CAL_ROTATION_CHECK,   // Moving to -180
-    CAL_SAMPLING,     // Moving 0 to 360 and taking samples
-    CAL_POST_ROTATION_CHECK,  // Returning to 0
-    CAL_COMPUTE       // Calculating final matrix
+    CAL_ROTATION_CHECK, 	// Moving to -180
+    CAL_SAMPLING,     		// Moving 0 to 360 and taking samples
+    CAL_POST_ROTATION_CHECK,// Returning to 0
+    CAL_COMPUTE       		// Calculating final matrix
 } CalibState_t;
 
 //---Idle internal states---
@@ -365,9 +377,6 @@ void controlLoop()
 				//Save last control loop state in case of returning back
 				prevControlState = controlState;
 
-				//Reset all states to the default
-				resetStates();
-
 				//Stop all motors
 				if (AZ_AxisMotor.busy) stepperStop(&AZ_AxisMotor);
 				if (ALT_AxisMotor.busy) stepperStop(&ALT_AxisMotor);
@@ -425,6 +434,7 @@ void controlLoop()
 	case SHUTDOWN:
 		handleShutdown();
 		break;
+
 	case FAULT:
 		handleFault();
 		break;
@@ -446,7 +456,6 @@ void handleLowPowerIdle()
 {
 	uint8_t btn = readButtonDebounced();
 	static uint32_t secondPressStart = 0;
-	//static uint32_t lastLedTime = 0;
 	static int ledStep = 0;
 
 	switch (lowPowerIdleButtonState) {
@@ -464,7 +473,7 @@ void handleLowPowerIdle()
 			if (btn == RELEASED) //Released
 			{
 				lowPowerIdleButtonState = BTN_SEQ_WAIT_SECOND_PRESS;
-				secondPressStart = HAL_GetTick(); //Start 2s window
+				secondPressStart = HAL_GetTick(); //Start 1s window
 			}
 			break;
 
@@ -474,7 +483,7 @@ void handleLowPowerIdle()
 				// Timeout, reset sequence
 				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS;
 				ledStep = 0;
-				//Reset LEDs to ON state
+				//Reset LEDs to OFF state
 				ledsSet(false);
 			}
 			else if (btn == PRESSED) //Pressed again
@@ -494,10 +503,10 @@ void handleLowPowerIdle()
 				lowPowerIdleButtonState = BTN_SEQ_WAIT_FIRST_PRESS;
 				break;
 			}
-			// Check how long held
+			//Check how long held
 			uint32_t heldTime = HAL_GetTick() - secondPressStart;
 
-			// light LEDs progressively
+			//light LEDs progressively
 			if ((heldTime / LED_DELAY) > ledStep && ledStep < 4)
 			{
 				ledStep++;
@@ -1624,6 +1633,9 @@ void handleShutdown()
 		case SHUTDOWN_PROCESS:
 			if (btn == RELEASED)
 			{
+				//Reset all states to the default
+				resetStates();
+
 				//Send $SHUTDOWN command to RPi
 				rpiShutdown();
 				timeoutStart(&rpiShutdownTimeout, RPI_SHUTDOWN_TIME);
@@ -1706,6 +1718,8 @@ void error(errorCode_t err)
 	stepperDisable(&ALT_AxisMotor);
 	stepperDisable(&RA_AxisMotor);
 	stepperDisable(&DEC_AxisMotor);
+
+	statusFlags.moveEnabled = false;
 }
 
 static void ledsBlink(uint32_t blinkPeriod)
@@ -1911,7 +1925,6 @@ void trackingCommand(UART_Source_t src, bool trackingStart)
 		trackingState = TRACKING_STOP;
 		uartSend(src, "TRACKING OFF\r\n");
 	}
-
 }
 
 void idleCommand(UART_Source_t src)

@@ -25,7 +25,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "leds.h"
 #include "timers.h"
 #include "stepper.h"
 #include "mag.h"

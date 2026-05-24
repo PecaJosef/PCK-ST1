@@ -6,14 +6,13 @@
  */
 
 /*
- * UART1 - Controller/PC
+ * UART1 - Control port (Controller/PC)
  * UART5 - RPI
  */
 
 #include "uart_it.h"
 #include "cmd_handler.h"
 #include "stm32l4xx_hal.h"
-//#include "usbd_cdc_if.h"
 
 uint8_t uart1_rx_byte;
 uint8_t uart5_rx_byte;

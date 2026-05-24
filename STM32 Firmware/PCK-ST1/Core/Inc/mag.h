@@ -12,13 +12,13 @@
 #include "usbd_cdc_if.h"
 #include "stepper.h"
 
-#define QMC5883_ADDR         (0x0D << 1) // 7-bit address shifted for HAL
-#define QMC5883_REG_X_LSB    0x00
-#define QMC5883_REG_CTRL1    0x09
+#define QMC5883_ADDR (0x0D << 1) // 7-bit address shifted for HAL
+#define QMC5883_REG_X_LSB 0x00
+#define QMC5883_REG_CTRL1 0x09
 #define QMC5883_REG_SETRESET 0x0B
-#define QMC5883_REG_ID      0x0D
+#define QMC5883_REG_ID 0x0D
 
-
+//Memory address for the calibration data
 #define CALIB_FLASH_ADDR 0x0808F800
 #define CALIB_FLASH_PAGE 31
 
@@ -33,21 +33,19 @@ typedef struct {
 typedef struct {
     float x_offset;
     float y_offset;
-    float softiron[2][2]; // 2x2 correction matrix
+    float softiron[2][2]; //2x2 transformation matrix
 } MagCalib_t;
 
 typedef struct {
     uint32_t magic;
-    uint32_t padding; // pad to 8-byte multiple
+    uint32_t padding; //padding to a 8-byte multiple
     MagCalib_t calib;
 } __attribute__((aligned(8))) StoredCalib_t;
 
 
 
-// Initialize HMC5883
 HAL_StatusTypeDef Mag_Init(I2C_HandleTypeDef *hi2c);
 
-// Read raw magnetometer data
 HAL_StatusTypeDef magReadRaw(MagRawData_t *data);
 
 MagCalib_t CalibrateMagnetometer(StepperMotor_t *AZ_motor, float step_angle, float speed);

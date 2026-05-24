@@ -8,7 +8,6 @@
 #ifndef INC_TIMERS_H_
 #define INC_TIMERS_H_
 
-#include "leds.h"
 #include "stepper.h"
 #include "main.h"
 #include "stm32l4xx_hal.h"

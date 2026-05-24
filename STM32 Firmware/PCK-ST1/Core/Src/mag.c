@@ -10,16 +10,21 @@
 
 
 static I2C_HandleTypeDef *mag_hi2c;
-//extern I2C_HandleTypeDef hi2c3;
 
 
 HAL_StatusTypeDef Mag_Init(I2C_HandleTypeDef *hi2c)
 {
     mag_hi2c = hi2c;
 
+    if (magIsAlive() == false)
+    {
+    	return HAL_ERROR;
+    }
+
     uint8_t setreset[2] = {QMC5883_REG_SETRESET, 0x01};
-    uint8_t ctrl1[2]    = {QMC5883_REG_CTRL1, 0x0D};
-    // 0x1D = OSR=512, RNG=2G, ODR=200Hz, Continuous
+    uint8_t ctrl1[2]    = {QMC5883_REG_CTRL1, 0x05};
+    //0x0D = OSR=512, RNG=2G, ODR=200Hz, Continuous
+    //0x05 = OSR=512, RNG=2G, ODR=50Hz, Continuous
 
     if (HAL_I2C_Master_Transmit(mag_hi2c, QMC5883_ADDR, setreset, 2, HAL_MAX_DELAY) != HAL_OK) return HAL_ERROR;
     if (HAL_I2C_Master_Transmit(mag_hi2c, QMC5883_ADDR, ctrl1, 2, HAL_MAX_DELAY) != HAL_OK) return HAL_ERROR;
@@ -90,7 +95,7 @@ MagCalib_t calibrationMatrix(int32_t sumX, int32_t sumY, int64_t sumXX, int64_t 
 	double l1    = (trace + disc) / 2.0f;
 	double l2    = (trace - disc) / 2.0f;
 
-	//Eigenvectors (Normalized)
+	//Eigenvectors (normalized)
 	double v1x = covXY;
 	double v1y = l1 - varX;
 	double mag1 = sqrtf(v1x*v1x + v1y*v1y);
@@ -101,7 +106,7 @@ MagCalib_t calibrationMatrix(int32_t sumX, int32_t sumY, int64_t sumXX, int64_t 
 	double mag2 = sqrtf(v2x*v2x + v2y*v2y);
 	v2x /= mag2; v2y /= mag2;
 
-	//Whitening Matrix M = s1*v1*v1^T + s2*v2*v2^T
+	//Transformation matrix = s1*v1*v1^T + s2*v2*v2^T
 	float s1 = 1.0f / sqrtf(fmaxf(l1, 1e-6f));
 	float s2 = 1.0f / sqrtf(fmaxf(l2, 1e-6f));
 
@@ -123,19 +128,19 @@ float getCalibratedHeading(MagCalib_t *calib, float declination)
     MagRawData_t data;
     if (magReadRaw(&data) != HAL_OK) return -1.0f;
 
-    // Subtract offsets (hard-iron correction)
+    //Subtract offsets (hard-iron correction)
     float dx = data.x - calib->x_offset;
     float dy = data.y - calib->y_offset;
 
-    // Apply soft-iron correction matrix
+    //Apply soft-iron correction matrix
     float x = calib->softiron[0][0] * dx + calib->softiron[0][1] * dy;
     float y = calib->softiron[1][0] * dx + calib->softiron[1][1] * dy;
 
-    // Compute heading
+    //Compute heading
     //Positive values - heading EAST from NORTH, negative values - heading WEST from NORTH
     float heading = -(atan2f(y, x) * 180.0f / M_PI);
 
-    // Apply magnetic declination
+    //Apply magnetic declination
     heading += declination;
 
     return heading;
@@ -149,7 +154,7 @@ void SaveCalibrationToFlash(MagCalib_t *calib)
 
 	HAL_FLASH_Unlock();
 
-    // Erase the page
+    //Erase the mem page
     FLASH_EraseInitTypeDef eraseInit = {0};
     uint32_t pageError;
     eraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
@@ -160,11 +165,12 @@ void SaveCalibrationToFlash(MagCalib_t *calib)
     if (HAL_FLASHEx_Erase(&eraseInit, &pageError) != HAL_OK)
     {
         HAL_FLASH_Lock();
-        return; // erase failed
+        return; //mem erase failed
     }
 
     uint64_t *p = (uint64_t*)&data;
-	// Calculate iterations based on the fixed struct size
+
+	//Calculate iterations based on the struct size
 	for (size_t i = 0; i < sizeof(StoredCalib_t) / 8; i++)
 	{
 		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIB_FLASH_ADDR + i*8, p[i]) != HAL_OK)
@@ -175,23 +181,6 @@ void SaveCalibrationToFlash(MagCalib_t *calib)
 	HAL_FLASH_Lock();
 }
 
-/*
-bool LoadCalibrationFromFlash(MagCalib_t *calib)
-{
-    //Cast the Flash address directly
-    StoredCalib_t *flashData = (StoredCalib_t*)CALIB_FLASH_ADDR;
-
-    //Check the magic number
-    if(flashData->magic != 0xDEADBEEF)
-    {
-        return false;
-    }
-
-    *calib = flashData->calib;
-
-    return true;
-}
-*/
 
 bool LoadCalibrationFromFlash(MagCalib_t *calib)
 {

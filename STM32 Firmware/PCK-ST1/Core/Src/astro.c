@@ -204,13 +204,13 @@ void gotoRaDec(float targetRA, float targetDec)
 
     float targetMechRA = RA_AxisMotor.Position.angularPosition + deltaRA;
 
-    //90degree offset (at DEC mechanical position 0 DEC celestial is 90°)
+    //90degree offset (at DEC mechanical position of 0° the DEC celestial is 90°)
     float targetMechDec = 90.0f - targetDec;
 
     float finalMechRA;
     float finalMechDec;
 
-    //If the target is outside the GOTO_RA_MIN - GOTO_RA_MAX mechanical position, do meridian flip to keep some space for tracking
+    //If the target is outside the GOTO_RA_MIN - GOTO_RA_MAX mechanical position range, do meridian flip to keep some space for tracking
     if (targetMechRA < GOTO_RA_MIN || targetMechRA > GOTO_RA_MAX)
 	{
 		//Meridian flip
