@@ -14,9 +14,8 @@ center_offset = None
 
 def alignmentError(uart):
     global center_offset
-    #star_image = cv2.imread("star_img/polaris4_1.jpg")
 
-    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, flip the image
+    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, dont flip the image
 
     cv2.imwrite('stars.jpg', star_image)
     uart.send("$PA:CAPTURED")
@@ -25,6 +24,7 @@ def alignmentError(uart):
         center_offset = np.array([0, 0])
 
     NCPErrorX, NCPErrorY, polarisFound, ncpFound, raAngle = getAlignmentError(star_image, center_offset, True)
+    #Create a $PA:DEV command based on the getAlignmentError results
     pae_msg = f"$PA:DEV:{int(ncpFound)}:{int(polarisFound)}:{-NCPErrorX:.5f}:{-NCPErrorY:.5f}:{raAngle:.5f}"
     uart.send(pae_msg)
     return
@@ -32,7 +32,7 @@ def alignmentError(uart):
 def centerOfRotation(uart):
     global image_zero, image_angled, center_offset
 
-    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, flip the image
+    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, dont flip the image
     uart.send("$PA:CAPTURED")
 
     if (image_zero is None):

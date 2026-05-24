@@ -10,54 +10,55 @@ star_distances = np.load("/home/pck/repo/PCK-ST1/RPi Zero Software/pckdev/databa
 star_Polaris_RA_angle = np.load("/home/pck/repo/PCK-ST1/RPi Zero Software/pckdev/database/star_Polaris_RA_angle.npy")
 #star_RA_hours = np.load("database/star_RA_hours.npy")
 
-defaultPixPerArcmin = 4056/(14.334*60) #Default pixels per arminute - Later load from config file
+defaultPixPerArcmin = 4056/(14.334*60) #Default pixels per arminute - for 25mm lens and Raspberry Pi HQ Camera
 
 def imagePreprocessing(image):
+  #Convert to grayscale
   gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
   #Get mean pixel value from the image
   mean = np.mean(gray)
-  #print("Mean pixel value:", mean)
 
-  #Increase the image contrast based on mean pixel value
-  contrast_img = cv2.convertScaleAbs(gray, alpha=1, beta=-mean)
+  #Decrease the image brightness based on the mean pixel value
+  darkened_img = cv2.convertScaleAbs(gray, alpha=1, beta=-mean)
 
-  # Apply Gaussian blur to reduce noise
-  blurred = cv2.GaussianBlur(contrast_img, (5, 5), 0)
+  #Apply Gaussian blur to reduce noise
+  blurred = cv2.GaussianBlur(darkened_img, (5, 5), 0)
 
-  # Get threshold from contrasted and blurred image
-  #thresh, _ = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+  #Get threshold from the darkened and blurred image
   thresh = np.mean(blurred)
 
-  #print("Initial threshold: ", thresh)
-  # Limit the threshold
+  #Limit the threshold
   min_thresh = 20
   max_thresh = 100
   threshold = max(min_thresh, min(thresh, max_thresh))
-  #print("Limited threshold: ",threshold)
 
-  # Apply adaptive thresholding to detect bright spots
-  _, thresholded = cv2.threshold(blurred, threshold, 255, cv2.THRESH_BINARY) #If pix value < threshold  --->  turns pixel black
-
+  #Apply adaptive thresholding to detect bright spots
+  _, thresholded = cv2.threshold(blurred, threshold, 255, cv2.THRESH_BINARY)
   cv2.imwrite('thresholded.jpg', thresholded)
-
   return thresholded
 
 def findStars(image, number_of_brightest_stars):
-  # Find contours (potential stars)
+  #Find contours (potential stars)
   contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-  # Filter out small contours based on area (to avoid noise)
-  min_area = 1  # Minimum area for contours to be considered as stars
+  #Filter out small contours based on area (to avoid noise)
+  min_area = 1  #Min area for contours to be considered as stars
   contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
-  # Sort contours by area in descending order (for selecting biggest stars)
+  #Sort contours by area in descending order (for selecting biggest stars)
   contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
   print("Number of stars found: ",len(contours))
 
-  #top_contours = contours[:number_of_brightest_stars]
-  star_centers = np.array([[int(x), int(y)] for (x, y), _ in (cv2.minEnclosingCircle(cnt) for cnt in contours)], dtype=np.int32)
+  contour_centers = []
 
-  # Select only the top n brightest stars
+  for cnt in contours:
+      #Find the center of circle enclosing the stars blobs in the image
+      (x, y), radius = cv2.minEnclosingCircle(cnt)
+      contour_centers.append([x, y])
+
+  star_centers = np.array(contour_centers, dtype=np.float32)
+
+  #Select only the top N brightest stars
   brightest_stars = star_centers[:number_of_brightest_stars]
 
   return star_centers, brightest_stars
@@ -78,11 +79,13 @@ def markStars(stars, image, img_name):
   output = image.copy()
   for index, star in enumerate(stars):
 
+      center_x, center_y = int(star[0]), int(star[1])
+
       # Draw the circle around the star on the output image
-      cv2.circle(output, star, circle_radius, (0, 255, 0), 2)
+      cv2.circle(output, (center_x, center_y), circle_radius, (0, 255, 0), 2)
 
       # Add the index number next to the star
-      cv2.putText(output, str(index), (star[0] + 13, star[1] - 13), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
+      cv2.putText(output, str(index), (center_x + 13, center_y - 13), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
 
   cv2.imwrite(img_name, output)
   return output
@@ -104,12 +107,12 @@ def starCorrelation(star_vectors, database_vectors, threshold, angle_step, debug
   cos_a = np.cos(angles_rad)
   sin_a =  np.sin(angles_rad)
 
-  #Combines sin a cos values into large rotation matrix for all angles
+  #Combine sin a cos values into a large rotation matrix for all angle steps
   rot_matrix = np.stack([np.stack([ cos_a, -sin_a], axis=1), np.stack([ sin_a,  cos_a], axis=1)], axis=1).astype(np.float32)
 
-  rotated_vectors = star_vectors_unit @ rot_matrix.transpose(0, 2, 1)               # (angles, star_vectors, 2)
-  dots = rotated_vectors @ database_vectors_unit.T                                  # (angles, star_vectors, databese_vectors)
-  match_array = np.count_nonzero(dots.max(axis=2) >= cos_threshold, axis=1)  # (N,)
+  rotated_vectors = star_vectors_unit @ rot_matrix.transpose(0, 2, 1) #(angles, star_vectors, 2)
+  dots = rotated_vectors @ database_vectors_unit.T #(angles, star_vectors, databese_vectors)
+  match_array = np.count_nonzero(dots.max(axis=2) >= cos_threshold, axis=1) #(N,)
 
   max_idx = np.argmax(match_array)
   max_matched_vectors = match_array[max_idx]
@@ -140,8 +143,8 @@ def starCorrelation(star_vectors, database_vectors, threshold, angle_step, debug
     plt.legend()
     plt.savefig('correlation_analysis.jpg')
     """
-  #True if Z-score uis above threshold and at least N stars were found
-  stars_matched = (z_score > threshold)
+  #True if Z-score is above threshold and more than N stars were found
+  stars_matched = (z_score > threshold and max_val > 5)
   print("Z-score: ", z_score,"Matched: ", stars_matched)
 
   return stars_matched, z_score, max_matched_angle
@@ -150,7 +153,7 @@ def findPolaris(star_candidates, stars, database_vectors, threshold, radius_arcm
   for star in star_candidates:
       radius_stars = getStarsInRadius(star, stars, radius_arcmin * defaultPixPerArcmin)
 
-      #Check if too many stars were found near polaris and exit in case it did
+      #Check if too many stars were found near Polaris and exit in case it did
       if (len(radius_stars) > 50):
         print("Too many stars in radius, probably picked up some noise -> ABORT")
         return False, None, None
@@ -212,12 +215,12 @@ def findNCPStars(polaris, stars, database_ncp_vectors, central_angle, radius_arc
     ov_cephei_dot = np.dot(rotated_stars, ov_cephei_vector_unit)
     ursae_minoris_2_dot = np.dot(rotated_stars, ursae_minoris_2_vector_unit)
 
-    # Find heading-matched star indices for each db star
+    #Find matches for each database star
     yildun_candidates = np.where(yildun_dot > cos_threshold)[0]
     ov_cephei_candidates = np.where(ov_cephei_dot > cos_threshold)[0]
     ursae_minoris_2_candidates = np.where(ursae_minoris_2_dot > cos_threshold)[0]
 
-    # Length check for each candidate
+    #Length check for each star candidate
     yildun_result = None
     for i in yildun_candidates:
         ratio = star_lengths[i] / yildun_length
@@ -245,10 +248,10 @@ def findNCPStars(polaris, stars, database_ncp_vectors, central_angle, radius_arc
         print(f"Angle:   {angle:.2f}°    Yildun:  {yildun_result}     OV Cephei: {ov_cephei_result}     2 Ursae Minoris: {ursae_minoris_2_result}")
 
     if match_count > best_match_count:
-        best_match_count    = match_count
-        best_angle          = angle
-        yildun_idx          = yildun_result
-        ov_cephei_idx       = ov_cephei_result
+        best_match_count = match_count
+        best_angle = angle
+        yildun_idx = yildun_result
+        ov_cephei_idx = ov_cephei_result
         ursae_minoris_2_idx = ursae_minoris_2_result
 
   if debug:
@@ -281,11 +284,11 @@ def trilaterateNCP(starA_coordinates, starB_coordinates, starC_coordinates, star
     d  = np.linalg.norm(starB_coordinates - starA_coordinates)
     j  = np.dot(ey, starC_coordinates - starA_coordinates)
 
-    # Compute coordinates
+    #Compute x,y coordinates
     x = (starA_NCP_dist**2 - starB_NCP_dist**2 + d**2) / (2 * d)
     y = (starA_NCP_dist**2 - starC_NCP_dist**2 + i**2 + j**2 - 2*i*x) / (2 * j)
 
-    # Calculate final NCP position
+    #Final NCP position
     NCP_coordinates = starA_coordinates + x * ex + y * ey
     return NCP_coordinates
 
@@ -494,7 +497,7 @@ def calculateCoR(P, P_prime):
     try:
         center = np.linalg.solve(I - R, t)
         
-        #Print the actual rotation angle
+        #Print the actual rotation angle (for debug)
         actual_angle = np.degrees(np.arctan2(R[1,0], R[0,0]))
         print(f"Detected rotation: {actual_angle:.4f} degrees")
         
@@ -506,7 +509,7 @@ def getAlignmentError(image, center_offset, debug=False):
   #Check if the image was loaded successfully
   if image is None:
       print("ERROR: Image not loaded")
-      #Error should be sent to PCK main board here
+      #Send zero response to the Main board -> results in fault
       return 0,0,False,False,0
 
   preprocessed_image = imagePreprocessing(image)

@@ -35,7 +35,7 @@ def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/Fals
     image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
     #image_gray = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2GRAY)
 
-    # Rotate image by 180 degrees
+    # Rotate image by 180 degrees if applicable
     if flip == True:
         image_rotated = cv2.rotate(image_bgr, cv2.ROTATE_180)
         return image_rotated

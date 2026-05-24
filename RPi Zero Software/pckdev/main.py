@@ -3,7 +3,7 @@ import camera
 import time
 
 def main():
-    #uart = UARTHandler(port="/dev/serial0", baudrate=115200) #For Raspberry Pi 5
+    #uart = UARTHandler(port="/dev/serial0", baudrate=115200) #For testing on Raspberry Pi 5
     uart = UARTHandler(port="/dev/ttyAMA0", baudrate=115200) #For Raspberry Pi Zero 2W
     
     if camera.cameraConnected() == True:
@@ -16,7 +16,7 @@ def main():
         
         uart.send("#RPI READY")
         time.sleep(0.25)
-        uart.send("$RDY") #Sends $RDY after the RPi boots up and the Python started
+        uart.send("$RDY") #Send $RDY after the RPi boots up and the Python started
 
         while True:
             cmd = uart.read_line()

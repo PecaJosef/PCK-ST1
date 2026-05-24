@@ -5,11 +5,10 @@ import cmdprocessing
 class UARTHandler:
     def __init__(self, port="/dev/ttyAMA0", baudrate=115200, timeout=1):
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
-        time.sleep(1)  # Give some time for the connection to settle
-        print(f"[UART] Connected to {port} at {baudrate} baud")
+        time.sleep(1)  #wait for the connection
 
     def read_line(self):
-        """Reads a line from UART and returns it as a string."""
+        #Read data from the UART and return it as a string
         if self.ser.in_waiting > 0:
             line = self.ser.readline().decode(errors='ignore').strip()
             if line:
@@ -18,12 +17,12 @@ class UARTHandler:
         return None
 
     def send(self, msg):
-        """Sends a string over UART."""
+        #Send data over UART
         self.ser.write((msg + '\r\n').encode())
         print(f"[UART] Sent: {msg}")
 
     def process_command(self, cmd):
-        """Parse and respond to commands."""
+        #Command parsing
         if cmd.startswith("$ECHO"):
             self.send("#ECHO")
         elif cmd.startswith("$PA:ALIGN"):
@@ -50,7 +49,6 @@ class UARTHandler:
             self.send("#Command error")
 
     def close(self):
-        """Close the serial port."""
         if self.ser.is_open:
             self.ser.close()
             print("[UART] Connection closed")
