@@ -58,7 +58,7 @@ void cameraHandler()
         case CAM_WAIT_DELAY:
             if (HAL_GetTick() - camera.delayLastTicks >= CAMERA_INTER_IMG_DELAY)
             {
-                camera.currentState = CAM_BUSY;
+            	camera.currentState = CAM_BUSY;
             }
             break;
 
@@ -68,20 +68,36 @@ void cameraHandler()
 
 void captureImage(float exposure, uint16_t imageCount)
 {
-    if (camera.currentState != CAM_IDLE || imageCount == 0)
+    if (camera.currentState != CAM_IDLE || imageCount <= 0)
 	{
 		return;
 	}
 
     //Calculate how many camera ticks are needed
     camera.exposureLengthTicks = (uint32_t)(exposure / CAMERA_TICK_DURATION);
-    if (camera.exposureLengthTicks == 0)
+    if (camera.exposureLengthTicks <= 0)
     {
     	camera.exposureLengthTicks = 1;
     }
 
     camera.imagesRemaining = imageCount;
     camera.currentState = CAM_BUSY;
+}
+
+void captureStop()
+{
+	//Stop the camera timer
+	HAL_TIM_Base_Stop_IT(CAM_TIM_PTR);
+
+	//Reset the camera timer
+	__HAL_TIM_SET_COUNTER(CAM_TIM_PTR, 0);
+	__HAL_TIM_CLEAR_IT(CAM_TIM_PTR, TIM_IT_UPDATE);
+
+	//Release the camera shutter GPIO
+	HAL_GPIO_WritePin(CAM_SHUTTER_GPIO_Port, CAM_SHUTTER_Pin, GPIO_PIN_RESET);
+
+	camera.currentState = CAM_IDLE;
+	camera.imagesRemaining = 0;
 }
 
 void cameraInterruptHandler()

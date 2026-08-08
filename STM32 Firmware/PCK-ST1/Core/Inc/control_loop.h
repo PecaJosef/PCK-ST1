@@ -25,7 +25,7 @@
 #include "stepper.h"
 #include "cmd_handler.h"
 
-//Status flags mostly for control via commands
+//Status flags - telemetry
 typedef struct {
 	bool homed;
 	bool calibrated;
@@ -34,12 +34,16 @@ typedef struct {
 	bool magOK;
 	bool rpiRDY;
 	bool moveEnabled;
-	bool calibForceEnable;
 	bool tracking;
 	bool polarAligned;
 	bool fault;
-
 }StatusFlags_t;
+
+typedef struct {
+	bool calibForceEnable;
+	bool fineAlignmentEnable;
+	bool continuousPolarAlignment;
+}ControlFlags_t;
 
 typedef enum {
 	LOW_POWER_IDLE, 	//Waiting for button press to power up, initial state
@@ -81,6 +85,7 @@ typedef struct {
 	float altError;
 	float raAngle;
 	uint8_t alignmentTriesCounter;
+	uint32_t lastCmdTicks;
 }Align_t;
 
 typedef struct {
@@ -108,6 +113,7 @@ extern MoveRequest_t DEC_MoveRequest;
 extern MoveRequest_t RA_MoveRequest;
 
 extern StatusFlags_t statusFlags;
+extern ControlFlags_t controlFlags;
 
 void controlLoop();
 

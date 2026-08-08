@@ -27,7 +27,8 @@
 #define RA_MICROSTEPPING 32
 
 //Define Gear ratios for each axis
-#define ALT_GEAR_RATIO 90.0f
+//#define ALT_GEAR_RATIO 90.0f //Without gearbox
+#define ALT_GEAR_RATIO 466.36364f //With 1:5.18 gearbox (90 * (5 + 2/11))
 #define AZ_GEAR_RATIO 48.57954f //(5 + 2/11) * (150/16)
 #define DEC_GEAR_RATIO 100.0f
 #define RA_GEAR_RATIO 1000.0f

@@ -39,11 +39,11 @@ static void polarAlignmentParsing (char **saveptr, UART_Source_t src);
 
 static void trackingParsing(char **saveptr, UART_Source_t src);
 
-static void calibParsing(char **saveptr, UART_Source_t src);
-
 static void isetParsing(char **saveptr, UART_Source_t src);
 
 static void telemetryParsing(char **saveptr, UART_Source_t src);
+
+static void setCommandParsing(char **saveptr, UART_Source_t src);
 
 void commandHandler(void)
 {
@@ -130,12 +130,6 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		return;
 	}
 
-	if (cmd[0] != '$')
-	{
-		uartSend(src, "ERR:FORMAT\r\n");
-		return;
-	}
-
 	token = strtok_r(cmd, ":", &saveptr);
 	if (!token)
 	{
@@ -171,13 +165,9 @@ static void executeCommand(char *cmd, UART_Source_t src)
 		//RPI commands processing and forwarding
 		rpiParsing(&saveptr, src);
 	}
-	else if(strcmp(token, "$TRACKING")==0)
+	else if(strcmp(token, "$TRACK")==0)
 	{
 		trackingParsing(&saveptr, src);
-	}
-	else if(strcmp(token, "$CALIB")==0)
-	{
-		calibParsing(&saveptr, src);
 	}
 	else if(strcmp(token, "$RDY")==0 && src == RPI_UART_SRC)
 	{
@@ -197,25 +187,9 @@ static void executeCommand(char *cmd, UART_Source_t src)
 	{
 		telemetryParsing(&saveptr, src);
 	}
-	else if(strcmp(token, "$HOME")==0)
+	else if(strcmp(token, "$SET")== 0)
 	{
-		homeCommand(src);
-	}
-	else if(strcmp(token, "$CALIBRATE")==0)
-	{
-		calibCommand(src);
-	}
-	else if(strcmp(token, "$ALIGN")==0)
-	{
-		alignCommand(src);
-	}
-	else if(strcmp(token, "$IDLE")==0)
-	{
-		idleCommand(src);
-	}
-	else if(strcmp(token, "$PATEST")==0)
-	{
-		patestCommand(src);
+		setCommandParsing(&saveptr, src);
 	}
 	else if(strcmp(token, "$ISET")==0)
 	{
@@ -505,28 +479,52 @@ static void rpiParsing(char **saveptr, UART_Source_t src)
 
 static void exposureParsing(char **saveptr, UART_Source_t src)
 {
-	char *imgExposure_c;
-	char *imgCount_c;
+	char *command;
 
-	imgExposure_c = strtok_r(NULL, ":", saveptr);
-	imgCount_c = strtok_r(NULL, ":", saveptr);
+	command = strtok_r(NULL, ":", saveptr);
 
-	if(imgExposure_c == NULL || imgCount_c == NULL)
+	if(command == NULL)
 	{
 		uartSend(src, "ERR:FORMAT\r\n");
 		return;
 	}
 
-	float imgExposure = atof(imgExposure_c);
-	uint16_t imgCount = atoi(imgCount_c);
+	if(strcmp(command, "START")==0)
+	{
+		char *imgExposure_c;
+		char *imgCount_c;
 
-	if(imgExposure <= 0 || imgCount <= 0)
+		imgExposure_c = strtok_r(NULL, ":", saveptr);
+		imgCount_c = strtok_r(NULL, ":", saveptr);
+
+		if(imgExposure_c == NULL || imgCount_c == NULL)
+		{
+			uartSend(src, "ERR:FORMAT\r\n");
+			return;
+		}
+
+		float imgExposure = atof(imgExposure_c);
+		uint16_t imgCount = atoi(imgCount_c);
+
+		if(imgExposure <= 0 || imgCount <= 0)
+		{
+			uartSend(src, "ERR:FORMAT\r\n");
+			return;
+		}
+		//Capture images based on the exposure value and the number of images
+		captureImage(imgExposure, imgCount);
+	}
+	else if(strcmp(command, "STOP")==0)
+	{
+		//Stop the image capturing
+		captureStop();
+		uartSend(src, "Imaging stopped\r\n");
+	}
+	else
 	{
 		uartSend(src, "ERR:FORMAT\r\n");
-		return;
 	}
-	//Capture images based on the exposure value and the number of images
-	captureImage(imgExposure, imgCount);
+
 }
 
 static void polarAlignmentParsing (char **saveptr, UART_Source_t src)
@@ -609,7 +607,6 @@ static void polarAlignmentParsing (char **saveptr, UART_Source_t src)
 
 		uartSend(PC_UART_SRC, paDataBuffer);
 
-
 		return;
 	}
 	else if(strcmp(command, "CAPTURED")==0)
@@ -643,11 +640,11 @@ static void trackingParsing(char **saveptr, UART_Source_t src)
 
 	command = strtok_r(NULL, ":", saveptr);
 
-	if(strcmp(command, "START")==0)
+	if (strcmp(command, "ON")==0 || strcmp(command, "EN")==0 || strcmp(command, "1")==0 || strcmp(command, "T")==0)
 	{
 		trackingCommand(src, true);
 	}
-	else if (strcmp(command, "STOP")==0)
+	else if (strcmp(command, "OFF")==0 || strcmp(command, "DIS")==0 || strcmp(command, "0")==0 || strcmp(command, "F")==0)
 	{
 		trackingCommand(src, false);
 	}
@@ -658,28 +655,6 @@ static void trackingParsing(char **saveptr, UART_Source_t src)
 }
 
 
-static void calibParsing(char **saveptr, UART_Source_t src)
-{
-	char *command;
-
-	command = strtok_r(NULL, ":", saveptr);
-
-	if(strcmp(command, "ON")==0)
-	{
-		statusFlags.calibForceEnable = true;
-		uartSend(src, "CALIBRATION ENABLED\r\n");
-	}
-	else if (strcmp(command, "OFF")==0)
-	{
-		statusFlags.calibForceEnable = false;
-		uartSend(src, "CALIBRATION DISABLED\r\n");
-	}
-	else
-	{
-		uartSend(src, "ERROR:FORMAT\r\n");
-	}
-
-}
 
 static void telemetryParsing(char **saveptr, UART_Source_t src)
 {
@@ -698,6 +673,148 @@ static void telemetryParsing(char **saveptr, UART_Source_t src)
 	{
 		uartSend(src, "ERR:FORMAT\r\n");
 	}
+}
+
+static void setCommandParsing(char **saveptr, UART_Source_t src)
+{
+	//Set command parsing
+	//F - flag, S - state
+
+	//$SET:F:<FLAG>:<VAL>
+	//$SET:S:<STATE>
+	    char *type = strtok_r(NULL, ":", saveptr);
+
+	    if (type == NULL)
+	    {
+	        uartSend(src, "ERR:FORMAT\r\n");
+	        return;
+	    }
+
+	     //FLAG SETTINGS $SET:F:
+
+	    if (strcmp(type, "F") == 0)
+	    {
+	        char *flag = strtok_r(NULL, ":", saveptr);
+	        char *val  = strtok_r(NULL, ":", saveptr);
+
+	        if (flag == NULL || val == NULL)
+	        {
+	            uartSend(src, "ERR:FORMAT\r\n");
+	            return;
+	        }
+
+	        //Flag value
+	        bool boolVal = false;
+	        if (strcmp(val, "1") == 0 || strcmp(val, "EN") == 0 || strcmp(val, "ON") == 0 || strcmp(val, "T") == 0)
+	        {
+	            boolVal = true;
+	        }
+	        else if (strcmp(val, "0") == 0 || strcmp(val, "DIS") == 0 || strcmp(val, "OFF") == 0 || strcmp(val, "F") == 0)
+	        {
+	            boolVal = false;
+	        }
+	        else
+	        {
+	            uartSend(src, "ERR:INVALID VAL\r\n");
+	            return;
+	        }
+
+	        if (strcmp(flag, "FINEPA") == 0) //Fine polar alignment
+	        {
+	            controlFlags.fineAlignmentEnable = boolVal;
+	        }
+	        else if (strcmp(flag, "CALIB") == 0) //Calibration enabled/disabled
+	        {
+	            controlFlags.calibForceEnable = boolVal;
+	        }
+	        else if (strcmp(flag, "CONTPA")==0) //Continuous polar alignment
+			{
+	        	controlFlags.continuousPolarAlignment = boolVal;
+			}
+	        else
+	        {
+	            uartSend(src, "ERR:UNKNOWN\r\n");
+	            return;
+	        }
+
+	        uartSend(src, "#OK:FLAG SET\r\n");
+	    }
+
+	    //STATE SETTINGS $SET:S:
+
+	    else if (strcmp(type, "S") == 0)
+	    {
+	        char *state = strtok_r(NULL, ":", saveptr);
+
+	        if (state == NULL)
+	        {
+	            uartSend(src, "ERR:FORMAT\r\n");
+	            return;
+	        }
+
+	        if (strcmp(state, "HOME") == 0)
+	        {
+	            homeCommand(src);
+	        }
+	        else if (strcmp(state, "CALIB") == 0)
+	        {
+	            calibCommand(src);
+	        }
+	        else if (strcmp(state, "ALIGN") == 0)
+	        {
+	            alignCommand(src);
+	        }
+	        else if (strcmp(state, "IDLE") == 0)
+	        {
+	            idleCommand(src);
+	        }
+	        else if (strcmp(state, "PATEST") == 0)
+	        {
+	            patestCommand(src);
+	        }
+	        else
+	        {
+	            uartSend(src, "ERR:UNKNOWN\r\n");
+	            return;
+	        }
+	    }
+
+	    //RA and DEC coordinates setting
+	    else if(strcmp(type, "RADEC")==0)
+	    {
+	    		char *raHours_c = strtok_r(NULL, ":", saveptr);
+	    		char *raMinutes_c = strtok_r(NULL, ":", saveptr);
+	    		char *raSeconds_c = strtok_r(NULL, ":", saveptr);
+	    		char *decDegrees_c = strtok_r(NULL, ":", saveptr);
+	    		char *decArcmin_c = strtok_r(NULL, ":", saveptr);
+	    		char *decArcsec_c = strtok_r(NULL, ":", saveptr);
+
+	    		if (raHours_c == NULL || raMinutes_c == NULL || raSeconds_c == NULL || decDegrees_c == NULL || decArcmin_c == NULL || decArcsec_c == NULL)
+	    		{
+	    			uartSend(src, "ERR:FORMAT\r\n");
+	    			return;
+	    		}
+
+	    		int16_t raHours = atoi(raHours_c);
+	    		int16_t raMinutes = atoi(raMinutes_c);
+	    		int16_t raSeconds = atoi(raSeconds_c);
+
+	    		int16_t decDegrees = atoi(decDegrees_c);
+	    		int16_t decArcmin = atoi(decArcmin_c);
+	    		int16_t decArcsec = atoi(decArcsec_c);
+
+	    		if(raHours >= 24 || raHours < 0 || decDegrees > 90 || decDegrees < -90)
+	    		{
+	    			uartSend(src, "ERR:INVALID DATA\r\n");
+	    			return;
+	    		}
+
+	    		setRaDec(raHours*15.0f + raMinutes*15.0f/60.0f + raSeconds*15.0f/3600.0f, decDegrees*1.0f + decArcmin/60.0f + decArcsec/3600.0f);
+	    }
+	    else
+	    {
+	        uartSend(src, "ERR:FORMAT\r\n");
+	    }
 }
 
 static void isetParsing(char **saveptr, UART_Source_t src)

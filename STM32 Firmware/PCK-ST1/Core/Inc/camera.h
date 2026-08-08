@@ -43,6 +43,7 @@ typedef struct {
 }Camera_t;
 
 extern TIM_HandleTypeDef htim16;
+extern Camera_t camera;
 
 void cameraInit();
 
@@ -51,6 +52,8 @@ void cameraHandler();
 void cameraInterruptHandler();
 
 void captureImage(float exposure, uint16_t imageCount);
+
+void captureStop();
 
 
 #endif /* INC_CAMERA_H_ */

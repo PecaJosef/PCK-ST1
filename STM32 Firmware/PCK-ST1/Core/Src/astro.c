@@ -23,6 +23,8 @@ CoordinatesRaDec_t coordinatesRaDec = {
 
 void trackingStart(StepperMotor_t *Axis)
 {
+	if(statusFlags.tracking == true) return;
+
 	if(!Axis->enabled)
 	{
 		stepperEnable(Axis);
@@ -61,6 +63,8 @@ void trackingStart(StepperMotor_t *Axis)
 
 void trackingStop(StepperMotor_t *Axis)
 {
+	if(statusFlags.tracking == false) return;
+
 	//Update the axis position
 	updatePosition(Axis);
 
