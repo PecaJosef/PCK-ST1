@@ -31,18 +31,20 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 TH_ACCENT2 = "#7b2fff"
 TH_SUCCESS = "#00e676"
 TH_WARNING = "#ffb700"
+TH_RED = "#ff3d71"
 
 # ── Simple one-click commands ────────────────────────────────
 #   Each entry: ("Button Label", "command string to send", "Button Color")
 SIMPLE_COMMANDS = [
-    ("HOME", "$HOME", TH_SUCCESS),
-    ("CALIBRATION", "$CALIBRATE", TH_SUCCESS),
-    ("ALIGNMENT", "$ALIGN", TH_SUCCESS),
+    ("HOME", "$SET:S:HOME", TH_SUCCESS),
+    ("CALIBRATION", "$SET:S:CALIB", TH_SUCCESS),
+    ("ALIGNMENT", "$SET:S:ALIGN", TH_SUCCESS),
+    ("IDLE", "$SET:S:IDLE", TH_SUCCESS),
     ("PARK", "$MOVE:PARK", TH_WARNING),
-    ("IDLE", "$IDLE", TH_WARNING),
     ("ECHO", "$ECHO", TH_ACCENT2),
     ("RPI ECHO", "$RPI:ECHO", TH_ACCENT2),
     ("RPI SHUTDOWN", "$RPI:SHUTDOWN", TH_WARNING),
+    ("STOP CAPTURING", "$IMG:STOP", TH_RED),
 ]
 
 # ── Toggle commands ──────────────────────────────────────────
@@ -50,8 +52,11 @@ SIMPLE_COMMANDS = [
 TOGGLE_COMMANDS = [
     ("RPI POWER", "$RPI:ON", "$RPI:OFF"),
     ("MOTORS", "$EN", "$DIS"),
-    ("TRACKING", "$TRACKING:START", "$TRACKING:STOP"),
-    ("CALIBRATION", "$CALIB:ON", "$CALIB:OFF"),
+    ("TRACKING", "$TRACK:EN", "$TRACK:DIS"),
+    ("CALIBRATION", "$SET:F:CALIB:EN", "$SET:F:CALIB:DIS"),
+    ("FINE PA", "$SET:F:FINEPA:EN", "$SET:F:FINEPA:DIS"),
+    ("CONTINUOUS PA", "$SET:F:CONTPA:EN", "$SET:F:CONTPA:DIS"),
+
 ]
 
 # ── Axis-move commands ───────────────────────────────────────
@@ -618,7 +623,7 @@ class App(tk.Tk):
         num_e.grid(row=1, column=1, padx=(6, 6))
 
         go_btn = tk.Button(row, text="SEND",
-                           command=lambda: self._send(f'$IMG:{exp_v.get()}:{num_v.get()}'),
+                           command=lambda: self._send(f'$IMG:START:{exp_v.get()}:{num_v.get()}'),
                            bg=TH["accent"], fg="#0a0a14",
                            font=("Segoe UI", 8, "bold"), bd=0, padx=6, pady=2,
                            cursor="hand2",
