@@ -347,6 +347,8 @@ static void ledsBlink(uint32_t blinkPeriod);
 static void ledsRampUp(uint32_t ledPeriod);
 static void pwrButtonBlink(uint32_t ledPeriod);
 
+static void continuousPolarAlignment();
+
 static void resetStates();
 
 void timeoutStart(Timeout_t *timeout, uint32_t seconds);
@@ -470,6 +472,17 @@ void controlLoop()
 	default:
 		controlState = FAULT;
 		break;
+	}
+
+	//------------------------------------------------------
+	//Continuous polar alignment
+	//------------------------------------------------------
+	if(controlState == IDLE || controlState == TRACKING)
+	{
+		if(statusFlags.polarAligned == true && controlFlags.continuousPolarAlignment == true && controlFlags.fineAlignmentEnable == true)
+		{
+			continuousPolarAlignment();
+		}
 	}
 }
 
@@ -1476,120 +1489,6 @@ void handleIdle()
 		idleState = IDLE_BTN_RELEASED;
 		break;
 	}
-
-	//------------------------------------------------------
-	//Continuous polar alignment
-	//------------------------------------------------------
-	switch(contAlignmentState)
-	{
-	case CONT_PA_CMD:
-		if (controlFlags.continuousPolarAlignment == false || AZ_AxisMotor.busy == true || ALT_AxisMotor.busy == true)
-		{
-			break;
-		}
-
-		if((HAL_GetTick() - alignmentData.lastCmdTicks) < CONTINUOUS_PA_PERIOD)
-		{
-			break;
-		}
-
-		//Send the PA command and update the last cmd ticks
-		uartSend(RPI_UART_SRC, "$PA:ALIGN\r\n");
-		uartSend(PC_UART_SRC, "$PA Sent\r\n");
-		alignmentData.lastCmdTicks = HAL_GetTick();
-
-		timeoutStart(&paCommandTimeout, PA_TIMEOUT);
-
-		alignmentData.alignmentDataUpdated = false;
-		alignmentData.imageCaptured = false;
-		contAlignmentState = CONT_PA_WAIT;
-
-		break;
-
-	case CONT_PA_WAIT:
-		//Resets the states if the flag is disabled
-		if (controlFlags.continuousPolarAlignment == false)
-		{
-			timeoutReset(&paCommandTimeout);
-			contAlignmentState = CONT_PA_CMD;
-			break;
-		}
-
-		if (alignmentData.imageCaptured == false)
-		{
-			if (timeoutReached(&paCommandTimeout) == true)
-			{
-				timeoutReset(&paCommandTimeout);
-				uartSend(PC_UART_SRC, "ERR:PA TIMEOUT\r\n");
-				//Disable the continuous polar alignment if the RPi response timeouts
-				controlFlags.continuousPolarAlignment = false;
-				contAlignmentState = CONT_PA_CMD;
-			}
-			break;
-		}
-
-		contAlignmentState = CONT_PA_CHECK;
-		break;
-
-	case CONT_PA_CHECK:
-		//Resets the states if the flag is disabled
-		if (controlFlags.continuousPolarAlignment == false)
-		{
-			timeoutReset(&paCommandTimeout);
-			alignmentData.alignmentDataUpdated = false;
-			alignmentData.imageCaptured = false;
-			contAlignmentState = CONT_PA_CMD;
-			break;
-		}
-
-		if(alignmentData.alignmentDataUpdated == false)
-		{
-			if (timeoutReached(&paCommandTimeout) == true)
-			{
-				timeoutReset(&paCommandTimeout);
-				uartSend(PC_UART_SRC, "ERR:PA TIMEOUT\r\n");
-				//Disable the continuous polar alignment if the RPi response timeouts
-				controlFlags.continuousPolarAlignment = false;
-				contAlignmentState = CONT_PA_CMD;
-			}
-			break;
-		}
-
-		//Image captured and alignment data updated - reset the polar alignment timeout and data updated flag
-		timeoutReset(&paCommandTimeout);
-		alignmentData.alignmentDataUpdated = false;
-		alignmentData.imageCaptured = false;
-
-		//Polaris or NCP not found -> skip the movement
-		if (alignmentData.polarisFound == false || alignmentData.ncpFound == false)
-		{
-			contAlignmentState = CONT_PA_CMD;
-			break;
-		}
-
-		//Wait for the external camera to be idle or in waiting state
-		if(camera.currentState == CAM_IDLE || camera.currentState == CAM_WAIT_DELAY) break;
-
-		if(alignmentData.azError != 0.0f && alignmentData.azError >= AZ_PA_ERROR_MIN && alignmentData.azError <= AZ_PA_ERROR_MAX)
-		{
-			stepperMove(&AZ_AxisMotor, alignmentData.azError/cosf(gpsData.latitude*(M_PI/180)), 2.5f);
-		}
-		if(alignmentData.altError >= ALT_PA_ERROR_MIN && alignmentData.altError <= ALT_PA_ERROR_MAX)
-		{
-			stepperMove(&ALT_AxisMotor, alignmentData.altError, 2.5f);
-		}
-
-		contAlignmentState = CONT_PA_MOVE_WAIT;
-		break;
-
-	case CONT_PA_MOVE_WAIT:
-		if(AZ_AxisMotor.busy == true || ALT_AxisMotor.busy == true)
-		{
-			break;
-		}
-
-		contAlignmentState = CONT_PA_CMD;
-	}
 }
 
 void handleTracking()
@@ -1848,6 +1747,125 @@ void handleFault()
 		faultLedState = (faultLedState == GPIO_PIN_SET) ? GPIO_PIN_RESET : GPIO_PIN_SET;
 	}
 }
+
+/*
+ * --- CONTINUOUS POLAR ALIGNMENT ---
+ */
+
+static void continuousPolarAlignment()
+{
+	switch(contAlignmentState)
+	{
+	case CONT_PA_CMD:
+		if (AZ_AxisMotor.busy == true || ALT_AxisMotor.busy == true)
+		{
+			break;
+		}
+
+		if((HAL_GetTick() - alignmentData.lastCmdTicks) < CONTINUOUS_PA_PERIOD)
+		{
+			break;
+		}
+
+		//Send the PA command and update the last cmd ticks
+		uartSend(RPI_UART_SRC, "$PA:ALIGN\r\n");
+		uartSend(PC_UART_SRC, "$PA Sent\r\n");
+		alignmentData.lastCmdTicks = HAL_GetTick();
+
+		timeoutStart(&paCommandTimeout, PA_TIMEOUT);
+
+		alignmentData.alignmentDataUpdated = false;
+		alignmentData.imageCaptured = false;
+		contAlignmentState = CONT_PA_WAIT;
+
+		break;
+
+	case CONT_PA_WAIT:
+		//Resets the states if the flag is disabled
+		if (controlFlags.continuousPolarAlignment == false)
+		{
+			timeoutReset(&paCommandTimeout);
+			contAlignmentState = CONT_PA_CMD;
+			break;
+		}
+
+		if (alignmentData.imageCaptured == false)
+		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				uartSend(PC_UART_SRC, "ERR:PA TIMEOUT\r\n");
+				//Disable the continuous polar alignment if the RPi response timeouts
+				controlFlags.continuousPolarAlignment = false;
+				contAlignmentState = CONT_PA_CMD;
+			}
+			break;
+		}
+
+		contAlignmentState = CONT_PA_CHECK;
+		break;
+
+	case CONT_PA_CHECK:
+		//Resets the states if the flag is disabled
+		if (controlFlags.continuousPolarAlignment == false)
+		{
+			timeoutReset(&paCommandTimeout);
+			alignmentData.alignmentDataUpdated = false;
+			alignmentData.imageCaptured = false;
+			contAlignmentState = CONT_PA_CMD;
+			break;
+		}
+
+		if(alignmentData.alignmentDataUpdated == false)
+		{
+			if (timeoutReached(&paCommandTimeout) == true)
+			{
+				timeoutReset(&paCommandTimeout);
+				uartSend(PC_UART_SRC, "ERR:PA TIMEOUT\r\n");
+				//Disable the continuous polar alignment if the RPi response timeouts
+				controlFlags.continuousPolarAlignment = false;
+				contAlignmentState = CONT_PA_CMD;
+			}
+			break;
+		}
+
+		//Image captured and alignment data updated - reset the polar alignment timeout and data updated flag
+		timeoutReset(&paCommandTimeout);
+		alignmentData.alignmentDataUpdated = false;
+		alignmentData.imageCaptured = false;
+
+		//Polaris or NCP not found -> skip the movement
+		if (alignmentData.polarisFound == false || alignmentData.ncpFound == false)
+		{
+			contAlignmentState = CONT_PA_CMD;
+			break;
+		}
+
+		//Wait for the external camera to be idle or in waiting state
+		if(camera.currentState == CAM_IDLE || camera.currentState == CAM_WAIT_DELAY) break;
+
+		if(alignmentData.azError != 0.0f && alignmentData.azError >= AZ_PA_ERROR_MIN && alignmentData.azError <= AZ_PA_ERROR_MAX)
+		{
+			stepperMove(&AZ_AxisMotor, alignmentData.azError/cosf(gpsData.latitude*(M_PI/180)), 2.5f);
+		}
+		if(alignmentData.altError >= ALT_PA_ERROR_MIN && alignmentData.altError <= ALT_PA_ERROR_MAX)
+		{
+			stepperMove(&ALT_AxisMotor, alignmentData.altError, 2.5f);
+		}
+
+		contAlignmentState = CONT_PA_MOVE_WAIT;
+		break;
+
+	case CONT_PA_MOVE_WAIT:
+		if(AZ_AxisMotor.busy == true || ALT_AxisMotor.busy == true)
+		{
+			break;
+		}
+
+		contAlignmentState = CONT_PA_CMD;
+	}
+}
+
 
 void error(errorCode_t err)
 {
