@@ -79,6 +79,7 @@
 #include "mag.h"
 #include "astro.h"
 #include "camera.h"
+#include "math.h"
 
 /*
  *	LOW POWER IDLE variables and defines
@@ -103,9 +104,9 @@
 
 #define GPS_CONFIG_RETRIES 5
 
-#define ROUGH_ALIGNMENT_THRESHOLD 2.0f
+#define ROUGH_ALIGNMENT_THRESHOLD 2.0f //deg
 #define ALIGNMENT_TRIES 3
-#define PRECISE_ALIGNMENT_THRESHOLD 0.5f
+#define PRECISE_ALIGNMENT_THRESHOLD 0.5f //arcmin
 
 #define CALIB_STEP 2.5f
 #define CALIB_MINMAX_SAMPLES 5
@@ -117,10 +118,11 @@
 
 #define COR_ANGLE 60.0f
 
-#define AZ_PA_ERROR_MIN   -1.0f
-#define AZ_PA_ERROR_MAX    1.0f
-#define ALT_PA_ERROR_MIN  -1.0f
-#define ALT_PA_ERROR_MAX   1.0f
+//Minimal and maximal values for continuous PA to get activated and to correct the PA error
+#define AZ_PA_ERROR_MIN PRECISE_ALIGNMENT_THRESHOLD
+#define AZ_PA_ERROR_MAX 1.0f*DEG
+#define ALT_PA_ERROR_MIN PRECISE_ALIGNMENT_THRESHOLD
+#define ALT_PA_ERROR_MAX 1.0f*DEG
 
 #define CONTINUOUS_PA_PERIOD 60000//ms
 
@@ -217,6 +219,7 @@ typedef enum {
 	CONT_PA_CMD,
 	CONT_PA_WAIT,
 	CONT_PA_CHECK,
+	CONT_PA_MOVE,
 	CONT_PA_MOVE_WAIT
 }ContAlignmentState_t;
 
@@ -362,6 +365,64 @@ void controlLoop()
 {
 	static uint32_t shutdownButtonPressStart = 0;
 
+	//------------------------------------------------------
+	// Main state machine
+	//------------------------------------------------------
+
+	switch (controlState)
+	{
+	case LOW_POWER_IDLE:
+		handleLowPowerIdle();
+		break;
+
+	case HOMING:
+		handleHoming();
+		break;
+
+	case CALIBRATION:
+		handleCalibration();
+		break;
+
+	case WARMING_UP:
+		handleWarmingUp();
+		break;
+
+	case ALIGNMENT:
+		handleAligning();
+		break;
+	case IDLE:
+		handleIdle();
+		break;
+
+	case AXIS_MOVING:
+		handleMoving();
+		break;
+
+	case GOTO:
+		handleGoto();
+		break;
+
+	case SHUTDOWN:
+		handleShutdown();
+		break;
+
+	case FAULT:
+		handleFault();
+		break;
+
+	case TRACKING:
+		handleTracking();
+		break;
+
+	default:
+		controlState = FAULT;
+		break;
+	}
+
+	//------------------------------------------------------
+	//	Shutdown control
+	//------------------------------------------------------
+
 	if (controlState != LOW_POWER_IDLE && controlState != SHUTDOWN)
 	{
 		uint8_t btn = readButtonDebounced();
@@ -423,59 +484,8 @@ void controlLoop()
 		}
 	}
 
-
-	switch (controlState)
-	{
-	case LOW_POWER_IDLE:
-		handleLowPowerIdle();
-		break;
-
-	case HOMING:
-		handleHoming();
-		break;
-
-	case CALIBRATION:
-		handleCalibration();
-		break;
-
-	case WARMING_UP:
-		handleWarmingUp();
-		break;
-
-	case ALIGNMENT:
-		handleAligning();
-		break;
-	case IDLE:
-		handleIdle();
-		break;
-
-	case AXIS_MOVING:
-		handleMoving();
-		break;
-
-	case GOTO:
-		handleGoto();
-		break;
-
-	case SHUTDOWN:
-		handleShutdown();
-		break;
-
-	case FAULT:
-		handleFault();
-		break;
-
-	case TRACKING:
-		handleTracking();
-		break;
-
-	default:
-		controlState = FAULT;
-		break;
-	}
-
 	//------------------------------------------------------
-	//Continuous polar alignment
+	//	Continuous polar alignment
 	//------------------------------------------------------
 	if(controlState == IDLE || controlState == TRACKING)
 	{
@@ -1751,7 +1761,6 @@ void handleFault()
 /*
  * --- CONTINUOUS POLAR ALIGNMENT ---
  */
-
 static void continuousPolarAlignment()
 {
 	switch(contAlignmentState)
@@ -1829,8 +1838,17 @@ static void continuousPolarAlignment()
 			break;
 		}
 
-		//Image captured and alignment data updated - reset the polar alignment timeout and data updated flag
+		//Image captured and alignment data updated
 		timeoutReset(&paCommandTimeout);
+		contAlignmentState = CONT_PA_MOVE;
+
+		break;
+
+	case CONT_PA_MOVE:
+		//Wait for the external camera to be idle or in waiting state
+		if(camera.currentState != CAM_IDLE && camera.currentState != CAM_WAIT_DELAY) break;
+
+		//Reset the polar alignment timeout and data updated flag
 		alignmentData.alignmentDataUpdated = false;
 		alignmentData.imageCaptured = false;
 
@@ -1841,16 +1859,20 @@ static void continuousPolarAlignment()
 			break;
 		}
 
-		//Wait for the external camera to be idle or in waiting state
-		if(camera.currentState == CAM_IDLE || camera.currentState == CAM_WAIT_DELAY) break;
+		float cosRA = cosf(RA_AxisMotor.Position.angularPosition*(M_PI/180.0f));
+		float sinRA = sinf(RA_AxisMotor.Position.angularPosition*(M_PI/180.0f));
 
-		if(alignmentData.azError != 0.0f && alignmentData.azError >= AZ_PA_ERROR_MIN && alignmentData.azError <= AZ_PA_ERROR_MAX)
+		//Rotate the ALT and AZ errors by the RA angle
+		float azErrorTransformed = alignmentData.azError * cosRA + alignmentData.altError * sinRA;
+		float altErrorTransformed = alignmentData.altError * cosRA - alignmentData.azError * sinRA;
+
+		if(azErrorTransformed != 0.0f && fabsf(azErrorTransformed) >= AZ_PA_ERROR_MIN && fabsf(azErrorTransformed) <= AZ_PA_ERROR_MAX)
 		{
-			stepperMove(&AZ_AxisMotor, alignmentData.azError/cosf(gpsData.latitude*(M_PI/180)), 2.5f);
+			stepperMove(&AZ_AxisMotor, azErrorTransformed/cosf(gpsData.latitude*(M_PI/180)), 2.5f);
 		}
-		if(alignmentData.altError >= ALT_PA_ERROR_MIN && alignmentData.altError <= ALT_PA_ERROR_MAX)
+		if(fabsf(altErrorTransformed) >= ALT_PA_ERROR_MIN && fabsf(altErrorTransformed) <= ALT_PA_ERROR_MAX)
 		{
-			stepperMove(&ALT_AxisMotor, alignmentData.altError, 2.5f);
+			stepperMove(&ALT_AxisMotor, altErrorTransformed, 2.5f);
 		}
 
 		contAlignmentState = CONT_PA_MOVE_WAIT;
@@ -1861,8 +1883,8 @@ static void continuousPolarAlignment()
 		{
 			break;
 		}
-
 		contAlignmentState = CONT_PA_CMD;
+		break;
 	}
 }
 
