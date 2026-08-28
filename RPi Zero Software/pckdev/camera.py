@@ -13,7 +13,9 @@ def cameraConnected():
 
 # Initialize camera
 def initCamera():
-    PAcam.configure(PAcam.create_still_configuration())
+    config = PAcam.create_still_configuration(main={"size": (2028, 1520)})
+    PAcam.configure(config)
+    #PAcam.configure(PAcam.create_still_configuration())
     PAcam.start()
 
 def captureImage(exposure, gain, flip): #Exposure [s], Gain [-], Flip [True/False]
