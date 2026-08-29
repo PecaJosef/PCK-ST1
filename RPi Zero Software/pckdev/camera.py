@@ -14,9 +14,9 @@ def cameraConnected():
 # Initialize camera
 def initCamera():
     # 2x2 Binning config
-    config = PAcam.create_still_configuration(main={"size": (2028, 1520)})
+    #config = PAcam.create_still_configuration(main={"size": (2028, 1520)})
     # Regular config
-    #config = PAcam.create_still_configuration()
+    config = PAcam.create_still_configuration()
     PAcam.configure(config)
     PAcam.start()
 
