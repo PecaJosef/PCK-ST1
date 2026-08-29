@@ -32,7 +32,7 @@ def alignmentError(uart):
 def centerOfRotation(uart):
     global image_zero, image_angled, center_offset
 
-    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, dont flip the image
+    star_image = captureImage(10, 10.0, False) #10s exposure, 8 gain, dont flip the image
     uart.send("$PA:CAPTURED")
 
     if (image_zero is None):
@@ -61,7 +61,7 @@ def centerOfRotation(uart):
         gc.collect()
 
 def imgCapture(uart, exposure, img_name):
-    image = captureImage(exposure, 8.0, False)
+    image = captureImage(exposure, 20.0, False)
     cv2.imwrite(img_name, image)
     uart.send("#IMAGE CAPTURED")
 
