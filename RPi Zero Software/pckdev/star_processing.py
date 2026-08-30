@@ -10,7 +10,7 @@ star_distances = np.load("/home/pck/repo/PCK-ST1/RPi Zero Software/pckdev/databa
 star_Polaris_RA_angle = np.load("/home/pck/repo/PCK-ST1/RPi Zero Software/pckdev/database/star_Polaris_RA_angle.npy")
 #star_RA_hours = np.load("database/star_RA_hours.npy")
 
-defaultPixPerArcmin = (4056/2)/(14.334*60) #Default pixels per arminute - for 25mm lens and Raspberry Pi HQ Camera
+defaultPixPerArcmin = 4056/(14.334*60) #Default pixels per arminute - for 25mm lens and Raspberry Pi HQ Camera
 
 def imagePreprocessing(image):
   #Convert to grayscale
