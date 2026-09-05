@@ -1808,10 +1808,11 @@ static void continuousPolarAlignment()
 				controlFlags.continuousPolarAlignment = false;
 				contAlignmentState = CONT_PA_CMD;
 			}
-			break;
 		}
-
-		contAlignmentState = CONT_PA_CHECK;
+		else
+		{
+			contAlignmentState = CONT_PA_CHECK;
+		}
 		break;
 
 	case CONT_PA_CHECK:
@@ -1835,12 +1836,13 @@ static void continuousPolarAlignment()
 				controlFlags.continuousPolarAlignment = false;
 				contAlignmentState = CONT_PA_CMD;
 			}
-			break;
 		}
-
-		//Image captured and alignment data updated
-		timeoutReset(&paCommandTimeout);
-		contAlignmentState = CONT_PA_MOVE;
+		else
+		{
+			//Image captured and alignment data updated
+			timeoutReset(&paCommandTimeout);
+			contAlignmentState = CONT_PA_MOVE;
+		}
 
 		break;
 
