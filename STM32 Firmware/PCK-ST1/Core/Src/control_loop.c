@@ -1865,8 +1865,8 @@ static void continuousPolarAlignment()
 		float sinRA = sinf(RA_AxisMotor.Position.angularPosition*(M_PI/180.0f));
 
 		//Rotate the ALT and AZ errors by the RA angle
-		float azErrorTransformed = alignmentData.azError * cosRA + alignmentData.altError * sinRA;
-		float altErrorTransformed = alignmentData.altError * cosRA - alignmentData.azError * sinRA;
+		float azErrorTransformed = alignmentData.azError * cosRA - alignmentData.altError * sinRA;
+		float altErrorTransformed = alignmentData.altError * cosRA + alignmentData.azError * sinRA;
 
 		if(azErrorTransformed != 0.0f && fabsf(azErrorTransformed) >= AZ_PA_ERROR_MIN && fabsf(azErrorTransformed) <= AZ_PA_ERROR_MAX)
 		{
