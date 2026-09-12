@@ -52,10 +52,9 @@ def captureImage(exposure, gain, flip, raw = False): #Exposure [s], Gain [-], Fl
 
     # Rotate image by 180 degrees if applicable
     if flip == True:
-        image_rotated = cv2.rotate(image_bgr, cv2.ROTATE_180)
-        return image_rotated
-    else:
-        return image_bgr
+        image_out = cv2.rotate(image_bgr, cv2.ROTATE_180)
+        
+    return image_out
         
     
 
