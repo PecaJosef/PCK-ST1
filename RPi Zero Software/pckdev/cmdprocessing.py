@@ -61,7 +61,11 @@ def centerOfRotation(uart):
         gc.collect()
 
 def imgCapture(uart, exposure, img_name):
-    image = captureImage(exposure, 8.0, False)
+    image = captureImage(exposure, 8.0, False, raw = True)
+
+    if img_name.lower().endswith('.jpg') or img_name.lower().endswith('.jpeg'):
+        img_name = img_name.rsplit('.', 1)[0] + '.png'
+        
     cv2.imwrite(img_name, image)
     uart.send("#IMAGE CAPTURED")
 
