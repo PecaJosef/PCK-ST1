@@ -567,7 +567,7 @@ class App(tk.Tk):
                  bg=TH["panel2"], fg=TH["dim"]).grid(row=0, column=1, sticky="w", padx=(6, 0))
 
         exp_v = tk.StringVar(value="10")
-        name_v = tk.StringVar(value="stars.jpg")
+        name_v = tk.StringVar(value="stars.png")
 
         exp_e = tk.Entry(row, textvariable=exp_v, width=4,
                          bg=TH["bg"], fg=TH["text"],
