@@ -17,11 +17,11 @@ def initCamera():
     # 2x2 Binning config
     #config = PAcam.create_still_configuration(main={"size": (2028, 1520)})
     # Regular config
-    #config = PAcam.create_still_configuration()
+    #config = PAcam.create_still_configuration(main={"size": (4056, 3040)})
 
     config = PAcam.create_still_configuration(
         main={"size": (4056, 3040)},
-        raw={"size": (2028, 1520), "format": "SRGGB12"}
+        raw={"size": (4056, 3040), "format": "SRGGB12"}
     )
     
     PAcam.configure(config)
