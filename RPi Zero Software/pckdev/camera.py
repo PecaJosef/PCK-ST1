@@ -43,8 +43,13 @@ def captureImage(exposure, gain, flip, raw = False): #Exposure [s], Gain [-], Fl
             # Fetch the raw 12-bit buffer
             raw_bytes = PAcam.capture_array("raw")
             raw_16bit = raw_bytes.view(np.uint16)
-            # Demosaic raw Bayer pattern (RGGB) into BGR 16-bit for OpenCV
-            image_out = cv2.cvtColor(raw_16bit, cv2.COLOR_BayerRG2BGR)
+
+            image_cropped = raw_16bit[:3040, :4056]
+            blocks = image_cropped.reshape(1520, 2, 2028, 2)
+            image_binned = (blocks.astype(np.uint32).sum(axis=(1, 3)) // 4).astype(np.uint16)
+
+            image_out = image_binned * 16
+
     else:
             # Fetch the standard ISP-processed RGB image
             image_rgb = PAcam.capture_array("main")
@@ -52,7 +57,7 @@ def captureImage(exposure, gain, flip, raw = False): #Exposure [s], Gain [-], Fl
 
     # Rotate image by 180 degrees if applicable
     if flip == True:
-        image_out = cv2.rotate(image_bgr, cv2.ROTATE_180)
+        image_out = cv2.rotate(image_out, cv2.ROTATE_180)
         
     return image_out
         
