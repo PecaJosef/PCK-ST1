@@ -113,6 +113,26 @@
 			(embedded_fonts no)
 		)
 	)
+	(wire
+		(pts
+			(xy 191.77 132.08) (xy 251.46 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "90830e12-3a8f-47c3-a264-6e2777080dd0")
+	)
+	(wire
+		(pts
+			(xy 191.77 129.54) (xy 251.46 129.54)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a1854625-e56a-4b0d-a328-973530e91286")
+	)
 	(symbol
 		(lib_id "Mechanical:MountingHole_Pad")
 		(at 31.75 250.19 0)
@@ -851,8 +871,8 @@
 		)
 	)
 	(sheet
-		(at 227.33 104.14)
-		(size 65.532 34.29)
+		(at 251.46 86.868)
+		(size 64.77 71.12)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -867,7 +887,7 @@
 		)
 		(uuid "e1252ff5-5f60-457a-8d61-5f7f4d76068a")
 		(property "Sheetname" "Power"
-			(at 227.33 103.4284 0)
+			(at 251.46 86.1564 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -876,12 +896,102 @@
 			)
 		)
 		(property "Sheetfile" "Power.kicad_sch"
-			(at 227.33 139.0146 0)
+			(at 251.46 158.5726 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 				(justify left top)
+			)
+		)
+		(pin "BATT_CE" input
+			(at 251.46 114.3 180)
+			(uuid "6f757c37-bc3a-4a30-aa3c-9c4f1f46dd25")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "BATT_ST2" output
+			(at 251.46 119.38 180)
+			(uuid "39fc831b-9207-4915-8a88-5efd5e97be02")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "BAT_ST1" output
+			(at 251.46 121.92 180)
+			(uuid "aa4a1998-22f5-4520-bca1-ff9cbca0b217")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "CTR_RX" output
+			(at 251.46 129.54 180)
+			(uuid "34335295-4958-4bfb-818f-16ebf19dd03b")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "CTR_TX" input
+			(at 251.46 132.08 180)
+			(uuid "198be78a-a5ef-47a0-9339-3f1240bd9db8")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "DN" bidirectional
+			(at 251.46 138.43 180)
+			(uuid "95b515fb-f169-43c0-9844-2f4158bbb5b8")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "DP" bidirectional
+			(at 251.46 140.97 180)
+			(uuid "61788a32-3858-46a9-8505-95960500ab10")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "IN1_SEL" output
+			(at 251.46 109.22 180)
+			(uuid "516f9bd1-12be-46f9-9917-60ebbef8e4a2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "PWR_EN" input
+			(at 251.46 105.41 180)
+			(uuid "f9fc2ecf-8204-454c-adf3-4915be87c245")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 			)
 		)
 		(instances
@@ -894,7 +1004,7 @@
 	)
 	(sheet
 		(at 114.808 105.156)
-		(size 77.47 33.274)
+		(size 76.962 33.274)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -924,6 +1034,26 @@
 					(size 1.27 1.27)
 				)
 				(justify left top)
+			)
+		)
+		(pin "STM_RX" input
+			(at 191.77 129.54 0)
+			(uuid "21608e99-01f4-4c9e-b4ff-b3d358925ae2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(pin "STM_TX" output
+			(at 191.77 132.08 0)
+			(uuid "5abbc604-d04a-422e-92d5-2d1fc49839a5")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 			)
 		)
 		(instances
