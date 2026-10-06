@@ -45,7 +45,9 @@ def imagePreprocessing(image):
   mean = np.mean(image)
   std = np.std(image)
 
-  _, thresholded = cv2.threshold(image, 1*mean+6*std, 65535, cv2.THRESH_BINARY)
+  _, thresholded = cv2.threshold(image, 1*mean+6*std, 255, cv2.THRESH_BINARY)
+
+  thresholded = thresholded.astype(np.uint8)
   
   cv2.imwrite('thresholded.jpg', thresholded)
   return thresholded
