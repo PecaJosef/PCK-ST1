@@ -15,9 +15,9 @@ center_offset = None
 def alignmentError(uart):
     global center_offset
 
-    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, dont flip the image
+    star_image = captureImage(3, 22.0, False, raw = True) #3s exposure, 22.0 gain, dont flip the image, raw image
 
-    cv2.imwrite('stars.jpg', star_image)
+    cv2.imwrite('stars.tiff', star_image)
     uart.send("$PA:CAPTURED")
 
     if (center_offset is None):
@@ -32,15 +32,15 @@ def alignmentError(uart):
 def centerOfRotation(uart):
     global image_zero, image_angled, center_offset
 
-    star_image = captureImage(10, 8.0, False) #10s exposure, 8 gain, dont flip the image
+    star_image = captureImage(3, 22.0, False, raw = True) #3s exposure, 22.0 gain, dont flip the image, raw image
     uart.send("$PA:CAPTURED")
 
     if (image_zero is None):
         image_zero = star_image
-        cv2.imwrite('cor1.jpg', image_zero)
+        cv2.imwrite('cor1.tiff', image_zero)
     else:
         image_angled = star_image
-        cv2.imwrite('cor2.jpg', image_angled)
+        cv2.imwrite('cor2.tiff', image_angled)
     
     if(image_zero is not None and image_angled is not None):
         center_offset = getCenterOfRotation(image_zero, image_angled)
@@ -64,7 +64,7 @@ def imgCapture(uart, exposure, img_name):
     image = captureImage(exposure, 22.0, False, raw = True)
 
     if img_name.lower().endswith('.jpg') or img_name.lower().endswith('.jpeg'):
-        img_name = img_name.rsplit('.', 1)[0] + '.png'
+        img_name = img_name.rsplit('.', 1)[0] + '.tiff'
 
     cv2.imwrite(img_name, image)
     uart.send("#IMAGE CAPTURED")

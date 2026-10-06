@@ -40,7 +40,7 @@ def captureImage(exposure, gain, flip, raw = False): #Exposure [s], Gain [-], Fl
     PAcam.start()
     
     if raw == True:
-            # Fetch the raw 12-bit buffer
+            #Fetch the raw 12-bit buffer
             raw_bytes = PAcam.capture_array("raw")
             raw_16bit = raw_bytes.view(np.uint16)
 
@@ -51,7 +51,7 @@ def captureImage(exposure, gain, flip, raw = False): #Exposure [s], Gain [-], Fl
             image_out = image_binned * 16
 
     else:
-            # Fetch the standard ISP-processed RGB image
+            #Fetch the standard RGB image
             image_rgb = PAcam.capture_array("main")
             image_out = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 

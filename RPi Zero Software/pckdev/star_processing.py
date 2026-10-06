@@ -12,6 +12,7 @@ star_Polaris_RA_angle = np.load("/home/pck/repo/PCK-ST1/RPi Zero Software/pckdev
 
 defaultPixPerArcmin = 4056/(14.334*60) #Default pixels per arminute - for 25mm lens and Raspberry Pi HQ Camera
 
+'''
 def imagePreprocessing(image):
   #Convert to grayscale
   gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -35,6 +36,17 @@ def imagePreprocessing(image):
 
   #Apply adaptive thresholding to detect bright spots
   _, thresholded = cv2.threshold(blurred, threshold, 255, cv2.THRESH_BINARY)
+  cv2.imwrite('thresholded.jpg', thresholded)
+  return thresholded
+'''
+
+def imagePreprocessing(image):
+  #Get mean pixel value from the image
+  mean = np.mean(image)
+  std = np.std(image)
+
+  _, thresholded = cv2.threshold(image, 1*mean+6*std, 65535, cv2.THRESH_BINARY)
+  
   cv2.imwrite('thresholded.jpg', thresholded)
   return thresholded
 
