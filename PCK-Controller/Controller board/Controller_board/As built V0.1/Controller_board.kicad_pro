@@ -512,7 +512,7 @@
       "plot": "FabData/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "Controller_board.step",
+      "step": "",
       "svg": "",
       "vrml": ""
     },
