@@ -10,7 +10,7 @@ star_distances = np.load("/home/pck/repo/PCK-ST1/RPi Zero Software/pckdev/databa
 star_Polaris_RA_angle = np.load("/home/pck/repo/PCK-ST1/RPi Zero Software/pckdev/database/star_Polaris_RA_angle.npy")
 #star_RA_hours = np.load("database/star_RA_hours.npy")
 
-defaultPixPerArcmin = (4056/2)/(14.334*60) #Default pixels per arminute - for 25mm lens and Raspberry Pi HQ Camera
+defaultPixPerArcmin = (2028)/(14.334*60) #Default pixels per arminute - for 25mm lens and Raspberry Pi HQ Camera
 
 '''
 def imagePreprocessing(image):
@@ -52,12 +52,59 @@ def imagePreprocessing(image):
   cv2.imwrite('thresholded.jpg', thresholded)
   return thresholded
 
+
+def findStars(thresholded_image, original_image, number_of_brightest_stars):
+    # Find contours (potential stars) on the binary image
+    contours, _ = cv2.findContours(thresholded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    star_data = []
+    
+    for cnt in contours:
+            
+        # Find the center of the circle enclosing the star
+        (cx, cy), radius = cv2.minEnclosingCircle(cnt)
+        
+        # Calculate Flux (Total Brightness)
+        # 1. Get the bounding box of the contour to create a tiny Region of Interest (ROI)
+        x, y, w, h = cv2.boundingRect(cnt)
+        roi_original = original_image[y:y+h, x:x+w]
+        
+        # 2. Create a local mask for just this bounding box
+        roi_mask = np.zeros((h, w), dtype=np.uint8)
+        cv2.drawContours(roi_mask, [cnt], -1, 255, thickness=-1, offset=(-x, -y))
+        
+        # 3. Sum the pixel values from the original image where the mask is applied
+        flux = roi_original[roi_mask == 255].sum()
+        
+        star_data.append({
+            'center': [cx, cy],
+            'flux': flux
+        })
+
+    print("Number of stars found: ", len(star_data))
+
+    # Sort stars by their total flux in descending order (brightest first)
+    star_data = sorted(star_data, key=lambda s: s['flux'], reverse=True)
+
+    # Extract the sorted centers
+    contour_centers = [s['center'] for s in star_data]
+    star_centers = np.array(contour_centers, dtype=np.float32)
+
+    # Select only the top N brightest stars
+    brightest_stars = star_centers[:number_of_brightest_stars]
+
+    # Draw on the thresholded image as before
+    markStars(brightest_stars, thresholded_image, 'brightest_stars.jpg')
+
+    return star_centers, brightest_stars
+
+'''
 def findStars(image, number_of_brightest_stars):
   #Find contours (potential stars)
   contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
   #Filter out small contours based on area (to avoid noise)
-  min_area = 1  #Min area for contours to be considered as stars
-  contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
+  min_area = 0  #Min area for contours to be considered as stars
+  contours = [cnt for cnt in contours if cv2.contourArea(cnt) >= min_area]
   #Sort contours by area in descending order (for selecting biggest stars)
   contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
@@ -75,7 +122,10 @@ def findStars(image, number_of_brightest_stars):
   #Select only the top N brightest stars
   brightest_stars = star_centers[:number_of_brightest_stars]
 
+  markStars(brightest_stars, image, 'brightest_stars.jpg')
+
   return star_centers, brightest_stars
+'''
 
 def getStarsInRadius(center_star, stars, radius):
   #Filters stars based on a set radius (distance from center star)
@@ -447,8 +497,8 @@ def getCenterOfRotation(image_zero, image_angled):
   preprocessed_image_zero = imagePreprocessing(image_zero)
   preprocessed_image_angled = imagePreprocessing(image_angled)
 
-  stars_zero, brightest_stars_zero = findStars(preprocessed_image_zero, number_of_brightest_stars = 10)
-  stars_angled, brightest_stars_angled = findStars(preprocessed_image_angled, number_of_brightest_stars = 10)
+  stars_zero, brightest_stars_zero = findStars(preprocessed_image_zero, image_zero, number_of_brightest_stars = 10)
+  stars_angled, brightest_stars_angled = findStars(preprocessed_image_angled, image_angled, number_of_brightest_stars = 10)
 
   polarisFound_zero, Polaris_zero, Angle_zero = findPolaris(brightest_stars_zero, stars_zero, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
   polarisFound_angled, Polaris_angled, Angle_angled = findPolaris(brightest_stars_angled, stars_angled, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
@@ -527,7 +577,7 @@ def getAlignmentError(image, center_offset, debug=False):
       return 0,0,False,False,0
 
   preprocessed_image = imagePreprocessing(image)
-  stars, brightest_stars = findStars(preprocessed_image, number_of_brightest_stars = 10)
+  stars, brightest_stars = findStars(preprocessed_image, image, number_of_brightest_stars = 10)
 
   polarisFound, Polaris, Angle = findPolaris(brightest_stars, stars, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
 
@@ -548,7 +598,7 @@ def getAlignmentError(image, center_offset, debug=False):
   ncpFound, NCP_coordinates, NCP_error, zero_RA_angle = getNCPposition(Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, center_of_rotation, star_distances, star_Polaris_RA_angle)
 
   if (debug and ncpFound):
-    drawNCP(image, NCP_coordinates, Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, zero_RA_angle)
+    #drawNCP(image, NCP_coordinates, Polaris, Yildun, OV_Cephei, Ursae_Minoris_2, zero_RA_angle)
 
     print("Polaris", Polaris, "NCP", NCP_coordinates, "Yildun", Yildun, "OV Cephein", OV_Cephei,"2 Ursae Minoris", Ursae_Minoris_2)
 
