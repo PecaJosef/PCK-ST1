@@ -497,8 +497,8 @@ def getCenterOfRotation(image_zero, image_angled):
   preprocessed_image_zero = imagePreprocessing(image_zero)
   preprocessed_image_angled = imagePreprocessing(image_angled)
 
-  stars_zero, brightest_stars_zero = findStars(preprocessed_image_zero, image_zero, number_of_brightest_stars = 20)
-  stars_angled, brightest_stars_angled = findStars(preprocessed_image_angled, image_angled, number_of_brightest_stars = 20)
+  stars_zero, brightest_stars_zero = findStars(preprocessed_image_zero, image_zero, number_of_brightest_stars = 15)
+  stars_angled, brightest_stars_angled = findStars(preprocessed_image_angled, image_angled, number_of_brightest_stars = 15)
 
   polarisFound_zero, Polaris_zero, Angle_zero = findPolaris(brightest_stars_zero, stars_zero, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
   polarisFound_angled, Polaris_angled, Angle_angled = findPolaris(brightest_stars_angled, stars_angled, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
@@ -577,7 +577,7 @@ def getAlignmentError(image, center_offset, debug=False):
       return 0,0,False,False,0
 
   preprocessed_image = imagePreprocessing(image)
-  stars, brightest_stars = findStars(preprocessed_image, image, number_of_brightest_stars = 10)
+  stars, brightest_stars = findStars(preprocessed_image, image, number_of_brightest_stars = 15)
 
   polarisFound, Polaris, Angle = findPolaris(brightest_stars, stars, polaris_database_vectors, threshold=6.0, radius_arcmin=107.5, star_count=25, debug=True)
 

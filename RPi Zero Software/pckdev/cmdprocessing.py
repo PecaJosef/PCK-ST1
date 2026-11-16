@@ -15,7 +15,7 @@ center_offset = None
 def alignmentError(uart):
     global center_offset
 
-    star_image = captureImage(3, 22.0, False, raw = True) #3s exposure, 22.0 gain, dont flip the image, raw image
+    star_image = captureImage(5, 22.0, False, raw = True) #3s exposure, 22.0 gain, dont flip the image, raw image
 
     cv2.imwrite('stars.tiff', star_image)
     uart.send("$PA:CAPTURED")
@@ -32,7 +32,7 @@ def alignmentError(uart):
 def centerOfRotation(uart):
     global image_zero, image_angled, center_offset
 
-    star_image = captureImage(3, 22.0, False, raw = True) #3s exposure, 22.0 gain, dont flip the image, raw image
+    star_image = captureImage(5, 22.0, False, raw = True) #3s exposure, 22.0 gain, dont flip the image, raw image
     uart.send("$PA:CAPTURED")
 
     if (image_zero is None):
